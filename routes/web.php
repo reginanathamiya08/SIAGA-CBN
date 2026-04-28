@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\PenggajianController;
 use App\Http\Controllers\Pimpinan\DashboardController as PimpinanDashboard;
 use App\Http\Controllers\Pimpinan\ApprovalController;
 use App\Http\Controllers\Karyawan\DashboardController as KaryawanDashboard;
+use App\Http\Controllers\Karyawan\AbsensiController;
 use App\Http\Controllers\Karyawan\PerizinanController;
 use App\Http\Controllers\Karyawan\LemburController;
 use App\Http\Controllers\Karyawan\DinasLuarController;
@@ -88,6 +89,12 @@ Route::prefix('pimpinan')->name('pimpinan.')->middleware(['auth','role:pimpinan'
 Route::prefix('karyawan')->name('karyawan.')->middleware(['auth','role:karyawan_tetap,karyawan_kontrak'])->group(function () {
 
     Route::get('dashboard', [KaryawanDashboard::class,'index'])->name('dashboard');
+
+    // Absensi
+    Route::get ('absensi',         [AbsensiController::class,'index'])      ->name('absensi.index');
+    Route::post('absensi/masuk',   [AbsensiController::class,'absenMasuk']) ->name('absensi.masuk');
+    Route::post('absensi/pulang',  [AbsensiController::class,'absenPulang'])->name('absensi.pulang');
+    Route::get ('absensi/riwayat', [AbsensiController::class,'riwayat'])    ->name('absensi.riwayat');
 
     // Perizinan
     Route::get   ('perizinan',             [PerizinanController::class,'index'])  ->name('perizinan.index');

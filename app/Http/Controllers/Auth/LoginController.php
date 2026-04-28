@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class LoginController extends Controller
 {
@@ -13,7 +15,6 @@ class LoginController extends Controller
      */
     public function showLogin()
     {
-        // Jika sudah login, redirect ke dashboard sesuai role
         if (Auth::check()) {
             return $this->redirectByRole(Auth::user()->role);
         }
@@ -34,21 +35,23 @@ class LoginController extends Controller
             'password.required' => 'Password wajib diisi.',
         ]);
 
-        $credentials = [
-            'username'  => $request->username,
-            'password'  => $request->password,
-            'is_active' => true,
-        ];
+        // Cari user manual by username dan is_active
+        $user = User::where('username', $request->username)
+                    ->where('is_active', true)
+                    ->first();
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
-            $request->session()->regenerate();
-
-            return $this->redirectByRole(Auth::user()->role);
+        // Cek user ada dan password cocok
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return back()
+                ->withInput($request->only('username'))
+                ->withErrors(['username' => 'Username atau password salah, atau akun tidak aktif.']);
         }
 
-        return back()
-            ->withInput($request->only('username'))
-            ->withErrors(['username' => 'Username atau password salah, atau akun tidak aktif.']);
+        // Login manual - tidak bergantung pada getAuthIdentifierName()
+       Auth::login($user, false);
+        $request->session()->regenerate();
+
+        return $this->redirectByRole($user->role);
     }
 
     /**

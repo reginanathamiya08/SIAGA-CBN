@@ -40,9 +40,9 @@
                       class="text-[11px] font-black uppercase tracking-wider">Dashboard</span>
             </a>
 
-            <a href="#"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-xl
-                      text-white/60 hover:bg-white/10 hover:text-white transition-all">
+            <a href="{{ route('karyawan.absensi.index') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all
+                      {{ request()->routeIs('karyawan.absensi.*') ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10 hover:text-white' }}">
                 <i data-lucide="fingerprint" class="w-4 h-4 shrink-0"></i>
                 <span x-show="sidebarOpen" x-transition.opacity
                       class="text-[11px] font-black uppercase tracking-wider">Absensi</span>

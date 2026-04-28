@@ -43,12 +43,12 @@
             </div>
         </div>
         @if (!$absensiHariIni?->waktu_masuk)
-            <a href="#" class="mt-4 flex items-center justify-center gap-2 bg-[#1E3A5F] text-white rounded-2xl py-3 font-black   text-xs italic hover:bg-red-600 transition-all">
+            <a href="{{ route('karyawan.absensi.index') }}" class="mt-4 flex items-center justify-center gap-2 bg-[#1E3A5F] text-white rounded-2xl py-3 font-black   text-xs italic hover:bg-red-600 transition-all">
                 <i data-lucide="fingerprint" class="w-4 h-4"></i>
                 Absen Masuk Sekarang
             </a>
         @elseif (!$absensiHariIni?->waktu_pulang)
-            <a href="#" class="mt-4 flex items-center justify-center gap-2 bg-gray-700 text-white rounded-2xl py-3 font-black   text-xs italic hover:bg-red-600 transition-all">
+            <a href="{{ route('karyawan.absensi.index') }}" class="mt-4 flex items-center justify-center gap-2 bg-gray-700 text-white rounded-2xl py-3 font-black   text-xs italic hover:bg-red-600 transition-all">
                 <i data-lucide="log-out" class="w-4 h-4"></i>
                 Absen Pulang
             </a>

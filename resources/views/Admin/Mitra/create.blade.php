@@ -169,6 +169,29 @@
                     </p>
                 </div>
 
+                {{-- IP Public --}}
+                <div>
+                    <label class="block text-[10px] font-black text-gray-500 tracking-widest mb-2">
+                        IP PUBLIC KANTOR <span class="text-red-400">*</span>
+                    </label>
+                    <input type="text" name="ip_public"
+                           value="{{ old('ip_public') }}"
+                           placeholder="Contoh: 103.12.34.56"
+                           required
+                           class="w-full px-4 py-3 rounded-xl border text-sm font-semibold
+                                  text-gray-700 outline-none transition-all
+                                  @error('ip_public') border-red-400 bg-red-50
+                                  @else border-gray-200 bg-gray-50 focus:border-[#1E3A5F] focus:bg-white
+                                  @enderror">
+                    @error('ip_public')
+                        <p class="mt-1 text-xs text-red-500 font-semibold">{{ $message }}</p>
+                    @enderror
+                    <p class="mt-1 text-[9px] text-gray-400 font-medium">
+                        IP Public jaringan WiFi kantor mitra. Karyawan <strong>hanya bisa absen</strong>
+                        saat terhubung ke jaringan ini. Tanyakan ke IT/ISP jika tidak tahu IP-nya.
+                    </p>
+                </div>
+
             </div>
         </div>
 

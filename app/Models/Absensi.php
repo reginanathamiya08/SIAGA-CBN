@@ -16,8 +16,10 @@ class Absensi extends Model
         'waktu_pulang',
         'lat_masuk',
         'long_masuk',
+        'ip_masuk',
         'lat_pulang',
         'long_pulang',
+        'ip_pulang',
         'status',
         'is_telat',
     ];

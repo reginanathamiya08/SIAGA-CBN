@@ -75,7 +75,7 @@ class ApprovalController extends Controller
 
         $perizinan->update([
             'status_approval' => 'disetujui',
-            'approved_by'     => Auth::id(),
+            'approved_by'     => Auth::user()->id,
             'approved_at'     => now(),
             'alasan_tolak'    => null,
         ]);
@@ -109,7 +109,7 @@ class ApprovalController extends Controller
 
         $perizinan->update([
             'status_approval' => 'ditolak',
-            'approved_by'     => Auth::id(),
+            'approved_by'     => Auth::user()->id,
             'approved_at'     => now(),
             'alasan_tolak'    => $request->alasan_tolak,
         ]);
@@ -133,7 +133,7 @@ class ApprovalController extends Controller
 
         $lembur->update([
             'status_approval' => 'disetujui',
-            'approved_by'     => Auth::id(),
+            'approved_by'     => Auth::user()->id,
             'approved_at'     => now(),
         ]);
 
@@ -159,7 +159,7 @@ class ApprovalController extends Controller
 
         $lembur->update([
             'status_approval' => 'ditolak',
-            'approved_by'     => Auth::id(),
+            'approved_by'     => Auth::user()->id,
             'approved_at'     => now(),
             'alasan_tolak'    => $request->alasan_tolak,
         ]);
@@ -182,7 +182,7 @@ class ApprovalController extends Controller
 
         $dinasLuar->update([
             'status_approval' => 'disetujui',
-            'approved_by'     => Auth::id(),
+            'approved_by'     => Auth::user()->id,
             'approved_at'     => now(),
         ]);
 
@@ -208,7 +208,7 @@ class ApprovalController extends Controller
 
         $dinasLuar->update([
             'status_approval' => 'ditolak',
-            'approved_by'     => Auth::id(),
+            'approved_by'     => Auth::user()->id,
             'approved_at'     => now(),
             'alasan_tolak'    => $request->alasan_tolak,
         ]);

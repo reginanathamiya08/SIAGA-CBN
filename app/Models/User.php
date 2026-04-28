@@ -25,15 +25,6 @@ class User extends Authenticatable
         'is_active' => 'boolean',
     ];
 
-    /**
-     * Override: gunakan 'username' sebagai field autentikasi,
-     * bukan 'email' (default Laravel).
-     */
-    public function getAuthIdentifierName(): string
-    {
-        return 'username';
-    }
-
     // ── Relasi ──────────────────────────────────────────────────
 
     public function karyawan()

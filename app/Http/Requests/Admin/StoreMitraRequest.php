@@ -15,6 +15,7 @@ class StoreMitraRequest extends FormRequest
             'latitude'       => 'required|numeric|between:-90,90',
             'longitude'      => 'required|numeric|between:-180,180',
             'radius_meter'   => 'required|integer|min:10|max:5000',
+            'ip_public'      => 'required|ip',
             'mitra_induk_id' => 'nullable|exists:mitra,id',
         ];
     }
@@ -30,6 +31,8 @@ class StoreMitraRequest extends FormRequest
             'radius_meter.required' => 'Radius wajib diisi.',
             'radius_meter.min'      => 'Radius minimal 10 meter.',
             'radius_meter.max'      => 'Radius maksimal 5000 meter.',
+            'ip_public.required'    => 'IP Public kantor wajib diisi.',
+            'ip_public.ip'          => 'Format IP Public tidak valid (contoh: 103.12.34.56).',
         ];
     }
 }
