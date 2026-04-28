@@ -1,0 +1,137 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Karyawan;
+use App\Models\KomponenGaji;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class KomponenGajiController extends Controller
+{
+    // ─────────────────────────────────────────────────────────────────
+    // INDEX - Daftar komponen gaji semua karyawan
+    // ─────────────────────────────────────────────────────────────────
+    public function index(Request $request)
+    {
+        $query = Karyawan::with(['user', 'komponenGaji', 'penempatanAktif.mitra'])
+                         ->where('is_active', true)
+                         ->orderBy('jenis_karyawan')
+                         ->orderBy('nama');
+
+        if ($request->filled('jenis')) {
+            $query->where('jenis_karyawan', $request->jenis);
+        }
+        if ($request->filled('divisi')) {
+            $query->where('divisi', $request->divisi);
+        }
+        if ($request->filled('cari')) {
+            $query->where('nama', 'LIKE', '%' . $request->cari . '%');
+        }
+
+        $karyawan = $query->paginate(15)->withQueryString();
+
+        // Statistik
+        $stats = [
+            'belum_diisi'  => KomponenGaji::where('gaji_pokok', 0)->count(),
+            'sudah_diisi'  => KomponenGaji::where('gaji_pokok', '>', 0)->count(),
+            'total'        => KomponenGaji::count(),
+        ];
+
+        return view('admin.komponen-gaji.index', compact('karyawan', 'stats'));
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // EDIT - Form edit komponen gaji satu karyawan
+    // ─────────────────────────────────────────────────────────────────
+    public function edit(Karyawan $karyawan)
+    {
+        $karyawan->load(['user', 'komponenGaji', 'penempatanAktif.mitra']);
+
+        // Buat komponen gaji jika belum ada (seharusnya sudah ada dari store karyawan)
+        if (!$karyawan->komponenGaji) {
+            $uangMakanMitra = $karyawan->uang_makan_by_mitra;
+            KomponenGaji::create([
+                'karyawan_id'     => $karyawan->id,
+                'gaji_pokok'      => 0,
+                'uang_makan'      => $uangMakanMitra ? null : 35000,
+                'uang_transport'  => $uangMakanMitra ? null : 45000,
+                'persen_bpjs_kes' => 9.24,
+                'persen_bpjs_tk'  => 5.00,
+            ]);
+            $karyawan->refresh()->load('komponenGaji');
+        }
+
+        // Ambil UMR Sumatera Barat tahun berjalan (bisa diubah sesuai peraturan)
+        $umrTahunIni = config('cbn.umr_tahun_ini', 2994031);
+
+        return view('admin.komponen-gaji.edit', compact('karyawan', 'umrTahunIni'));
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // UPDATE - Simpan komponen gaji
+    // ─────────────────────────────────────────────────────────────────
+    public function update(Request $request, Karyawan $karyawan)
+    {
+        $rules = [
+            'gaji_pokok'      => 'required|numeric|min:0',
+            'persen_bpjs_kes' => 'required|numeric|min:0|max:100',
+            'persen_bpjs_tk'  => 'required|numeric|min:0|max:100',
+        ];
+
+        // Uang makan & transport hanya wajib jika dibayar CBN
+        if (!$karyawan->uang_makan_by_mitra) {
+            $rules['uang_makan']     = 'required|numeric|min:0';
+            $rules['uang_transport'] = 'required|numeric|min:0';
+        }
+
+        $request->validate($rules, [
+            'gaji_pokok.required'      => 'Gaji pokok wajib diisi.',
+            'gaji_pokok.numeric'       => 'Gaji pokok harus berupa angka.',
+            'gaji_pokok.min'           => 'Gaji pokok tidak boleh negatif.',
+            'uang_makan.required'      => 'Uang makan wajib diisi.',
+            'uang_transport.required'  => 'Uang transport wajib diisi.',
+            'persen_bpjs_kes.required' => 'Persentase BPJS Kesehatan wajib diisi.',
+            'persen_bpjs_tk.required'  => 'Persentase BPJS Ketenagakerjaan wajib diisi.',
+        ]);
+
+        $karyawan->komponenGaji()->updateOrCreate(
+            ['karyawan_id' => $karyawan->id],
+            [
+                'gaji_pokok'      => $request->gaji_pokok,
+                'uang_makan'      => $karyawan->uang_makan_by_mitra ? null : $request->uang_makan,
+                'uang_transport'  => $karyawan->uang_makan_by_mitra ? null : $request->uang_transport,
+                'persen_bpjs_kes' => $request->persen_bpjs_kes,
+                'persen_bpjs_tk'  => $request->persen_bpjs_tk,
+                'updated_by'      => Auth::id(),
+            ]
+        );
+
+        return redirect()
+            ->route('admin.komponen-gaji.index')
+            ->with('success', "Komponen gaji {$karyawan->nama} berhasil disimpan.");
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // UPDATE BULK - Update BPJS semua karyawan sekaligus
+    // ─────────────────────────────────────────────────────────────────
+    public function updateBulkBpjs(Request $request)
+    {
+        $request->validate([
+            'persen_bpjs_kes' => 'required|numeric|min:0|max:100',
+            'persen_bpjs_tk'  => 'required|numeric|min:0|max:100',
+        ]);
+
+        KomponenGaji::query()->update([
+            'persen_bpjs_kes' => $request->persen_bpjs_kes,
+            'persen_bpjs_tk'  => $request->persen_bpjs_tk,
+            'updated_by'      => Auth::id(),
+        ]);
+
+        return back()->with('success',
+            "Persentase BPJS semua karyawan berhasil diperbarui: " .
+            "Kesehatan {$request->persen_bpjs_kes}%, Ketenagakerjaan {$request->persen_bpjs_tk}%."
+        );
+    }
+}
