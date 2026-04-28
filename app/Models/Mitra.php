@@ -13,6 +13,7 @@ class Mitra extends Model
         'latitude',
         'longitude',
         'radius_meter',
+        'ip_public',
         'mitra_induk_id',
         'is_cabang',
     ];
