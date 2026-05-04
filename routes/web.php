@@ -8,8 +8,13 @@ use App\Http\Controllers\Admin\MitraController;
 use App\Http\Controllers\Admin\PenempatanController;
 use App\Http\Controllers\Admin\KomponenGajiController;
 use App\Http\Controllers\Admin\PenggajianController;
+use App\Http\Controllers\Admin\LaporanAbsensiController;
+use App\Http\Controllers\Admin\LaporanGajiController;
+use App\Http\Controllers\Admin\GajiMassalController;
 use App\Http\Controllers\Pimpinan\DashboardController as PimpinanDashboard;
 use App\Http\Controllers\Pimpinan\ApprovalController;
+use App\Http\Controllers\Pimpinan\MonitoringKehadiranController;
+use App\Http\Controllers\Pimpinan\MonitoringGajiController;
 use App\Http\Controllers\Karyawan\DashboardController as KaryawanDashboard;
 use App\Http\Controllers\Karyawan\AbsensiController;
 use App\Http\Controllers\Karyawan\PerizinanController;
@@ -62,12 +67,25 @@ Route::prefix('admin')->name('admin.')->middleware(['auth','role:admin'])->group
     Route::put ('komponen-gaji/{karyawan}',      [KomponenGajiController::class,'update'])       ->name('komponen-gaji.update');
     Route::post('komponen-gaji/bulk-bpjs',       [KomponenGajiController::class,'updateBulkBpjs'])->name('komponen-gaji.bulk-bpjs');
 
+    // Gaji Massal (Auto-fill)
+    Route::get ('gaji-massal',                 [GajiMassalController::class,'index'])           ->name('gaji-massal.index');
+    Route::post('gaji-massal/update-umr',       [GajiMassalController::class,'updateUmr'])         ->name('gaji-massal.update-umr');
+    Route::post('gaji-massal/update-spesialis', [GajiMassalController::class,'updateSpesialis'])   ->name('gaji-massal.update-spesialis');
+
     // Penggajian — PENTING: route statis (proses) harus SEBELUM route dinamis ({periodeGaji})
     Route::get ('penggajian',              [PenggajianController::class,'index'])     ->name('penggajian.index');
     Route::get ('penggajian/proses',       [PenggajianController::class,'create'])    ->name('penggajian.create');
     Route::post('penggajian/proses',       [PenggajianController::class,'proses'])    ->name('penggajian.proses');
     Route::get ('penggajian/slip/{slipGaji}', [PenggajianController::class,'detailSlip'])->name('penggajian.slip');
     Route::get ('penggajian/{periodeGaji}',[PenggajianController::class,'show'])      ->name('penggajian.show');
+
+    // Laporan
+    Route::prefix('laporan')->name('laporan.')->group(function () {
+        Route::get ('absensi',        [LaporanAbsensiController::class, 'index']) ->name('absensi.index');
+        Route::get ('absensi/export', [LaporanAbsensiController::class, 'export'])->name('absensi.export');
+        Route::get ('gaji',           [LaporanGajiController::class, 'index'])    ->name('gaji.index');
+        Route::get ('gaji/export',    [LaporanGajiController::class, 'export'])   ->name('gaji.export');
+    });
 });
 
 // ── PIMPINAN ──────────────────────────────────────────────────────────
@@ -75,14 +93,29 @@ Route::prefix('pimpinan')->name('pimpinan.')->middleware(['auth','role:pimpinan'
 
     Route::get('dashboard', [PimpinanDashboard::class,'index'])->name('dashboard');
 
+    // ── Monitoring Kehadiran ───────────────────────────────────────────
+    Route::prefix('monitoring-kehadiran')->name('monitoring.')->group(function () {
+        Route::get('/',           [MonitoringKehadiranController::class, 'index'])     ->name('index');
+        Route::get('/statistik',  [MonitoringKehadiranController::class, 'statistik']) ->name('statistik');
+        Route::get('/per-mitra',  [MonitoringKehadiranController::class, 'perMitra'])  ->name('per-mitra');
+        Route::get('/export',     [MonitoringKehadiranController::class, 'export'])    ->name('export');
+        Route::get('/{karyawan}', [MonitoringKehadiranController::class, 'detail'])    ->name('detail');
+    });
+
+    // ── Monitoring Gaji ──────────────────────────────────────────────
+    Route::prefix('monitoring-gaji')->name('monitoring-gaji.')->group(function () {
+        Route::get('/',       [MonitoringGajiController::class, 'index'])  ->name('index');
+        Route::get('/export', [MonitoringGajiController::class, 'export']) ->name('export');
+    });
+
     Route::get  ('approval',                              [ApprovalController::class,'index'])           ->name('approval.index');
     Route::get  ('approval/perizinan/{perizinan}',        [ApprovalController::class,'showPerizinan'])   ->name('approval.perizinan.show');
     Route::patch('approval/perizinan/{perizinan}/setuju', [ApprovalController::class,'approvePerizinan'])->name('approval.perizinan.setuju');
     Route::patch('approval/perizinan/{perizinan}/tolak',  [ApprovalController::class,'tolakPerizinan'])  ->name('approval.perizinan.tolak');
     Route::patch('approval/lembur/{lembur}/setuju',       [ApprovalController::class,'approveLembur'])   ->name('approval.lembur.setuju');
     Route::patch('approval/lembur/{lembur}/tolak',        [ApprovalController::class,'tolakLembur'])     ->name('approval.lembur.tolak');
-    Route::patch('approval/dinas/{dinasLuar}/setuju',     [ApprovalController::class,'approveDinas'])    ->name('approval.dinas.setuju');
-    Route::patch('approval/dinas/{dinasLuar}/tolak',      [ApprovalController::class,'tolakDinas'])      ->name('approval.dinas.tolak');
+    Route::patch('approval/dinas_luar/{dinasLuar}/setuju', [ApprovalController::class,'approveDinas'])->name('approval.dinas_luar.setuju');
+    Route::patch('approval/dinas_luar/{dinasLuar}/tolak',  [ApprovalController::class,'tolakDinas'])->name('approval.dinas_luar.tolak');
 });
 
 // ── KARYAWAN ──────────────────────────────────────────────────────────

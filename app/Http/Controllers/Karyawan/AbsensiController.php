@@ -4,35 +4,56 @@ namespace App\Http\Controllers\Karyawan;
 
 use App\Http\Controllers\Controller;
 use App\Models\Absensi;
+use App\Models\Shift;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AbsensiController extends Controller
 {
-    // ─────────────────────────────────────────────────────────────────
-    // HALAMAN ABSENSI — tampilkan status + form absen masuk/pulang
-    // ─────────────────────────────────────────────────────────────────
     public function index()
     {
         $karyawan = Auth::user()->karyawan;
         $today    = Carbon::today();
-
-        // Cari penempatan aktif karyawan
         $penempatan = $karyawan->penempatanAktif()->with('mitra')->first();
 
-        // Absensi hari ini
         $absensi = Absensi::where('karyawan_id', $karyawan->id)
                           ->whereDate('tanggal', $today)
+                          ->with('shift')
                           ->first();
 
-        // Riwayat 30 hari terakhir
+        if (!$absensi || $absensi->waktu_pulang) {
+            $yesterdayAbsensi = Absensi::where('karyawan_id', $karyawan->id)
+                                      ->whereDate('tanggal', Carbon::yesterday())
+                                      ->whereNull('waktu_pulang')
+                                      ->with('shift')
+                                      ->first();
+            if ($yesterdayAbsensi && $yesterdayAbsensi->shift?->is_lintas_hari) {
+                $absensi = $yesterdayAbsensi;
+            }
+        }
+
+        // Cek apakah sudah boleh pulang (minimal 15 menit sebelum shift selesai)
+        $bolehPulang = true;
+        $pesanBelumPulang = null;
+        
+        if ($absensi && $absensi->shift && !$absensi->waktu_pulang) {
+            $jamSelesai = Carbon::parse($absensi->tanggal->format('Y-m-d') . ' ' . $absensi->shift->jam_selesai);
+            if ($absensi->shift->is_lintas_hari) $jamSelesai->addDay();
+            
+            $batasPulang = $jamSelesai->copy()->subMinutes(15);
+            $bolehPulang = Carbon::now()->gte($batasPulang);
+            
+            if (!$bolehPulang) {
+                $pesanBelumPulang = "Shift selesai jam {$absensi->shift->jam_selesai}. Kamu baru bisa absen pulang 15 menit sebelum jam tersebut.";
+            }
+        }
+
         $riwayat = Absensi::where('karyawan_id', $karyawan->id)
                           ->whereDate('tanggal', '>=', $today->copy()->subDays(29))
                           ->orderByDesc('tanggal')
                           ->get();
 
-        // Rekap bulan ini
         $rekapBulan = Absensi::where('karyawan_id', $karyawan->id)
                              ->whereMonth('tanggal', $today->month)
                              ->whereYear('tanggal', $today->year)
@@ -41,13 +62,10 @@ class AbsensiController extends Controller
                              ->pluck('total', 'status');
 
         return view('karyawan.absensi.index', compact(
-            'karyawan', 'penempatan', 'absensi', 'riwayat', 'rekapBulan'
+            'karyawan', 'penempatan', 'absensi', 'riwayat', 'rekapBulan', 'bolehPulang', 'pesanBelumPulang'
         ));
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // ABSEN MASUK
-    // ─────────────────────────────────────────────────────────────────
     public function absenMasuk(Request $request)
     {
         $request->validate([
@@ -59,220 +77,130 @@ class AbsensiController extends Controller
         $now      = Carbon::now();
         $today    = Carbon::today();
 
-        // ── Cek sudah absen hari ini ──────────────────────────────────
+        $penempatan = $karyawan->penempatanAktif()->with('mitra')->first();
+        if (!$penempatan) return back()->with('error', 'Penempatan aktif tidak ditemukan.');
+        
+        $mitra = $penempatan->mitra;
+        $jarak = $this->hitungJarak((float)$request->latitude, (float)$request->longitude, (float)$mitra->latitude, (float)$mitra->longitude);
+
+        if ($jarak > $mitra->radius_meter) {
+            return back()->with('error', "Lokasi tidak valid. Kamu berada " . number_format($jarak, 0) . "m dari " . $mitra->nama_mitra);
+        }
+
+        $shifts = Shift::where('mitra_id', $mitra->id)->get();
+        $shiftTerdeteksi = null;
+
+        foreach ($shifts as $s) {
+            if ($s->isInWindow($now)) {
+                $shiftTerdeteksi = $s;
+                break;
+            }
+        }
+
+        if (!$shiftTerdeteksi) {
+            return back()->with('error', 'Waktu absensi tidak sesuai jadwal shift manapun.');
+        }
+
         $existing = Absensi::where('karyawan_id', $karyawan->id)
                            ->whereDate('tanggal', $today)
+                           ->where('shift_id', $shiftTerdeteksi->id)
                            ->first();
 
-        if ($existing && $existing->waktu_masuk) {
-            return back()->with('error', 'Kamu sudah melakukan absen masuk hari ini.');
+        if ($existing) {
+            return back()->with('error', 'Kamu sudah absen masuk hari ini.');
         }
 
-        // ── Cek penempatan aktif ──────────────────────────────────────
-        $penempatan = $karyawan->penempatanAktif()->with('mitra')->first();
+        $jamMulai = Carbon::today()->setTimeFromTimeString($shiftTerdeteksi->jam_mulai);
+        $batasToleransi = $jamMulai->copy()->addMinutes($shiftTerdeteksi->toleransi_menit);
+        $isTelat = $now->gt($batasToleransi);
+        $status  = $isTelat ? 'telat' : 'hadir';
 
-        if (! $penempatan) {
-            return back()->with('error', 'Kamu belum memiliki penempatan aktif. Hubungi admin.');
-        }
-
-        $mitra = $penempatan->mitra;
-
-        // ── Validasi IP Public (WAJIB — anti-kecurangan) ──────────────
-        // IP otomatis terbaca dari request, karyawan tidak bisa manipulasi
-        $ipKaryawan = $request->header('X-Forwarded-For')
-                        ? trim(explode(',', $request->header('X-Forwarded-For'))[0])
-                        : $request->ip();
-
-        if ($ipKaryawan !== $mitra->ip_public) {
-            return back()->with('error',
-                "Absensi gagal: Kamu tidak terhubung ke jaringan WiFi {$mitra->nama_mitra}. " .
-                "Absensi hanya bisa dilakukan dari jaringan kantor."
-            );
-        }
-
-        // ── Validasi GPS (Haversine formula) ─────────────────────────
-        $jarak = $this->hitungJarak(
-            (float) $request->latitude,
-            (float) $request->longitude,
-            (float) $mitra->latitude,
-            (float) $mitra->longitude
-        );
-
-        if ($jarak > $mitra->radius_meter) {
-            $jarakFormatted = number_format($jarak, 0, ',', '.');
-            return back()->with('error',
-                "Absensi gagal: Kamu berada {$jarakFormatted} m dari {$mitra->nama_mitra}. " .
-                "Maksimal radius adalah {$mitra->radius_meter} m."
-            );
-        }
-
-        // ── Cek keterlambatan (khusus karyawan tetap) ─────────────────
-        $isTelat = false;
-        if ($karyawan->isTetap()) {
-            $batasTelat = Carbon::today()->setTimeFromTimeString(config('cbn.batas_telat', '08:15:00'));
-            $isTelat    = $now->gt($batasTelat);
-        }
-
-        // ── Simpan / Update absensi ────────────────────────────────────
-        $statusAwal = $isTelat ? 'telat' : 'hadir';
-
-        Absensi::updateOrCreate(
-            ['karyawan_id' => $karyawan->id, 'tanggal' => $today],
-            [
-                'mitra_id'    => $mitra->id,
-                'waktu_masuk' => $now,
-                'lat_masuk'   => $request->latitude,
-                'long_masuk'  => $request->longitude,
-                'ip_masuk'    => $ipKaryawan,
-                'status'      => $statusAwal,
-                'is_telat'    => $isTelat,
-            ]
-        );
-
-        $pesan = $isTelat
-            ? 'Absen masuk berhasil tercatat. Kamu terlambat hari ini.'
-            : 'Absen masuk berhasil! Selamat bekerja.';
-
-        return back()->with($isTelat ? 'warning' : 'success', $pesan);
-    }
-
-    // ─────────────────────────────────────────────────────────────────
-    // ABSEN PULANG
-    // ─────────────────────────────────────────────────────────────────
-    public function absenPulang(Request $request)
-    {
-        $request->validate([
-            'latitude'  => 'required|numeric',
-            'longitude' => 'required|numeric',
+        Absensi::create([
+            'karyawan_id' => $karyawan->id,
+            'mitra_id'    => $mitra->id,
+            'shift_id'    => $shiftTerdeteksi->id,
+            'tanggal'     => $today,
+            'waktu_masuk' => $now,
+            'lat_masuk'   => $request->latitude,
+            'long_masuk'  => $request->longitude,
+            'status'      => $status,
+            'is_telat'    => $isTelat,
+            'ip_masuk'    => $request->ip()
         ]);
 
+        return back()->with($isTelat ? 'warning' : 'success', 'Absen masuk berhasil.');
+    }
+
+    public function absenPulang(Request $request)
+    {
+        $request->validate(['latitude' => 'required|numeric', 'longitude' => 'required|numeric']);
+        
         $karyawan = Auth::user()->karyawan;
         $now      = Carbon::now();
-        $today    = Carbon::today();
 
-        // ── Cek absensi masuk hari ini ────────────────────────────────
         $absensi = Absensi::where('karyawan_id', $karyawan->id)
-                          ->whereDate('tanggal', $today)
+                          ->where('waktu_pulang', null)
+                          ->with('shift')
+                          ->latest()
                           ->first();
 
-        if (! $absensi || ! $absensi->waktu_masuk) {
-            return back()->with('error', 'Kamu belum melakukan absen masuk hari ini.');
+        if (!$absensi) {
+            return back()->with('error', 'Belum melakukan absen masuk.');
         }
 
-        if ($absensi->waktu_pulang) {
-            return back()->with('error', 'Kamu sudah melakukan absen pulang hari ini.');
+        $shift = $absensi->shift;
+        if ($shift) {
+            $jamSelesai = Carbon::parse($absensi->tanggal->format('Y-m-d') . ' ' . $shift->jam_selesai);
+            if ($shift->is_lintas_hari) $jamSelesai->addDay();
+            
+            if ($now->lt($jamSelesai->copy()->subMinutes(15))) {
+                return back()->with('error', "Belum waktunya pulang. Shift baru selesai jam {$shift->jam_selesai}.");
+            }
         }
 
-        // ── Cek penempatan aktif ──────────────────────────────────────
         $penempatan = $karyawan->penempatanAktif()->with('mitra')->first();
-        $mitra      = $penempatan?->mitra ?? \App\Models\Mitra::find($absensi->mitra_id);
-
-        if (! $mitra) {
-            return back()->with('error', 'Data mitra tidak ditemukan. Hubungi admin.');
-        }
-
-        // ── Validasi IP Public (WAJIB — anti-kecurangan) ──────────────
-        $ipKaryawan = $request->header('X-Forwarded-For')
-                        ? trim(explode(',', $request->header('X-Forwarded-For'))[0])
-                        : $request->ip();
-
-        if ($ipKaryawan !== $mitra->ip_public) {
-            return back()->with('error',
-                "Absensi pulang gagal: Kamu tidak terhubung ke jaringan WiFi {$mitra->nama_mitra}. " .
-                "Absensi hanya bisa dilakukan dari jaringan kantor."
-            );
-        }
-
-        // ── Validasi GPS ──────────────────────────────────────────────
-        $jarak = $this->hitungJarak(
-            (float) $request->latitude,
-            (float) $request->longitude,
-            (float) $mitra->latitude,
-            (float) $mitra->longitude
-        );
+        $mitra = $penempatan->mitra;
+        $jarak = $this->hitungJarak((float)$request->latitude, (float)$request->longitude, (float)$mitra->latitude, (float)$mitra->longitude);
 
         if ($jarak > $mitra->radius_meter) {
-            $jarakFormatted = number_format($jarak, 0, ',', '.');
-            return back()->with('error',
-                "Absensi pulang gagal: Kamu berada {$jarakFormatted} m dari {$mitra->nama_mitra}. " .
-                "Maksimal radius adalah {$mitra->radius_meter} m."
-            );
+            return back()->with('error', "Lokasi tidak valid untuk absen pulang.");
         }
 
-        // ── Update absensi pulang ─────────────────────────────────────
         $absensi->update([
             'waktu_pulang' => $now,
             'lat_pulang'   => $request->latitude,
             'long_pulang'  => $request->longitude,
-            'ip_pulang'    => $ipKaryawan,
+            'ip_pulang'    => $request->ip()
         ]);
 
-        $durasi = $absensi->durasiMenit();
-        $jam    = intdiv($durasi, 60);
-        $menit  = $durasi % 60;
-
-        return back()->with('success',
-            "Absen pulang berhasil! Durasi kerja hari ini: {$jam} jam {$menit} menit."
-        );
+        return back()->with('success', 'Absen pulang berhasil. Selamat istirahat!');
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // RIWAYAT ABSENSI (halaman terpisah dengan filter bulan)
-    // ─────────────────────────────────────────────────────────────────
     public function riwayat(Request $request)
     {
         $karyawan = Auth::user()->karyawan;
-        $today    = Carbon::today();
-
-        $bulan = (int) $request->get('bulan', $today->month);
-        $tahun = (int) $request->get('tahun', $today->year);
+        $bulan = $request->get('bulan', now()->month);
+        $tahun = $request->get('tahun', now()->year);
 
         $riwayat = Absensi::where('karyawan_id', $karyawan->id)
                           ->whereMonth('tanggal', $bulan)
                           ->whereYear('tanggal', $tahun)
                           ->orderByDesc('tanggal')
-                          ->with('mitra')
+                          ->with(['mitra', 'shift'])
                           ->get();
 
         $rekapBulan = $riwayat->groupBy('status')->map->count();
 
-        // Hitung jumlah hari kerja di bulan tersebut (Senin–Sabtu, hari non-minggu)
-        $hariKerja = 0;
-        $ptr = Carbon::create($tahun, $bulan, 1)->startOfMonth();
-        $end = $ptr->copy()->endOfMonth();
-        while ($ptr->lte($end)) {
-            if (! $ptr->isSunday()) $hariKerja++;
-            $ptr->addDay();
-        }
-
-        $daftarBulan = collect(range(1, 12))->map(fn($b) => [
-            'value' => $b,
-            'label' => Carbon::create(null, $b)->translatedFormat('F'),
-        ]);
-
-        $daftarTahun = collect(range(now()->year - 2, now()->year));
-
-        return view('karyawan.absensi.riwayat', compact(
-            'karyawan', 'riwayat', 'rekapBulan',
-            'bulan', 'tahun', 'hariKerja',
-            'daftarBulan', 'daftarTahun'
-        ));
+        return view('karyawan.absensi.riwayat', compact('karyawan', 'riwayat', 'rekapBulan', 'bulan', 'tahun'));
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // HELPER: Haversine distance (meter)
-    // ─────────────────────────────────────────────────────────────────
-    private function hitungJarak(float $lat1, float $lon1, float $lat2, float $lon2): float
+    private function hitungJarak($lat1, $lon1, $lat2, $lon2)
     {
-        $R    = 6371000; // radius bumi dalam meter
+        $R = 6371000;
         $dLat = deg2rad($lat2 - $lat1);
         $dLon = deg2rad($lon2 - $lon1);
-
-        $a = sin($dLat / 2) ** 2
-           + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
-
-        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
-
+        $a = sin($dLat/2) * sin($dLat/2) + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon/2) * sin($dLon/2);
+        $c = 2 * atan2(sqrt($a), sqrt(1-$a));
         return $R * $c;
     }
 }

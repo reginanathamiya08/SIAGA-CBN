@@ -14,9 +14,6 @@ use Illuminate\Support\Facades\DB;
 
 class PenggajianController extends Controller
 {
-    // ─────────────────────────────────────────────────────────────────
-    // INDEX - Daftar riwayat periode penggajian
-    // ─────────────────────────────────────────────────────────────────
     public function index()
     {
         $periode = PeriodeGaji::withCount('slipGaji')
@@ -26,20 +23,15 @@ class PenggajianController extends Controller
         return view('admin.penggajian.index', compact('periode'));
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // CREATE - Form proses penggajian baru
-    // ─────────────────────────────────────────────────────────────────
     public function create()
     {
         $bulanIni  = now()->month;
         $tahunIni  = now()->year;
 
-        // Cek apakah bulan ini sudah ada periode
         $sudahAda = PeriodeGaji::whereMonth('tanggal_mulai', $bulanIni)
                                ->whereYear('tanggal_mulai', $tahunIni)
                                ->exists();
 
-        // Karyawan aktif yang punya gaji pokok
         $karyawan = Karyawan::with(['komponenGaji', 'user'])
                             ->where('is_active', true)
                             ->whereHas('komponenGaji', fn($q) => $q->where('gaji_pokok', '>', 0))
@@ -47,7 +39,6 @@ class PenggajianController extends Controller
                             ->orderBy('nama')
                             ->get();
 
-        // Karyawan yang belum punya komponen gaji / gaji pokok 0
         $karyawanBelumAda = Karyawan::where('is_active', true)
                                     ->where(function ($q) {
                                         $q->whereDoesntHave('komponenGaji')
@@ -61,9 +52,6 @@ class PenggajianController extends Controller
         ));
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // PROSES - Hitung dan simpan gaji semua karyawan
-    // ─────────────────────────────────────────────────────────────────
     public function proses(Request $request)
     {
         $request->validate([
@@ -74,26 +62,21 @@ class PenggajianController extends Controller
         $bulan = (int) $request->bulan;
         $tahun = (int) $request->tahun;
 
-        // Tanggal mulai & selesai periode
         $tanggalMulai   = Carbon::create($tahun, $bulan, 1)->startOfMonth();
         $tanggalSelesai = $tanggalMulai->copy()->endOfMonth();
-        $namaPeriode    = $tanggalMulai->translatedFormat('F Y'); // "Juli 2025"
+        $namaPeriode    = $tanggalMulai->translatedFormat('F Y');
 
-        // Cegah proses ganda untuk bulan yang sama
         $sudahAda = PeriodeGaji::whereMonth('tanggal_mulai', $bulan)
                                ->whereYear('tanggal_mulai', $tahun)
                                ->exists();
 
         if ($sudahAda) {
-            return back()->with('error',
-                "Penggajian {$namaPeriode} sudah pernah diproses."
-            );
+            return back()->with('error', "Penggajian {$namaPeriode} sudah pernah diproses.");
         }
 
         DB::beginTransaction();
 
         try {
-            // 1. Buat periode gaji (status: proses)
             $periode = PeriodeGaji::create([
                 'nama_periode'    => $namaPeriode,
                 'tanggal_mulai'   => $tanggalMulai->toDateString(),
@@ -101,24 +84,20 @@ class PenggajianController extends Controller
                 'status'          => 'proses',
             ]);
 
-            // 2. Ambil semua karyawan aktif yang punya gaji pokok
             $karyawanList = Karyawan::with('komponenGaji')
                                     ->where('is_active', true)
                                     ->whereHas('komponenGaji',
                                         fn($q) => $q->where('gaji_pokok', '>', 0))
                                     ->get();
 
-            // 3. Hitung hari kerja di bulan tersebut (Senin–Jumat)
             $jumlahHariKerja = $this->hitungHariKerja($bulan, $tahun);
 
-            // 4. Proses slip per karyawan
             foreach ($karyawanList as $karyawan) {
                 $this->buatSlipKaryawan(
                     $karyawan, $periode, $bulan, $tahun, $jumlahHariKerja
                 );
             }
 
-            // 5. Update status periode ke final & simpan waktu finalisasi
             $periode->update([
                 'status'        => 'final',
                 'finalisasi_at' => now(),
@@ -129,10 +108,7 @@ class PenggajianController extends Controller
 
             return redirect()
                 ->route('admin.penggajian.show', $periode->id)
-                ->with('success',
-                    "Penggajian {$namaPeriode} berhasil diproses. " .
-                    "{$karyawanList->count()} slip gaji dibuat."
-                );
+                ->with('success', "Penggajian {$namaPeriode} berhasil diproses.");
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -140,9 +116,6 @@ class PenggajianController extends Controller
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // SHOW - Detail periode + daftar semua slip gaji
-    // ─────────────────────────────────────────────────────────────────
     public function show(PeriodeGaji $periodeGaji)
     {
         $slipGaji = SlipGaji::with('karyawan.user')
@@ -162,18 +135,12 @@ class PenggajianController extends Controller
         return view('admin.penggajian.show', compact('periodeGaji', 'slipGaji', 'ringkasan'));
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // DETAIL SLIP - Lihat satu slip gaji (admin view)
-    // ─────────────────────────────────────────────────────────────────
     public function detailSlip(SlipGaji $slipGaji)
     {
         $slipGaji->load(['karyawan.user', 'karyawan.komponenGaji', 'periodeGaji']);
         return view('admin.penggajian.slip', compact('slipGaji'));
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // PRIVATE: Buat slip gaji satu karyawan
-    // ─────────────────────────────────────────────────────────────────
     private function buatSlipKaryawan(
         Karyawan $karyawan,
         PeriodeGaji $periode,
@@ -183,7 +150,6 @@ class PenggajianController extends Controller
     ): void {
         $kg = $karyawan->komponenGaji;
 
-        // ── Rekap absensi bulan tersebut ─────────────────────────────
         $absensi = Absensi::where('karyawan_id', $karyawan->id)
                           ->whereMonth('tanggal', $bulan)
                           ->whereYear('tanggal', $tahun)
@@ -193,61 +159,37 @@ class PenggajianController extends Controller
         $totalTelat = $absensi->where('is_telat', true)->count();
         $totalIzin  = $absensi->whereIn('status', ['izin', 'sakit'])->count();
         $totalCuti  = $absensi->where('status', 'cuti')->count();
-
-        // Hari tidak tercatat sama sekali = alfa
         $totalAlfa  = max(0, $jumlahHariKerja - $absensi->count());
 
-        // ── Hitung pendapatan ─────────────────────────────────────────
-
         $gajiPokok     = (float) $kg->gaji_pokok;
-        $uangMakan     = 0.0;
-        $uangTransport = 0.0;
+        
+        // Perhitungan untuk SEMUA Karyawan (Tanpa cek mitra)
+        $hariDibayar   = $totalHadir + $totalIzin;
+        $uangMakan     = (float) ($kg->uang_makan     ?? 35000) * $hariDibayar;
+        $uangTransport = (float) ($kg->uang_transport ?? 45000) * $hariDibayar;
 
-        if (!$karyawan->uang_makan_by_mitra) {
-            // Dibayar untuk hari hadir + izin + sakit
-            // Cuti: uang makan dipotong (tidak dibayar)
-            $hariDibayar   = $totalHadir + $totalIzin;
-            $uangMakan     = (float) ($kg->uang_makan     ?? 0) * $hariDibayar;
-            $uangTransport = (float) ($kg->uang_transport ?? 0) * $hariDibayar;
-        }
-
-        // ── Hitung potongan ───────────────────────────────────────────
-
-        // BPJS dihitung dari gaji pokok
+        // BPJS
         $potonganBpjsKes = $gajiPokok * ((float) $kg->persen_bpjs_kes / 100);
         $potonganBpjsTk  = $gajiPokok * ((float) $kg->persen_bpjs_tk  / 100);
 
-        // Potongan telat: uang makan + transport per hari (karyawan tetap saja)
+        // Potongan Telat
         $potonganTelat = 0.0;
-        if ($karyawan->isTetap() && !$karyawan->uang_makan_by_mitra) {
-            $potPerHari   = config('cbn.uang_makan_harian', 35000)
-                          + config('cbn.uang_transport_harian', 45000);
+        if ($karyawan->isTetap()) {
+            $potPerHari   = ($kg->uang_makan ?? 35000) + ($kg->uang_transport ?? 45000);
             $potonganTelat = $totalTelat * $potPerHari;
         }
 
-        // Potongan izin (cuti): uang makan 35.000/hari
-        $potonganIzin = 0.0;
-        if (!$karyawan->uang_makan_by_mitra) {
-            $potonganIzin = $totalCuti * config('cbn.potongan_cuti_per_hari', 35000);
-        }
+        // Potongan Cuti
+        $potonganIzin = $totalCuti * ($kg->uang_makan ?? 35000);
 
-        // Potongan alfa: uang makan + transport per hari
-        $potonganAlfa = 0.0;
-        if (!$karyawan->uang_makan_by_mitra) {
-            $potPerHari  = config('cbn.uang_makan_harian', 35000)
-                         + config('cbn.uang_transport_harian', 45000);
-            $potonganAlfa = $totalAlfa * $potPerHari;
-        }
+        // Potongan Alfa
+        $potPerHariAlfa = ($kg->uang_makan ?? 35000) + ($kg->uang_transport ?? 45000);
+        $potonganAlfa   = $totalAlfa * $potPerHariAlfa;
 
-        // Total potongan (gabung alfa ke potongan_izin sesuai kolom tabel)
-        $totalPotongan = $potonganBpjsKes + $potonganBpjsTk
-                       + $potonganTelat + $potonganIzin + $potonganAlfa;
+        $totalPotongan = $potonganBpjsKes + $potonganBpjsTk + $potonganTelat + $potonganIzin + $potonganAlfa;
 
-        $gajiBersih = max(0.0,
-            ($gajiPokok + $uangMakan + $uangTransport) - $totalPotongan
-        );
+        $gajiBersih = max(0.0, ($gajiPokok + $uangMakan + $uangTransport) - $totalPotongan);
 
-        // ── Simpan slip gaji ──────────────────────────────────────────
         SlipGaji::create([
             'karyawan_id'       => $karyawan->id,
             'periode_id'        => $periode->id,
@@ -260,7 +202,7 @@ class PenggajianController extends Controller
             'total_izin'        => $totalIzin,
             'total_cuti'        => $totalCuti,
             'potongan_telat'    => $potonganTelat,
-            'potongan_izin'     => $potonganIzin + $potonganAlfa, // gabung ke satu kolom
+            'potongan_izin'     => $potonganIzin + $potonganAlfa,
             'potongan_bpjs_kes' => $potonganBpjsKes,
             'potongan_bpjs_tk'  => $potonganBpjsTk,
             'total_potongan'    => $totalPotongan,
@@ -270,18 +212,15 @@ class PenggajianController extends Controller
         ]);
     }
 
-    // ── Hitung hari kerja Senin-Jumat dalam satu bulan ───────────────
     private function hitungHariKerja(int $bulan, int $tahun): int
     {
         $current = Carbon::create($tahun, $bulan, 1);
         $akhir   = $current->copy()->endOfMonth();
         $jumlah  = 0;
-
         while ($current->lte($akhir)) {
             if ($current->isWeekday()) $jumlah++;
             $current->addDay();
         }
-
         return $jumlah;
     }
 }

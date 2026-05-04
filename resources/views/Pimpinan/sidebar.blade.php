@@ -37,12 +37,16 @@
                     <span x-show="sidebarOpen" x-transition.opacity class="text-[11px] font-black uppercase tracking-wider">Dashboard</span>
                 </a>
 
-                <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:bg-white/10 hover:text-white transition-all">
+                <a href="{{ route('pimpinan.monitoring.index') }}"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all
+                          {{ request()->routeIs('pimpinan.monitoring.*') ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10 hover:text-white' }}">
                     <i data-lucide="calendar-check" class="w-4 h-4 shrink-0"></i>
                     <span x-show="sidebarOpen" x-transition.opacity class="text-[11px] font-black uppercase tracking-wider">Monitoring Kehadiran</span>
                 </a>
 
-                <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:bg-white/10 hover:text-white transition-all">
+                <a href="{{ route('pimpinan.monitoring-gaji.index') }}"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all
+                          {{ request()->routeIs('pimpinan.monitoring-gaji.*') ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10 hover:text-white' }}">
                     <i data-lucide="bar-chart-2" class="w-4 h-4 shrink-0"></i>
                     <span x-show="sidebarOpen" x-transition.opacity class="text-[11px] font-black uppercase tracking-wider">Monitoring Gaji</span>
                 </a>

@@ -18,11 +18,13 @@
        :class="sidebarOpen?'w-64':'w-16'">
 
     <div class="flex items-center gap-3 px-4 py-5 border-b border-white/10">
-        <div class="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center shrink-0">
-            <i data-lucide="building-2" class="w-4 h-4 text-white"></i>
+        <div class="w-12 h-12 rounded-x1 overflow-hidden bg-white/10 flex items-center justify-center shrink-0">
+            <img src="{{ asset('image/logo_cbn.jpg') }}" 
+                alt="Logo PT CBN" 
+                class="w-full h-full object-contain">
         </div>
         <div x-show="sidebarOpen" x-transition.opacity>
-            <p class="text-[11px] font-black uppercase tracking-widest text-white/90 leading-none">PT CBN</p>
+            <p class="text-[12px] font-black uppercase tracking-widest text-white/90 leading-none">PT Citra Bangun Nagari</p>
             <p class="text-[9px] text-white/50 font-medium mt-0.5">Admin Panel</p>
         </div>
     </div>
@@ -72,6 +74,7 @@
                 <i data-lucide="wallet" class="w-4 h-4 shrink-0"></i>
                 <span x-show="sidebarOpen" x-transition.opacity class="text-[11px] font-black uppercase tracking-wider">Komponen Gaji</span>
             </a>
+
             <a href="{{ route('admin.penggajian.index') }}"
                class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all
                       {{ request()->routeIs('admin.penggajian.*') ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10 hover:text-white' }}">
@@ -84,11 +87,15 @@
             <p class="text-[9px] font-black text-white/30 uppercase tracking-widest">Laporan</p>
         </div>
         <div class="px-3 space-y-0.5">
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:bg-white/10 hover:text-white transition-all">
+            <a href="{{ route('admin.laporan.absensi.index') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all
+                      {{ request()->routeIs('admin.laporan.absensi.*') ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10 hover:text-white' }}">
                 <i data-lucide="file-text" class="w-4 h-4 shrink-0"></i>
                 <span x-show="sidebarOpen" x-transition.opacity class="text-[11px] font-black uppercase tracking-wider">Laporan Absensi</span>
             </a>
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:bg-white/10 hover:text-white transition-all">
+            <a href="{{ route('admin.laporan.gaji.index') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all
+                      {{ request()->routeIs('admin.laporan.gaji.*') ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10 hover:text-white' }}">
                 <i data-lucide="bar-chart-2" class="w-4 h-4 shrink-0"></i>
                 <span x-show="sidebarOpen" x-transition.opacity class="text-[11px] font-black uppercase tracking-wider">Laporan Gaji</span>
             </a>

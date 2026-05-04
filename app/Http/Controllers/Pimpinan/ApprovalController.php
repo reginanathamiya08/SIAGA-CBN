@@ -17,32 +17,42 @@ use Illuminate\Support\Facades\Mail;
 class ApprovalController extends Controller
 {
     // ─────────────────────────────────────────────────────────────────
-    // INDEX - Semua pengajuan masuk (perizinan + lembur + dinas luar)
+    // INDEX - Semua pengajuan masuk dengan filter terpadu
     // ─────────────────────────────────────────────────────────────────
     public function index(Request $request)
     {
         $tipe   = $request->get('tipe', 'perizinan');
         $status = $request->get('status', 'menunggu');
+        $jenis  = $request->get('jenis', 'semua'); // Filter baru: tetap/kontrak/semua
+
+        // Base Query builder untuk filter jenis karyawan
+        $filterJenis = function($q) use ($jenis) {
+            if ($jenis !== 'semua') {
+                $q->whereHas('karyawan', fn($query) => $query->where('jenis_karyawan', $jenis));
+            }
+        };
 
         // Perizinan
         $perizinan = Perizinan::with('karyawan')
+            ->where($filterJenis)
             ->when($status !== 'semua', fn($q) => $q->where('status_approval', $status))
             ->orderBy('created_at', 'desc')
-            ->paginate(10, ['*'], 'page_perizinan');
+            ->paginate(10, ['*'], 'page_p');
 
         // Lembur
         $lembur = Lembur::with('karyawan')
+            ->where($filterJenis)
             ->when($status !== 'semua', fn($q) => $q->where('status_approval', $status))
             ->orderBy('created_at', 'desc')
-            ->paginate(10, ['*'], 'page_lembur');
+            ->paginate(10, ['*'], 'page_l');
 
         // Dinas Luar
         $dinasLuar = DinasLuar::with('karyawan')
+            ->where($filterJenis)
             ->when($status !== 'semua', fn($q) => $q->where('status_approval', $status))
             ->orderBy('created_at', 'desc')
-            ->paginate(10, ['*'], 'page_dinas');
+            ->paginate(10, ['*'], 'page_d');
 
-        // Jumlah menunggu untuk badge
         $jumlahMenunggu = [
             'perizinan' => Perizinan::where('status_approval', 'menunggu')->count(),
             'lembur'    => Lembur::where('status_approval', 'menunggu')->count(),
@@ -51,13 +61,10 @@ class ApprovalController extends Controller
 
         return view('pimpinan.approval.index', compact(
             'perizinan', 'lembur', 'dinasLuar',
-            'jumlahMenunggu', 'tipe', 'status'
+            'jumlahMenunggu', 'tipe', 'status', 'jenis'
         ));
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // DETAIL PERIZINAN
-    // ─────────────────────────────────────────────────────────────────
     public function showPerizinan(Perizinan $perizinan)
     {
         $perizinan->load('karyawan.user');
@@ -65,7 +72,7 @@ class ApprovalController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // APPROVE PERIZINAN
+    // PERIZINAN
     // ─────────────────────────────────────────────────────────────────
     public function approvePerizinan(Request $request, Perizinan $perizinan)
     {
@@ -77,31 +84,17 @@ class ApprovalController extends Controller
             'status_approval' => 'disetujui',
             'approved_by'     => Auth::user()->id,
             'approved_at'     => now(),
-            'alasan_tolak'    => null,
         ]);
 
-        // Proses efek sesuai jenis izin
         $this->prosesEfekPerizinan($perizinan);
-
-        // Kirim email notifikasi ke karyawan
         $this->kirimEmailPerizinan($perizinan, 'disetujui');
 
-        return back()->with('success',
-            "Pengajuan {$perizinan->labelJenis()} {$perizinan->karyawan->nama} berhasil disetujui."
-        );
+        return back()->with('success', "Pengajuan {$perizinan->labelJenis()} {$perizinan->karyawan->nama} berhasil disetujui.");
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // TOLAK PERIZINAN
-    // ─────────────────────────────────────────────────────────────────
     public function tolakPerizinan(Request $request, Perizinan $perizinan)
     {
-        $request->validate([
-            'alasan_tolak' => 'required|string|min:10|max:500',
-        ], [
-            'alasan_tolak.required' => 'Alasan penolakan wajib diisi.',
-            'alasan_tolak.min'      => 'Alasan penolakan minimal 10 karakter.',
-        ]);
+        $request->validate(['alasan_tolak' => 'required|string|min:5|max:500']);
 
         if ($perizinan->status_approval !== 'menunggu') {
             return back()->with('error', 'Pengajuan ini sudah diproses sebelumnya.');
@@ -114,16 +107,13 @@ class ApprovalController extends Controller
             'alasan_tolak'    => $request->alasan_tolak,
         ]);
 
-        // Kirim email notifikasi ke karyawan
         $this->kirimEmailPerizinan($perizinan, 'ditolak', $request->alasan_tolak);
 
-        return back()->with('success',
-            "Pengajuan {$perizinan->labelJenis()} {$perizinan->karyawan->nama} telah ditolak."
-        );
+        return back()->with('success', "Pengajuan {$perizinan->labelJenis()} {$perizinan->karyawan->nama} telah ditolak.");
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // APPROVE LEMBUR
+    // LEMBUR
     // ─────────────────────────────────────────────────────────────────
     public function approveLembur(Request $request, Lembur $lembur)
     {
@@ -139,19 +129,12 @@ class ApprovalController extends Controller
 
         $this->kirimEmailLembur($lembur, 'disetujui');
 
-        return back()->with('success',
-            "Pengajuan lembur {$lembur->karyawan->nama} berhasil disetujui."
-        );
+        return back()->with('success', "Pengajuan lembur {$lembur->karyawan->nama} berhasil disetujui.");
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // TOLAK LEMBUR
-    // ─────────────────────────────────────────────────────────────────
     public function tolakLembur(Request $request, Lembur $lembur)
     {
-        $request->validate([
-            'alasan_tolak' => 'required|string|min:10|max:500',
-        ]);
+        $request->validate(['alasan_tolak' => 'required|string|min:5|max:500']);
 
         if ($lembur->status_approval !== 'menunggu') {
             return back()->with('error', 'Pengajuan ini sudah diproses sebelumnya.');
@@ -166,13 +149,11 @@ class ApprovalController extends Controller
 
         $this->kirimEmailLembur($lembur, 'ditolak', $request->alasan_tolak);
 
-        return back()->with('success',
-            "Pengajuan lembur {$lembur->karyawan->nama} telah ditolak."
-        );
+        return back()->with('success', "Pengajuan lembur {$lembur->karyawan->nama} telah ditolak.");
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // APPROVE DINAS LUAR
+    // DINAS LUAR
     // ─────────────────────────────────────────────────────────────────
     public function approveDinas(Request $request, DinasLuar $dinasLuar)
     {
@@ -186,21 +167,15 @@ class ApprovalController extends Controller
             'approved_at'     => now(),
         ]);
 
+        $this->prosesEfekDinasLuar($dinasLuar);
         $this->kirimEmailDinas($dinasLuar, 'disetujui');
 
-        return back()->with('success',
-            "Pengajuan dinas luar kota {$dinasLuar->karyawan->nama} berhasil disetujui."
-        );
+        return back()->with('success', "Pengajuan dinas luar kota {$dinasLuar->karyawan->nama} berhasil disetujui.");
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // TOLAK DINAS LUAR
-    // ─────────────────────────────────────────────────────────────────
     public function tolakDinas(Request $request, DinasLuar $dinasLuar)
     {
-        $request->validate([
-            'alasan_tolak' => 'required|string|min:10|max:500',
-        ]);
+        $request->validate(['alasan_tolak' => 'required|string|min:5|max:500']);
 
         if ($dinasLuar->status_approval !== 'menunggu') {
             return back()->with('error', 'Pengajuan ini sudah diproses sebelumnya.');
@@ -215,25 +190,19 @@ class ApprovalController extends Controller
 
         $this->kirimEmailDinas($dinasLuar, 'ditolak', $request->alasan_tolak);
 
-        return back()->with('success',
-            "Pengajuan dinas luar kota {$dinasLuar->karyawan->nama} telah ditolak."
-        );
+        return back()->with('success', "Pengajuan dinas luar kota {$dinasLuar->karyawan->nama} telah ditolak.");
     }
 
     // ─────────────────────────────────────────────────────────────────
     // PRIVATE HELPERS
     // ─────────────────────────────────────────────────────────────────
 
-    /**
-     * Proses efek approval perizinan ke data absensi & kuota cuti.
-     */
     private function prosesEfekPerizinan(Perizinan $perizinan): void
     {
         $karyawan = $perizinan->karyawan;
         $mulai    = Carbon::parse($perizinan->tanggal_mulai);
         $selesai  = Carbon::parse($perizinan->tanggal_selesai);
 
-        // Tentukan status absensi berdasarkan jenis izin
         $statusAbsensi = match ($perizinan->jenis_izin) {
             'cuti'           => 'cuti',
             'izin_pribadi'   => 'izin',
@@ -242,113 +211,78 @@ class ApprovalController extends Controller
             default          => 'izin',
         };
 
-        // Buat record absensi untuk setiap hari izin
         $tanggal = $mulai->copy();
         while ($tanggal->lte($selesai)) {
             Absensi::updateOrCreate(
-                [
-                    'karyawan_id' => $karyawan->id,
-                    'tanggal'     => $tanggal->toDateString(),
-                ],
-                [
-                    'status'   => $statusAbsensi,
-                    'is_telat' => false,
-                ]
+                ['karyawan_id' => $karyawan->id, 'tanggal' => $tanggal->toDateString()],
+                ['status' => $statusAbsensi, 'is_telat' => false]
             );
             $tanggal->addDay();
         }
 
-        // Kurangi kuota cuti jika jenis izin memotong cuti
         if ($perizinan->memotongCuti()) {
             $kuota = KuotaCuti::where('karyawan_id', $karyawan->id)
-                              ->where('tahun', now()->year)
-                              ->first();
+                               ->where('tahun', now()->year)
+                               ->first();
             if ($kuota) {
                 $kuota->pakai($perizinan->jumlah_hari);
             }
         }
     }
 
-    /**
-     * Kirim email notifikasi approval perizinan.
-     */
-    private function kirimEmailPerizinan(
-        Perizinan $perizinan,
-        string $status,
-        ?string $alasan = null
-    ): void {
+    private function prosesEfekDinasLuar(DinasLuar $dinasLuar): void
+    {
+        $karyawan = $dinasLuar->karyawan;
+        $mulai    = Carbon::parse($dinasLuar->tanggal_berangkat);
+        $selesai  = Carbon::parse($dinasLuar->tanggal_kembali);
+
+        $tanggal = $mulai->copy();
+        while ($tanggal->lte($selesai)) {
+            Absensi::updateOrCreate(
+                ['karyawan_id' => $karyawan->id, 'tanggal' => $tanggal->toDateString()],
+                ['status' => 'dinas_luar', 'is_telat' => false]
+            );
+            $tanggal->addDay();
+        }
+    }
+
+    private function kirimEmailPerizinan(Perizinan $perizinan, string $status, ?string $alasan = null): void 
+    {
         $email = $perizinan->karyawan->email;
         if (!$email) return;
 
-        $keterangan = $perizinan->labelJenis() .
-            ", {$perizinan->jumlah_hari} hari " .
-            "({$perizinan->tanggal_mulai->format('d M Y')} — {$perizinan->tanggal_selesai->format('d M Y')})";
+        $keterangan = $perizinan->labelJenis() . ", {$perizinan->jumlah_hari} hari ({$perizinan->tanggal_mulai->format('d M Y')} — {$perizinan->tanggal_selesai->format('d M Y')})";
 
         try {
-            Mail::to($email)->send(new NotifikasiApproval(
-                namaKaryawan:   $perizinan->karyawan->nama,
-                jenisAjuan:     $perizinan->labelJenis(),
-                statusApproval: $status,
-                keterangan:     $keterangan,
-                alasanTolak:    $alasan,
-            ));
+            Mail::to($email)->send(new NotifikasiApproval($perizinan->karyawan->nama, $perizinan->labelJenis(), $status, $keterangan, $alasan));
         } catch (\Exception $e) {
-            // Log error tapi jangan gagalkan proses approval
             \Log::error('Gagal kirim email perizinan: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Kirim email notifikasi approval lembur.
-     */
-    private function kirimEmailLembur(
-        Lembur $lembur,
-        string $status,
-        ?string $alasan = null
-    ): void {
+    private function kirimEmailLembur(Lembur $lembur, string $status, ?string $alasan = null): void 
+    {
         $email = $lembur->karyawan->email;
         if (!$email) return;
 
-        $keterangan = "Lembur tanggal {$lembur->tanggal->format('d M Y')}, " .
-            "{$lembur->jam_mulai} — {$lembur->jam_selesai} " .
-            "({$lembur->formatDurasi()})";
+        $keterangan = "Lembur tanggal {$lembur->tanggal->format('d M Y')}, {$lembur->jam_mulai} — {$lembur->jam_selesai} ({$lembur->formatDurasi()})";
 
         try {
-            Mail::to($email)->send(new NotifikasiApproval(
-                namaKaryawan:   $lembur->karyawan->nama,
-                jenisAjuan:     'Lembur',
-                statusApproval: $status,
-                keterangan:     $keterangan,
-                alasanTolak:    $alasan,
-            ));
+            Mail::to($email)->send(new NotifikasiApproval($lembur->karyawan->nama, 'Lembur', $status, $keterangan, $alasan));
         } catch (\Exception $e) {
             \Log::error('Gagal kirim email lembur: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Kirim email notifikasi approval dinas luar.
-     */
-    private function kirimEmailDinas(
-        DinasLuar $dinasLuar,
-        string $status,
-        ?string $alasan = null
-    ): void {
+    private function kirimEmailDinas(DinasLuar $dinasLuar, string $status, ?string $alasan = null): void 
+    {
         $email = $dinasLuar->karyawan->email;
         if (!$email) return;
 
-        $keterangan = "Dinas luar kota ke {$dinasLuar->tujuan}, " .
-            "{$dinasLuar->tanggal_berangkat->format('d M Y')} — " .
-            "{$dinasLuar->tanggal_kembali->format('d M Y')}";
+        $keterangan = "Dinas luar kota ke {$dinasLuar->tujuan}, {$dinasLuar->tanggal_berangkat->format('d M Y')} — {$dinasLuar->tanggal_kembali->format('d M Y')}";
 
         try {
-            Mail::to($email)->send(new NotifikasiApproval(
-                namaKaryawan:   $dinasLuar->karyawan->nama,
-                jenisAjuan:     'Dinas Luar Kota',
-                statusApproval: $status,
-                keterangan:     $keterangan,
-                alasanTolak:    $alasan,
-            ));
+            Mail::to($email)->send(new NotifikasiApproval($dinasLuar->karyawan->nama, 'Dinas Luar Kota', $status, $keterangan, $alasan));
         } catch (\Exception $e) {
             \Log::error('Gagal kirim email dinas luar: ' . $e->getMessage());
         }

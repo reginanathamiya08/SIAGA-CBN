@@ -24,7 +24,14 @@ class KomponenGajiController extends Controller
             $query->where('jenis_karyawan', $request->jenis);
         }
         if ($request->filled('divisi')) {
-            $query->where('divisi', $request->divisi);
+            $val = $request->divisi;
+            // Jika nilai adalah kategori besar (HC/umum) atau divisi tetap
+            if (in_array($val, ['HC', 'umum', 'keuangan', 'koordinator_cs', 'adm_umum'])) {
+                $query->where('divisi', $val);
+            } else {
+                // Jika selain itu, kita anggap itu adalah pencarian Jabatan spesifik
+                $query->where('jabatan', $val);
+            }
         }
         if ($request->filled('cari')) {
             $query->where('nama', 'LIKE', '%' . $request->cari . '%');
@@ -49,22 +56,40 @@ class KomponenGajiController extends Controller
     {
         $karyawan->load(['user', 'komponenGaji', 'penempatanAktif.mitra']);
 
-        // Buat komponen gaji jika belum ada (seharusnya sudah ada dari store karyawan)
-        if (!$karyawan->komponenGaji) {
-            $uangMakanMitra = $karyawan->uang_makan_by_mitra;
-            KomponenGaji::create([
-                'karyawan_id'     => $karyawan->id,
-                'gaji_pokok'      => 0,
-                'uang_makan'      => $uangMakanMitra ? null : 35000,
-                'uang_transport'  => $uangMakanMitra ? null : 45000,
-                'persen_bpjs_kes' => 9.24,
-                'persen_bpjs_tk'  => 5.00,
-            ]);
-            $karyawan->refresh()->load('komponenGaji');
-        }
-
-        // Ambil UMR Sumatera Barat tahun berjalan (bisa diubah sesuai peraturan)
+        // Ambil UMR Sumatera Barat tahun berjalan
         $umrTahunIni = config('cbn.umr_tahun_ini', 2994031);
+
+        // Buat komponen gaji jika belum ada atau pre-fill jika gaji masih 0
+        if (!$karyawan->komponenGaji || $karyawan->komponenGaji->gaji_pokok == 0) {
+            $jabatan = $karyawan->jabatan;
+            $standardSalaries = \Illuminate\Support\Facades\Cache::get('standar_gaji_jabatan', []);
+            $defaultGaji = $standardSalaries[$jabatan] ?? 0;
+
+            if ($defaultGaji == 0) {
+                $defaultGaji = KomponenGaji::whereHas('karyawan', function($q) use ($jabatan) {
+                    $q->where('jabatan', $jabatan);
+                })->where('gaji_pokok', '>', 0)->max('gaji_pokok') ?? 0;
+            }
+
+            if ($defaultGaji == 0 && !$karyawan->gaji_atas_umr) {
+                $defaultGaji = $umrTahunIni;
+            }
+
+            if (!$karyawan->komponenGaji) {
+                KomponenGaji::create([
+                    'karyawan_id'     => $karyawan->id,
+                    'gaji_pokok'      => $defaultGaji,
+                    'uang_makan'      => $karyawan->uang_makan_by_mitra ? null : 35000,
+                    'uang_transport'  => $karyawan->uang_makan_by_mitra ? null : 45000,
+                    'persen_bpjs_kes' => 9.24,
+                    'persen_bpjs_tk'  => 5.00,
+                ]);
+            } else if ($karyawan->komponenGaji->gaji_pokok == 0 && $defaultGaji > 0) {
+                // Jangan update otomatis ke DB di sini agar user bisa review di form,
+                // tapi kita kirim nilai default ke view.
+                $karyawan->komponenGaji->gaji_pokok = $defaultGaji;
+            }
+        }
 
         return view('admin.komponen-gaji.edit', compact('karyawan', 'umrTahunIni'));
     }

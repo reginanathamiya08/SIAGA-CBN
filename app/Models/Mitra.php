@@ -48,6 +48,11 @@ class Mitra extends Model
         return $this->hasMany(Absensi::class);
     }
 
+    public function shifts()
+    {
+        return $this->hasMany(Shift::class);
+    }
+
     // ── Helper ──────────────────────────────────────────────────────────
 
     public function isInduk(): bool

@@ -4,7 +4,7 @@
 @section('content')
 
 <header class="mb-6 pb-4 border-b border-gray-100">
-    <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight uppercase">Slip Gaji</h1>
+    <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight ">Slip Gaji</h1>
     <p class="text-gray-500 mt-1 text-sm">Riwayat slip gaji bulanan kamu</p>
 </header>
 
@@ -14,7 +14,7 @@
            class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5
                   hover:border-blue-200 hover:shadow-md transition-all group">
             <div class="flex justify-between items-center mb-4">
-                <p class="text-base font-black text-[#1E3A5F] uppercase">
+                <p class="text-base font-black text-[#1E3A5F] ">
                     {{ $slip->periodeGaji->nama_periode }}
                 </p>
                 <i data-lucide="file-text"
@@ -35,7 +35,7 @@
                 </div>
             </div>
             <div class="flex justify-between items-center p-3 bg-[#1E3A5F]/5 rounded-xl">
-                <span class="text-[10px] font-black text-[#1E3A5F] uppercase tracking-widest">
+                <span class="text-[10px] font-black text-[#1E3A5F] ">
                     Gaji Bersih
                 </span>
                 <span class="text-sm font-black text-[#1E3A5F]">

@@ -37,15 +37,16 @@
 </div>
 
 {{-- Filter --}}
-<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6">
+<div id="filter-container" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6">
     <form method="GET" action="{{ route('admin.karyawan.index') }}"
-          class="flex flex-wrap items-center gap-3">
-        <input type="text" name="cari" value="{{ request('cari') }}"
+          id="filter-form" class="flex flex-wrap items-center gap-3">
+        <input type="text" name="cari" value="{{ request('cari') }}" id="search-input"
+               oninput="liveSearch(this)"
                placeholder="Cari nama karyawan..."
                class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold
                       text-gray-700 outline-none focus:border-[#1E3A5F] bg-gray-50 w-52">
 
-        <select name="jenis" onchange="this.form.submit()"
+        <select name="jenis" onchange="this.form.divisi.value=''; updateTable(this.form)"
                 class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold
                        text-gray-700 outline-none bg-gray-50 focus:border-[#1E3A5F]">
             <option value="">Semua Jenis</option>
@@ -57,22 +58,26 @@
             </option>
         </select>
 
-        <select name="divisi" onchange="this.form.submit()"
+        <select name="divisi" onchange="updateTable(this.form)"
                 class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold
                        text-gray-700 outline-none bg-gray-50 focus:border-[#1E3A5F]">
             <option value="">Semua Divisi</option>
-            <optgroup label="Karyawan Tetap">
-                <option value="keuangan"       {{ request('divisi')==='keuangan'       ?'selected':'' }}>Keuangan</option>
-                <option value="koordinator_cs" {{ request('divisi')==='koordinator_cs' ?'selected':'' }}>Koordinator CS</option>
-                <option value="adm_umum"       {{ request('divisi')==='adm_umum'       ?'selected':'' }}>Adm & Umum</option>
-            </optgroup>
-            <optgroup label="Karyawan Kontrak">
-                <option value="HC"   {{ request('divisi')==='HC'   ?'selected':'' }}>HC (Human Capital)</option>
-                <option value="umum" {{ request('divisi')==='umum' ?'selected':'' }}>Umum</option>
-            </optgroup>
+            @if(request('jenis') == '' || request('jenis') == 'tetap')
+                <optgroup label="Karyawan Tetap">
+                    <option value="keuangan"       {{ request('divisi')==='keuangan'       ?'selected':'' }}>Keuangan</option>
+                    <option value="koordinator_cs" {{ request('divisi')==='koordinator_cs' ?'selected':'' }}>Koordinator CS</option>
+                    <option value="adm_umum"       {{ request('divisi')==='adm_umum'       ?'selected':'' }}>Adm & Umum</option>
+                </optgroup>
+            @endif
+            @if(request('jenis') == '' || request('jenis') == 'kontrak')
+                <optgroup label="Karyawan Kontrak">
+                    <option value="HC"   {{ request('divisi')==='HC'   ?'selected':'' }}>HC (Human Capital)</option>
+                    <option value="umum" {{ request('divisi')==='umum' ?'selected':'' }}>Umum</option>
+                </optgroup>
+            @endif
         </select>
 
-        <select name="status" onchange="this.form.submit()"
+        <select name="status" onchange="updateTable(this.form)"
                 class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold
                        text-gray-700 outline-none bg-gray-50 focus:border-[#1E3A5F]">
             <option value="">Semua Status</option>
@@ -96,18 +101,18 @@
 </div>
 
 {{-- Tabel --}}
-<div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+<div id="table-container" class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
     <div class="overflow-x-auto">
         <table class="w-full text-left">
             <thead>
                 <tr class="text-[10px] font-black text-[#1E3A5F]  tracking-wider
                            border-b border-gray-50 bg-gray-50/50">
-                    <th class="px-6 py-4">Nama</th>
-                    <th class="px-6 py-4">Username</th>
-                    <th class="px-6 py-4">Jabatan / Divisi</th>
-                    <th class="px-6 py-4 text-center">Jenis</th>
-                    <th class="px-6 py-4 text-center">Status</th>
-                    <th class="px-6 py-4 text-center">Aksi</th>
+                    <th class="px-6 py-4" style="width: 30%">Nama</th>
+                    <th class="px-6 py-4" style="width: 15%">Username</th>
+                    <th class="px-6 py-4" style="width: 20%">Jabatan / Divisi</th>
+                    <th class="px-6 py-4 text-center" style="width: 10%">Jenis</th>
+                    <th class="px-6 py-4 text-center" style="width: 10%">Status</th>
+                    <th class="px-6 py-4 text-center" style="width: 15%">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -214,5 +219,90 @@
         </div>
     @endif
 </div>
+
+@push('scripts')
+<script>
+let searchTimeout = null;
+
+function updateTable(form) {
+    const url = new URL(form.action || window.location.href);
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData);
+    url.search = params.toString();
+
+    const container = document.getElementById('table-container');
+    const filterContainer = document.getElementById('filter-container');
+    
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Update Tabel
+            const newContent = doc.getElementById('table-container');
+            if (newContent && container) {
+                container.innerHTML = newContent.innerHTML;
+            }
+
+            // Update Filter (untuk sinkronisasi dropdown)
+            const newFilter = doc.getElementById('filter-container');
+            if (newFilter && filterContainer) {
+                // Simpan nilai input cari agar tidak hilang saat mengetik
+                const currentSearch = document.getElementById('search-input').value;
+                filterContainer.innerHTML = newFilter.innerHTML;
+                document.getElementById('search-input').value = currentSearch;
+                document.getElementById('search-input').focus();
+                // Pindahkan kursor ke akhir
+                const val = document.getElementById('search-input').value;
+                document.getElementById('search-input').value = '';
+                document.getElementById('search-input').value = val;
+            }
+
+            if (window.lucide) window.lucide.createIcons();
+            window.history.pushState({}, '', url);
+        });
+}
+
+function liveSearch(input) {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        updateTable(input.form);
+    }, 400);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('search-input');
+    if (searchInput && searchInput.value !== '') {
+        searchInput.focus();
+        const val = searchInput.value;
+        searchInput.value = '';
+        searchInput.value = val;
+    }
+
+    // Intercept pagination clicks (only links inside nav)
+    document.addEventListener('click', e => {
+        const link = e.target.closest('#table-container nav a');
+        if (link && link.href) {
+            e.preventDefault();
+            const container = document.getElementById('table-container');
+            
+            fetch(link.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newContent = doc.getElementById('table-container');
+                    if (newContent && container) {
+                        container.innerHTML = newContent.innerHTML;
+                        if (window.lucide) window.lucide.createIcons();
+                        window.history.pushState({}, '', link.href);
+                    }
+                });
+        }
+    });
+});
+</script>
+@endpush
 
 @endsection

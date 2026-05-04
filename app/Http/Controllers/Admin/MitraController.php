@@ -52,7 +52,16 @@ class MitraController extends Controller
         // Jika ada mitra_induk_id, ini adalah cabang
         $data['is_cabang'] = !empty($data['mitra_induk_id']);
 
-        Mitra::create($data);
+        $mitra = Mitra::create($data);
+
+        // Simpan Konfigurasi Shift jika ada
+        if ($request->has('shifts')) {
+            foreach ($request->shifts as $shiftData) {
+                if (!empty($shiftData['jam_mulai'])) {
+                    $mitra->shifts()->create($shiftData);
+                }
+            }
+        }
 
         $tipe = $data['is_cabang'] ? 'Cabang mitra' : 'Mitra';
         return redirect()
@@ -102,6 +111,19 @@ class MitraController extends Controller
         $data = $request->validated();
         $data['is_cabang'] = !empty($data['mitra_induk_id']);
         $mitra->update($data);
+
+        // Update Konfigurasi Shift
+        if ($request->has('shifts')) {
+            foreach ($request->shifts as $shiftData) {
+                if (!empty($shiftData['id'])) {
+                    // Update existing shift
+                    \App\Models\Shift::where('id', $shiftData['id'])->update(array_diff_key($shiftData, ['id' => 1]));
+                } else if (!empty($shiftData['jam_mulai'])) {
+                    // Create new shift for this mitra
+                    $mitra->shifts()->create($shiftData);
+                }
+            }
+        }
 
         return redirect()
             ->route('admin.mitra.show', $mitra->id)

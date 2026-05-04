@@ -5,7 +5,7 @@
 
 <header class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
     <div>
-        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight uppercase">Proses Gaji</h1>
+        <h1 class="text-2xl font-black text-[#1E3A5F]">Proses Gaji</h1>
         <p class="text-gray-500 mt-1 text-sm">Riwayat penggajian bulanan PT CBN</p>
     </div>
     <a href="{{ route('admin.penggajian.create') }}"

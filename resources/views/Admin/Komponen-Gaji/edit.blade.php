@@ -55,11 +55,6 @@
                                 Bersifat Shift
                             </span>
                         @endif
-                        @if ($karyawan->uang_makan_by_mitra)
-                            <span class="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-lg text-[9px] font-black uppercase">
-                                Uang Makan by Mitra
-                            </span>
-                        @endif
                     </div>
                 </div>
                 @if (!$karyawan->gaji_atas_umr)
@@ -110,7 +105,6 @@
                 </div>
 
                 {{-- Uang Makan & Transport --}}
-                @if (!$karyawan->uang_makan_by_mitra)
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2">
@@ -155,17 +149,8 @@
                     </div>
                     <p class="text-[9px] text-gray-400 font-semibold">
                         ⚠️ Jika karyawan <strong>telat/alfa</strong>: uang makan + transport dipotong
-                        (total Rp {{ number_format(config('cbn.uang_makan_harian', 35000) + config('cbn.uang_transport_harian', 45000), 0, ',', '.') }}/hari)
+                        (total Rp {{ number_format(35000 + 45000, 0, ',', '.') }}/hari)
                     </p>
-                @else
-                    <div class="p-4 bg-amber-50 rounded-2xl border border-amber-100">
-                        <p class="text-[10px] font-black text-amber-700 uppercase mb-1">Uang Makan & Transport</p>
-                        <p class="text-xs text-amber-600 font-semibold">
-                            Dibayarkan langsung oleh mitra tempat karyawan bekerja.
-                            Tidak dimasukkan dalam slip gaji CBN.
-                        </p>
-                    </div>
-                @endif
 
             </div>
         </div>
@@ -240,16 +225,14 @@
                     <span class="text-gray-600 font-semibold">Gaji Pokok</span>
                     <span class="font-black text-gray-800" id="prev-gaji-pokok">Rp 0</span>
                 </div>
-                @if (!$karyawan->uang_makan_by_mitra)
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-600 font-semibold">Uang Makan (26hr)</span>
-                        <span class="font-black text-gray-800" id="prev-uang-makan">Rp 0</span>
-                    </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-600 font-semibold">Uang Transport (26hr)</span>
-                        <span class="font-black text-gray-800" id="prev-uang-transport">Rp 0</span>
-                    </div>
-                @endif
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-600 font-semibold">Uang Makan (26hr)</span>
+                    <span class="font-black text-gray-800" id="prev-uang-makan">Rp 0</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-600 font-semibold">Uang Transport (26hr)</span>
+                    <span class="font-black text-gray-800" id="prev-uang-transport">Rp 0</span>
+                </div>
                 <div class="flex justify-between text-sm font-black border-t border-gray-100 pt-2">
                     <span class="text-gray-700">Total Pendapatan</span>
                     <span class="text-green-600" id="prev-total-pendapatan">Rp 0</span>
@@ -342,11 +325,8 @@ function hitungPreview() {
     document.getElementById('prev-total-potongan').textContent = rp(totalPotongan);
     document.getElementById('prev-gaji-bersih').textContent   = rp(gajiBersih);
 
-    if (!uangMakanByMitra) {
-        document.getElementById('prev-uang-makan')?.setAttribute('textContent', rp(totalMakan));
-        if (document.getElementById('prev-uang-makan')) document.getElementById('prev-uang-makan').textContent = rp(totalMakan);
-        if (document.getElementById('prev-uang-transport')) document.getElementById('prev-uang-transport').textContent = rp(totalTransport);
-    }
+    document.getElementById('prev-uang-makan').textContent = rp(totalMakan);
+    document.getElementById('prev-uang-transport').textContent = rp(totalTransport);
 
     // Warning UMR
     var warnEl = document.getElementById('warn-umr');

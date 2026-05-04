@@ -61,7 +61,7 @@
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-    {{-- ── STATUS ABSENSI HARI INI ──────────────────────────────── --}}
+    {{-- STATUS ABSENSI HARI INI --}}
     <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
         <h3 class="font-black text-[#1E3A5F] italic text-[11px] mb-5 flex items-center gap-2">
             <span class="w-1 h-4 bg-blue-500 rounded-full"></span>
@@ -124,7 +124,7 @@
             </div>
         @endif
 
-        {{-- Rekap bulan ini (mini) --}}
+        {{-- Rekap bulan ini --}}
         <div class="mt-4 pt-4 border-t border-gray-100">
             <p class="text-[9px] font-black text-gray-400 tracking-widest mb-3">REKAP BULAN INI</p>
             <div class="grid grid-cols-3 gap-2">
@@ -138,10 +138,9 @@
         </div>
     </div>
 
-    {{-- ── FORM ABSENSI ─────────────────────────────────────────── --}}
+    {{-- FORM ABSENSI --}}
     <div class="space-y-4" x-data="absensiApp()" x-init="init()">
 
-        {{-- Peta Lokasi --}}
         <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
             <div class="flex items-center justify-between mb-3">
                 <h3 class="font-black text-[#1E3A5F] italic text-[11px] flex items-center gap-2">
@@ -158,9 +157,7 @@
             <div id="map" class="mb-3"></div>
 
             <div x-show="loading" class="text-center py-2">
-                <p class="text-xs text-gray-400 font-semibold animate-pulse">
-                    Mengambil lokasi GPS...
-                </p>
+                <p class="text-xs text-gray-400 font-semibold animate-pulse">Mengambil lokasi GPS...</p>
             </div>
 
             <div x-show="!loading && lat" class="bg-gray-50 rounded-xl p-3">
@@ -176,8 +173,7 @@
                 </div>
                 <div class="mt-2" x-show="jarak !== null">
                     <p class="text-[8px] font-black text-gray-400 tracking-widest">JARAK KE MITRA</p>
-                    <p class="text-xs font-black"
-                       :class="jarakValid ? 'text-green-600' : 'text-red-500'">
+                    <p class="text-xs font-black" :class="jarakValid ? 'text-green-600' : 'text-red-500'">
                         <span x-text="jarak !== null ? Math.round(jarak) + ' m' : '-'"></span>
                         <span x-show="jarakValid" class="ml-1">✓ Dalam radius</span>
                         <span x-show="!jarakValid && jarak !== null" class="ml-1">✗ Di luar radius</span>
@@ -190,10 +186,8 @@
             </div>
         </div>
 
-        {{-- Tombol Absen --}}
         @if($penempatan)
             @if(!$absensi?->waktu_masuk)
-                {{-- ABSEN MASUK --}}
                 <form method="POST" action="{{ route('karyawan.absensi.masuk') }}"
                       x-ref="formMasuk" @submit.prevent="submitAbsen($refs.formMasuk)">
                     @csrf
@@ -210,32 +204,38 @@
                         <span x-show="!submitting">Absen Masuk Sekarang</span>
                         <span x-show="submitting" class="animate-pulse">Memproses...</span>
                     </button>
-                    <p class="text-center text-[9px] text-gray-400 font-semibold mt-2">
-                        Pastikan kamu berada di dalam radius kantor & terhubung WiFi kantor
-                    </p>
                 </form>
 
             @elseif(!$absensi?->waktu_pulang)
-                {{-- ABSEN PULANG --}}
                 <form method="POST" action="{{ route('karyawan.absensi.pulang') }}"
                       x-ref="formPulang" @submit.prevent="submitAbsen($refs.formPulang)">
                     @csrf
                     <input type="hidden" name="latitude"  x-bind:value="lat">
                     <input type="hidden" name="longitude" x-bind:value="lon">
 
+                    @if(!$bolehPulang)
+                        <div class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+                            <div class="flex items-center gap-2 text-amber-700 text-xs font-black italic mb-1">
+                                <i data-lucide="lock" class="w-4 h-4"></i>
+                                Belum Waktunya Pulang
+                            </div>
+                            <p class="text-[10px] font-bold text-amber-600 leading-tight">
+                                {{ $pesanBelumPulang }}
+                            </p>
+                        </div>
+                    @endif
+
                     <button type="submit"
-                            :disabled="!lat || !jarakValid || loading"
+                            :disabled="!lat || !jarakValid || loading || !{{ $bolehPulang ? 'true' : 'false' }}"
                             class="w-full flex items-center justify-center gap-3 py-4
-                                   bg-gray-700 text-white rounded-2xl font-black italic
-                                   text-sm shadow-lg hover:bg-red-600 transition-all
+                                   {{ $bolehPulang ? 'bg-gray-700 hover:bg-red-600' : 'bg-gray-300' }} 
+                                   text-white rounded-2xl font-black italic
+                                   text-sm shadow-lg transition-all
                                    disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i data-lucide="log-out" class="w-5 h-5"></i>
-                        <span x-show="!submitting">Absen Pulang</span>
+                        <i data-lucide="{{ $bolehPulang ? 'log-out' : 'lock' }}" class="w-5 h-5"></i>
+                        <span x-show="!submitting">{{ $bolehPulang ? 'Absen Pulang' : 'Tombol Terkunci' }}</span>
                         <span x-show="submitting" class="animate-pulse">Memproses...</span>
                     </button>
-                    <p class="text-center text-[9px] text-gray-400 font-semibold mt-2">
-                        Pastikan kamu berada di dalam radius kantor & terhubung WiFi kantor
-                    </p>
                 </form>
 
             @else
@@ -250,22 +250,19 @@
             @endif
         @endif
 
-    </div>{{-- end x-data --}}
+    </div>
 </div>
 
-{{-- ── RIWAYAT 30 HARI TERAKHIR ──────────────────────────────────── --}}
 @if($riwayat->count())
 <div class="mt-6 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
     <h3 class="font-black text-[#1E3A5F] italic text-[11px] mb-4 flex items-center gap-2">
         <span class="w-1 h-4 bg-teal-500 rounded-full"></span>
         Riwayat 30 Hari Terakhir
     </h3>
-
     <div class="overflow-x-auto">
         <table class="w-full text-xs">
             <thead>
-                <tr class="text-left text-[9px] font-black text-gray-400 tracking-widest
-                           border-b border-gray-100">
+                <tr class="text-left text-[9px] font-black text-gray-400 tracking-widest border-b border-gray-100">
                     <th class="pb-3 pr-4">TANGGAL</th>
                     <th class="pb-3 pr-4">STATUS</th>
                     <th class="pb-3 pr-4">MASUK</th>
@@ -288,27 +285,11 @@
                         [$label, $cls] = $statusMap[$row->status] ?? ['?', 'bg-gray-100 text-gray-500'];
                     @endphp
                     <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="py-2.5 pr-4 font-semibold text-gray-600">
-                            {{ $row->tanggal->translatedFormat('d M Y') }}
-                        </td>
-                        <td class="py-2.5 pr-4">
-                            <span class="inline-block px-2 py-0.5 rounded-full text-[9px]
-                                         font-black {{ $cls }}">{{ $label }}</span>
-                        </td>
-                        <td class="py-2.5 pr-4 text-gray-600">
-                            {{ $row->waktu_masuk?->format('H:i') ?? '-' }}
-                        </td>
-                        <td class="py-2.5 pr-4 text-gray-600">
-                            {{ $row->waktu_pulang?->format('H:i') ?? '-' }}
-                        </td>
-                        <td class="py-2.5 text-gray-600">
-                            @if($row->durasiMenit())
-                                {{ intdiv($row->durasiMenit(), 60) }}j
-                                {{ $row->durasiMenit() % 60 }}m
-                            @else
-                                -
-                            @endif
-                        </td>
+                        <td class="py-2.5 pr-4 font-semibold text-gray-600">{{ $row->tanggal->translatedFormat('d M Y') }}</td>
+                        <td class="py-2.5 pr-4"><span class="inline-block px-2 py-0.5 rounded-full text-[9px] font-black {{ $cls }}">{{ $label }}</span></td>
+                        <td class="py-2.5 pr-4 text-gray-600">{{ $row->waktu_masuk?->format('H:i') ?? '-' }}</td>
+                        <td class="py-2.5 pr-4 text-gray-600">{{ $row->waktu_pulang?->format('H:i') ?? '-' }}</td>
+                        <td class="py-2.5 text-gray-600">@if($row->durasiMenit()){{ intdiv($row->durasiMenit(), 60) }}j {{ $row->durasiMenit() % 60 }}m @else - @endif</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -324,124 +305,42 @@
 <script>
 function absensiApp() {
     return {
-        lat: null,
-        lon: null,
-        jarak: null,
-        jarakValid: false,
-        loading: false,
-        submitting: false,
-        errorGps: null,
-
-        // Koordinat mitra dari PHP
-        mitraLat:    {{ $penempatan?->mitra->latitude ?? 'null' }},
-        mitraLon:    {{ $penempatan?->mitra->longitude ?? 'null' }},
+        lat: null, lon: null, jarak: null, jarakValid: false, loading: false, submitting: false, errorGps: null,
+        mitraLat: {{ $penempatan?->mitra->latitude ?? 'null' }},
+        mitraLon: {{ $penempatan?->mitra->longitude ?? 'null' }},
         mitraRadius: {{ $penempatan?->mitra->radius_meter ?? 100 }},
-
-        map: null,
-        markerUser: null,
-        markerMitra: null,
-        circle: null,
-
-        init() {
-            this.$nextTick(() => {
-                this.initMap();
-                this.getLocation();
-            });
-        },
-
+        map: null, markerUser: null, markerMitra: null, circle: null,
+        init() { this.$nextTick(() => { this.initMap(); this.getLocation(); }); },
         initMap() {
             const defaultLat = this.mitraLat ?? -0.9492;
             const defaultLon = this.mitraLon ?? 100.3543;
-
             this.map = L.map('map').setView([defaultLat, defaultLon], 16);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OSM',
-                maxZoom: 19
-            }).addTo(this.map);
-
-            // Marker mitra
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.map);
             if (this.mitraLat && this.mitraLon) {
-                const mitraIcon = L.divIcon({
-                    html: `<div style="background:#1E3A5F;width:14px;height:14px;border-radius:50%;
-                                       border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>`,
-                    className: '', iconAnchor: [7, 7]
-                });
-                this.markerMitra = L.marker([this.mitraLat, this.mitraLon], { icon: mitraIcon })
-                    .addTo(this.map)
-                    .bindPopup(`<b>{{ $penempatan?->mitra->nama_mitra ?? 'Mitra' }}</b><br>Radius: ${this.mitraRadius} m`);
-
-                this.circle = L.circle([this.mitraLat, this.mitraLon], {
-                    radius: this.mitraRadius,
-                    color: '#1E3A5F', fillColor: '#1E3A5F', fillOpacity: 0.08, weight: 2
-                }).addTo(this.map);
+                const icon = L.divIcon({ html: `<div style="background:#1E3A5F;width:14px;height:14px;border-radius:50%;border:3px solid white;shadow:0 2px 6px rgba(0,0,0,.4)"></div>`, className: '', iconAnchor: [7, 7] });
+                this.markerMitra = L.marker([this.mitraLat, this.mitraLon], { icon }).addTo(this.map);
+                this.circle = L.circle([this.mitraLat, this.mitraLon], { radius: this.mitraRadius, color: '#1E3A5F', fillOpacity: 0.08 }).addTo(this.map);
             }
         },
-
         getLocation() {
-            if (!navigator.geolocation) {
-                this.errorGps = 'Browser tidak mendukung GPS.';
-                return;
-            }
-            this.loading  = true;
-            this.errorGps = null;
-
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    this.lat     = pos.coords.latitude;
-                    this.lon     = pos.coords.longitude;
-                    this.loading = false;
-
-                    // Update marker user
-                    const userIcon = L.divIcon({
-                        html: `<div style="background:#22c55e;width:12px;height:12px;border-radius:50%;
-                                           border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>`,
-                        className: '', iconAnchor: [6, 6]
-                    });
-
-                    if (this.markerUser) {
-                        this.markerUser.setLatLng([this.lat, this.lon]);
-                    } else {
-                        this.markerUser = L.marker([this.lat, this.lon], { icon: userIcon })
-                            .addTo(this.map)
-                            .bindPopup('Lokasi Kamu');
-                    }
-
-                    if (this.mitraLat && this.mitraLon) {
-                        this.jarak = this.hitungJarak(
-                            this.lat, this.lon, this.mitraLat, this.mitraLon
-                        );
-                        this.jarakValid = this.jarak <= this.mitraRadius;
-                    }
-
-                    // Fit map bounds
-                    const bounds = L.latLngBounds([[this.lat, this.lon]]);
-                    if (this.mitraLat) bounds.extend([this.mitraLat, this.mitraLon]);
-                    this.map.fitBounds(bounds, { padding: [30, 30] });
-
-                    lucide.createIcons();
-                },
-                (err) => {
-                    this.loading  = false;
-                    this.errorGps = 'Gagal mengambil lokasi GPS: ' + err.message +
-                                    '. Pastikan GPS aktif dan izin lokasi diberikan.';
-                },
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
+            if (!navigator.geolocation) { this.errorGps = 'Browser tidak mendukung GPS.'; return; }
+            this.loading = true; this.errorGps = null;
+            navigator.geolocation.getCurrentPosition((pos) => {
+                this.lat = pos.coords.latitude; this.lon = pos.coords.longitude; this.loading = false;
+                const icon = L.divIcon({ html: `<div style="background:#22c55e;width:12px;height:12px;border-radius:50%;border:3px solid white;shadow:0 2px 6px rgba(0,0,0,.4)"></div>`, className: '', iconAnchor: [6, 6] });
+                if (this.markerUser) this.markerUser.setLatLng([this.lat, this.lon]);
+                else this.markerUser = L.marker([this.lat, this.lon], { icon }).addTo(this.map);
+                if (this.mitraLat && this.mitraLon) { this.jarak = this.hitungJarak(this.lat, this.lon, this.mitraLat, this.mitraLon); this.jarakValid = this.jarak <= this.mitraRadius; }
+                const bounds = L.latLngBounds([[this.lat, this.lon]]);
+                if (this.mitraLat) bounds.extend([this.mitraLat, this.mitraLon]);
+                this.map.fitBounds(bounds, { padding: [30, 30] });
+                lucide.createIcons();
+            }, (err) => { this.loading = false; this.errorGps = 'Gagal mengambil GPS: ' + err.message; }, { enableHighAccuracy: true, timeout: 10000 });
         },
-
-        submitAbsen(form) {
-            if (!this.lat || !this.jarakValid) return;
-            this.submitting = true;
-            form.submit();
-        },
-
+        submitAbsen(form) { if (!this.lat || !this.jarakValid) return; this.submitting = true; form.submit(); },
         hitungJarak(lat1, lon1, lat2, lon2) {
-            const R    = 6371000;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a    = Math.sin(dLat/2)**2 +
-                         Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
-                         Math.sin(dLon/2)**2;
+            const R = 6371000; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         },
     };

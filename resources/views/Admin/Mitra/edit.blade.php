@@ -52,6 +52,8 @@
                 </span>
             </div>
         </div>
+
+        @include('admin.mitra._shift_config')
     </div>
 
     <div class="lg:col-span-2 space-y-5">

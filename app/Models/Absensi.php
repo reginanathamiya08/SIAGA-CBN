@@ -11,6 +11,7 @@ class Absensi extends Model
     protected $fillable = [
         'karyawan_id',
         'mitra_id',
+        'shift_id',
         'tanggal',
         'waktu_masuk',
         'waktu_pulang',
@@ -45,6 +46,11 @@ class Absensi extends Model
     public function mitra()
     {
         return $this->belongsTo(Mitra::class);
+    }
+
+    public function shift()
+    {
+        return $this->belongsTo(Shift::class);
     }
 
     // ── Helper ──────────────────────────────────────────────────────────

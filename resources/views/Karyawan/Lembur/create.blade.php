@@ -9,7 +9,7 @@
         <i data-lucide="arrow-left" class="w-4 h-4"></i>
     </a>
     <div>
-        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight uppercase">
+        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight ">
             Ajukan Lembur
         </h1>
         <p class="text-gray-500 mt-1 text-sm">
@@ -26,7 +26,7 @@
     {{-- ── Kiri: Form ──────────────────────────────────────────── --}}
     <div class="lg:col-span-2">
         <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-            <h3 class="font-black text-[#1E3A5F] uppercase italic text-[11px] mb-5
+            <h3 class="font-black text-[#1E3A5F]  italic text-[11px] mb-5
                        flex items-center gap-2">
                 <span class="w-1 h-4 bg-blue-500 rounded-full"></span>
                 Detail Lembur
@@ -37,7 +37,7 @@
                 {{-- Tanggal --}}
                 <div>
                     <label class="block text-[11px] font-black text-gray-500
-                                  uppercase tracking-widest mb-2">
+                                   mb-2">
                         Tanggal Lembur <span class="text-red-500">*</span>
                     </label>
                     <input type="date" name="tanggal"
@@ -56,7 +56,7 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[11px] font-black text-gray-500
-                                      uppercase tracking-widest mb-2">
+                                       mb-2">
                             Jam Mulai <span class="text-red-500">*</span>
                         </label>
                         <input type="time" name="jam_mulai"
@@ -74,7 +74,7 @@
                     </div>
                     <div>
                         <label class="block text-[11px] font-black text-gray-500
-                                      uppercase tracking-widest mb-2">
+                                       mb-2">
                             Jam Selesai <span class="text-red-500">*</span>
                         </label>
                         <input type="time" name="jam_selesai"
@@ -107,7 +107,7 @@
                 {{-- Keperluan Lembur --}}
                 <div>
                     <label class="block text-[11px] font-black text-gray-500
-                                  uppercase tracking-widest mb-2">
+                                   mb-2">
                         Keperluan Lembur <span class="text-red-500">*</span>
                     </label>
                     <textarea name="keterangan" rows="4"
@@ -131,7 +131,7 @@
     <div class="space-y-5">
 
         <div class="bg-blue-50 rounded-2xl border border-blue-100 p-5">
-            <p class="text-[10px] font-black text-blue-700 uppercase mb-3">Ketentuan Lembur</p>
+            <p class="text-[10px] font-black text-blue-700  mb-3">Ketentuan Lembur</p>
             <ul class="space-y-2 text-[9px] text-blue-600 font-semibold">
                 <li>• Pengajuan harus disetujui pimpinan <strong>sebelum</strong> melaksanakan lembur.</li>
                 <li>• Lembur yang belum disetujui tidak akan tercatat sebagai lembur resmi.</li>
@@ -141,7 +141,7 @@
 
         <button type="submit"
                 class="w-full bg-[#1E3A5F] hover:bg-green-600 text-white font-black text-sm
-                       uppercase tracking-widest py-4 rounded-2xl transition-all shadow-sm
+                        py-4 rounded-2xl transition-all shadow-sm
                        active:scale-95 italic flex items-center justify-center gap-2">
             <i data-lucide="send" class="w-5 h-5"></i>
             Kirim Pengajuan

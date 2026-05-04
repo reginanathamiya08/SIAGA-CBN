@@ -9,10 +9,10 @@
         <i data-lucide="arrow-left" class="w-4 h-4"></i>
     </a>
     <div>
-        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight uppercase">
+        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight ">
             Ajukan Dinas Luar Kota
         </h1>
-        <p class="text-gray-500 mt-1 text-sm">Harus mendapat persetujuan pimpinan</p>
+        <p class="text-gray-500 mt-1 text-sm italic font-bold  tracking-tighter">Wajib Melampirkan Dokumen SPPD Resmi</p>
     </div>
 </header>
 
@@ -25,7 +25,7 @@
     {{-- ── Kiri: Form ──────────────────────────────────────────── --}}
     <div class="lg:col-span-2">
         <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-            <h3 class="font-black text-[#1E3A5F] uppercase italic text-[11px] mb-5
+            <h3 class="font-black text-[#1E3A5F]  italic text-[11px] mb-5
                        flex items-center gap-2">
                 <span class="w-1 h-4 bg-blue-500 rounded-full"></span>
                 Detail Perjalanan Dinas
@@ -36,7 +36,7 @@
                 {{-- Tujuan --}}
                 <div>
                     <label class="block text-[11px] font-black text-gray-500
-                                  uppercase tracking-widest mb-2">
+                                   mb-2">
                         Tujuan Kota / Tempat <span class="text-red-500">*</span>
                     </label>
                     <input type="text" name="tujuan" value="{{ old('tujuan') }}"
@@ -55,7 +55,7 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[11px] font-black text-gray-500
-                                      uppercase tracking-widest mb-2">
+                                       mb-2">
                             Tanggal Berangkat <span class="text-red-500">*</span>
                         </label>
                         <input type="date" name="tanggal_berangkat"
@@ -74,7 +74,7 @@
                     </div>
                     <div>
                         <label class="block text-[11px] font-black text-gray-500
-                                      uppercase tracking-widest mb-2">
+                                       mb-2">
                             Tanggal Kembali <span class="text-red-500">*</span>
                         </label>
                         <input type="date" name="tanggal_kembali"
@@ -105,20 +105,27 @@
                     </div>
                 </div>
 
-                {{-- Upload Surat Tugas --}}
+                {{-- Upload Surat Tugas / SPPD --}}
                 <div>
                     <label class="block text-[11px] font-black text-gray-500
-                                  uppercase tracking-widest mb-2">
-                        Surat Tugas
+                                   mb-2">
+                        Upload Dokumen SPPD (Sudah Diisi) <span class="text-red-500">*</span>
                         <span class="font-normal text-gray-400 normal-case ml-1">
-                            (Opsional — PDF/JPG/PNG, maks 2MB)
+                            (PDF/JPG/PNG/DOCX, maks 2MB)
                         </span>
                     </label>
-                    <input type="file" name="file_surat_tugas"
-                           accept=".pdf,.jpg,.jpeg,.png"
-                           class="w-full px-4 py-3 rounded-xl border border-gray-200
-                                  bg-gray-50 text-sm font-semibold text-gray-700
-                                  outline-none focus:border-[#1E3A5F]">
+                    <div class="relative group">
+                        <input type="file" name="file_surat_tugas" required
+                               accept=".pdf,.jpg,.jpeg,.png,.docx"
+                               class="w-full px-4 py-8 rounded-2xl border-2 border-dashed border-gray-200
+                                      bg-gray-50 text-xs font-black text-center text-gray-400
+                                      outline-none group-hover:border-blue-300 group-hover:bg-blue-50/30 transition-all
+                                file:hidden cursor-pointer">
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none group-hover:scale-105 transition-transform">
+                            <i data-lucide="upload-cloud" class="w-8 h-8 text-gray-300 mb-2 group-hover:text-blue-400"></i>
+                            <p class="text-[10px]  font-black tracking-widest">Klik atau seret dokumen ke sini</p>
+                        </div>
+                    </div>
                     @error('file_surat_tugas')
                         <p class="mt-1 text-xs text-red-500 font-semibold">{{ $message }}</p>
                     @enderror
@@ -132,7 +139,7 @@
     <div class="space-y-5">
 
         <div class="bg-blue-50 rounded-2xl border border-blue-100 p-5">
-            <p class="text-[10px] font-black text-blue-700 uppercase mb-3">Ketentuan</p>
+            <p class="text-[10px] font-black text-blue-700  mb-3">Ketentuan</p>
             <ul class="space-y-2 text-[9px] text-blue-600 font-semibold">
                 <li>• Pengajuan harus disetujui pimpinan sebelum berangkat.</li>
                 <li>• Upload surat tugas jika sudah tersedia.</li>
@@ -142,7 +149,7 @@
 
         <button type="submit"
                 class="w-full bg-[#1E3A5F] hover:bg-green-600 text-white font-black text-sm
-                       uppercase tracking-widest py-4 rounded-2xl transition-all shadow-sm
+                        py-4 rounded-2xl transition-all shadow-sm
                        active:scale-95 italic flex items-center justify-center gap-2">
             <i data-lucide="send" class="w-5 h-5"></i>
             Kirim Pengajuan

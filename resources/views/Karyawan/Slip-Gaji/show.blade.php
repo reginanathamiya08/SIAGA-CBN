@@ -19,12 +19,12 @@
         <i data-lucide="arrow-left" class="w-4 h-4"></i>
     </a>
     <div class="flex-1">
-        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight uppercase">Slip Gaji</h1>
+        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight ">Slip Gaji</h1>
         <p class="text-gray-500 mt-1 text-sm">{{ $slipGaji->periodeGaji->nama_periode }}</p>
     </div>
     <button onclick="window.print()"
             class="flex items-center gap-2 bg-[#1E3A5F] text-white font-black text-xs
-                   uppercase italic px-5 py-3 rounded-xl hover:bg-green-600
+                    italic px-5 py-3 rounded-xl hover:bg-green-600
                    transition-all no-print">
         <i data-lucide="printer" class="w-4 h-4"></i>
         Cetak

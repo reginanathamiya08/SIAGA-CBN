@@ -9,7 +9,7 @@
         <i data-lucide="arrow-left" class="w-4 h-4"></i>
     </a>
     <div>
-        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight uppercase">
+        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight ">
             Detail Lembur
         </h1>
         <p class="text-gray-500 mt-1 text-sm">
@@ -35,7 +35,7 @@
             };
         @endphp
         <div class="{{ $bannerClass }} px-6 py-4 text-white">
-            <p class="font-black text-sm uppercase">{{ $bannerLabel }}</p>
+            <p class="font-black text-sm ">{{ $bannerLabel }}</p>
             @if ($lembur->approved_at)
                 <p class="text-[10px] text-white/70 mt-0.5">
                     {{ $lembur->approved_at->translatedFormat('d F Y, H:i') }} WIB
@@ -55,7 +55,7 @@
             ] as [$label, $value])
                 <div class="flex justify-between items-start border-b border-gray-50
                             pb-3 last:border-0 last:pb-0">
-                    <span class="text-[10px] font-black text-gray-400 uppercase
+                    <span class="text-[10px] font-black text-gray-400 
                                  tracking-widest w-32 shrink-0">
                         {{ $label }}
                     </span>
@@ -68,7 +68,7 @@
             {{-- Alasan Tolak --}}
             @if ($lembur->status_approval === 'ditolak' && $lembur->alasan_tolak)
                 <div class="p-4 bg-red-50 rounded-2xl border border-red-100">
-                    <p class="text-[10px] font-black text-red-700 uppercase mb-1">
+                    <p class="text-[10px] font-black text-red-700  mb-1">
                         Alasan Penolakan
                     </p>
                     <p class="text-sm font-semibold text-red-600">{{ $lembur->alasan_tolak }}</p>
@@ -83,7 +83,7 @@
                     @csrf @method('DELETE')
                     <button type="submit"
                             class="w-full mt-2 bg-red-50 hover:bg-red-100 text-red-600
-                                   font-black text-xs uppercase italic py-3 rounded-2xl
+                                   font-black text-xs  italic py-3 rounded-2xl
                                    transition-all flex items-center justify-center gap-2">
                         <i data-lucide="x-circle" class="w-4 h-4"></i>
                         Batalkan Pengajuan

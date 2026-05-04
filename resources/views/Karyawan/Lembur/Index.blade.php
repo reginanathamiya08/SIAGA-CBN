@@ -5,12 +5,12 @@
 
 <header class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
     <div>
-        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight uppercase">Pengajuan Lembur</h1>
+        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight ">Pengajuan Lembur</h1>
         <p class="text-gray-500 mt-1 text-sm">Harus mendapat persetujuan pimpinan sebelum dilaksanakan</p>
     </div>
     <a href="{{ route('karyawan.lembur.create') }}"
        class="flex items-center gap-2 bg-[#1E3A5F] hover:bg-red-600 text-white
-              font-black text-xs uppercase italic px-5 py-3 rounded-xl transition-all shadow-sm">
+              font-black text-xs  italic px-5 py-3 rounded-xl transition-all shadow-sm">
         <i data-lucide="plus" class="w-4 h-4"></i>
         Ajukan Lembur
     </a>
@@ -20,7 +20,7 @@
     <div class="overflow-x-auto">
         <table class="w-full text-left">
             <thead>
-                <tr class="text-[10px] font-black text-[#1E3A5F] uppercase tracking-wider
+                <tr class="text-[10px] font-black text-[#1E3A5F]  tracking-wider
                            border-b border-gray-50 bg-gray-50/50">
                     <th class="px-6 py-4">Tanggal</th>
                     <th class="px-6 py-4">Jam</th>
@@ -65,7 +65,7 @@
                                     default     => 'bg-gray-100 text-gray-600',
                                 };
                             @endphp
-                            <span class="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase {{ $badge }}">
+                            <span class="px-2.5 py-1 rounded-lg text-[9px] font-black  {{ $badge }}">
                                 {{ ucfirst($l->status_approval) }}
                             </span>
                         </td>
@@ -100,7 +100,7 @@
                             </p>
                             <a href="{{ route('karyawan.lembur.create') }}"
                                class="mt-3 inline-block text-xs font-black text-[#1E3A5F]
-                                      hover:text-red-600 uppercase italic transition-colors">
+                                      hover:text-red-600  italic transition-colors">
                                 + Ajukan Sekarang
                             </a>
                         </td>

@@ -17,6 +17,13 @@ class StoreMitraRequest extends FormRequest
             'radius_meter'   => 'required|integer|min:10|max:5000',
             'ip_public'      => 'required|ip',
             'mitra_induk_id' => 'nullable|exists:mitra,id',
+            'shifts'         => 'nullable|array',
+            'shifts.*.jam_mulai'      => 'nullable',
+            'shifts.*.jam_selesai'    => 'nullable',
+            'shifts.*.window_start'   => 'nullable',
+            'shifts.*.window_end'     => 'nullable',
+            'shifts.*.toleransi_menit'=> 'nullable|integer',
+            'shifts.*.is_lintas_hari' => 'nullable|boolean',
         ];
     }
 

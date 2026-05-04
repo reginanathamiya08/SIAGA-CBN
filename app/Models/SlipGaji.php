@@ -51,7 +51,11 @@ class SlipGaji extends Model
 
     public function periodeGaji()
     {
-        // Gunakan FK periode_id
+        return $this->belongsTo(PeriodeGaji::class, 'periode_id');
+    }
+
+    public function periode()
+    {
         return $this->belongsTo(PeriodeGaji::class, 'periode_id');
     }
 

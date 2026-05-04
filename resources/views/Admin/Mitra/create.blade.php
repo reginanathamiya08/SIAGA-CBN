@@ -53,6 +53,8 @@
             </div>
         </div>
 
+        @include('admin.mitra._shift_config')
+
     </div>
 
     {{-- ── KANAN: Form (2 kolom) ────────────────────────────────── --}}

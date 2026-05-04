@@ -10,7 +10,7 @@
     </a>
     <div>
         <h1 class="text-2xl font-black text-[#1E3A5F] ">Ajukan Perizinan</h1>
-        <p class="text-gray-500 mt-1 text-sm">Cuti, Izin Pribadi, atau Sakit</p>
+        <p class="text-gray-500 mt-1 text-sm">Cuti, Izin Pribadi, atau Sakit — <span class="text-red-600 font-bold ">Aturan PT CBN</span></p>
     </div>
 </header>
 
@@ -24,7 +24,7 @@
     <div class="lg:col-span-2 space-y-6">
 
         <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-            <h3 class="font-black text-[#1E3A5F]   italic text-[11px] mb-5
+            <h3 class="font-black text-[#1E3A5F] italic text-[11px] mb-5
                        flex items-center gap-2">
                 <span class="w-1 h-4 bg-blue-500 rounded-full"></span>
                 Detail Pengajuan
@@ -34,7 +34,7 @@
 
                 {{-- Jenis Izin --}}
                 <div>
-                    <label class="block text-[11px] font-black text-gray-500   tracking-widest mb-3">
+                    <label class="block text-[11px] font-black text-gray-500 tracking-widest mb-3">
                         Jenis Izin <span class="text-red-500">*</span>
                     </label>
                     {{-- Radio card --}}
@@ -48,8 +48,8 @@
                                    {{ old('jenis_izin') === 'cuti' ? 'checked' : '' }}
                                    onchange="onJenisChange(this.value)">
                             <div>
-                                <p class="text-xs font-black text-[#1E3A5F]  ">Cuti Tahunan</p>
-                                <p class="text-[9px] text-gray-400 mt-0.5">Potong uang makan Rp 35.000/hari. Kuota cuti tidak berkurang.</p>
+                                <p class="text-xs font-black text-[#1E3A5F]">Cuti</p>
+                                <p class="text-[9px] text-gray-400 mt-0.5">Potong uang makan Rp 35.000/hari. <span class="text-indigo-600 font-bold">Kuota tetap 12 hari.</span></p>
                             </div>
                         </label>
 
@@ -61,8 +61,8 @@
                                    {{ old('jenis_izin') === 'izin_pribadi' ? 'checked' : '' }}
                                    onchange="onJenisChange(this.value)">
                             <div>
-                                <p class="text-xs font-black text-[#1E3A5F]  ">Izin Pribadi</p>
-                                <p class="text-[9px] text-gray-400 mt-0.5">Memotong kuota cuti tahunan.</p>
+                                <p class="text-xs font-black text-[#1E3A5F]">Izin Pribadi</p>
+                                <p class="text-[9px] text-gray-400 mt-0.5"><span class="text-blue-600 font-bold">Memotong kuota cuti tahunan.</span></p>
                             </div>
                         </label>
 
@@ -74,8 +74,8 @@
                                    {{ old('jenis_izin') === 'sakit_surat' ? 'checked' : '' }}
                                    onchange="onJenisChange(this.value)">
                             <div>
-                                <p class="text-xs font-black text-[#1E3A5F]  ">Sakit + Surat Dokter</p>
-                                <p class="text-[9px] text-gray-400 mt-0.5">Tidak memotong kuota cuti. Wajib upload surat dokter.</p>
+                                <p class="text-xs font-black text-[#1E3A5F]">Sakit + Surat Dokter</p>
+                                <p class="text-[9px] text-gray-400 mt-0.5">Tidak potong kuota (Limit 12 hari). <span class="text-purple-600 font-bold">Wajib upload surat dokter.</span></p>
                             </div>
                         </label>
 
@@ -87,8 +87,8 @@
                                    {{ old('jenis_izin') === 'sakit_no_surat' ? 'checked' : '' }}
                                    onchange="onJenisChange(this.value)">
                             <div>
-                                <p class="text-xs font-black text-[#1E3A5F]  ">Sakit Tanpa Surat</p>
-                                <p class="text-[9px] text-gray-400 mt-0.5">Memotong kuota cuti tahunan.</p>
+                                <p class="text-xs font-black text-[#1E3A5F]">Sakit Tanpa Surat</p>
+                                <p class="text-[9px] text-gray-400 mt-0.5"><span class="text-orange-600 font-bold">Memotong kuota cuti tahunan.</span></p>
                             </div>
                         </label>
 
@@ -101,7 +101,7 @@
                 {{-- Tanggal --}}
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-[11px] font-black text-gray-500   tracking-widest mb-2">
+                        <label class="block text-[11px] font-black text-gray-500 tracking-widest mb-2">
                             Tanggal Mulai <span class="text-red-500">*</span>
                         </label>
                         <input type="date" name="tanggal_mulai" id="tgl-mulai"
@@ -118,7 +118,7 @@
                         @enderror
                     </div>
                     <div>
-                        <label class="block text-[11px] font-black text-gray-500   tracking-widest mb-2">
+                        <label class="block text-[11px] font-black text-gray-500 tracking-widest mb-2">
                             Tanggal Selesai <span class="text-red-500">*</span>
                         </label>
                         <input type="date" name="tanggal_selesai" id="tgl-selesai"
@@ -151,7 +151,7 @@
 
                 {{-- Keterangan --}}
                 <div>
-                    <label class="block text-[11px] font-black text-gray-500   tracking-widest mb-2">
+                    <label class="block text-[11px] font-black text-gray-500 tracking-widest mb-2">
                         Keterangan
                     </label>
                     <textarea name="keterangan" rows="3"
@@ -166,17 +166,17 @@
 
         {{-- Upload Surat Dokter (muncul otomatis jika pilih sakit_surat) --}}
         <div id="wrap-dokter" class="hidden bg-purple-50 rounded-3xl border border-purple-200 shadow-sm p-6">
-            <h3 class="font-black text-purple-700   italic text-[11px] mb-3
+            <h3 class="font-black text-purple-700 italic text-[11px] mb-3
                        flex items-center gap-2">
                 <span class="w-1 h-4 bg-purple-500 rounded-full"></span>
                 Upload Surat Dokter <span class="text-red-500">*</span>
             </h3>
             <p class="text-xs text-purple-600 font-semibold mb-4">
-                Sakit dengan surat dokter tidak akan memotong kuota cuti tahunan kamu.
+                Sakit dengan surat dokter tidak akan memotong kuota cuti tahunan kamu (Batas 12 hari/tahun).
                 Wajib upload surat dokter yang sah.
             </p>
             <div>
-                <label class="block text-[11px] font-black text-gray-500   tracking-widest mb-2">
+                <label class="block text-[11px] font-black text-gray-500 tracking-widest mb-2">
                     File Surat Dokter
                     <span class="font-normal text-gray-400 normal-case ml-1">(PDF/JPG/PNG, maks 2MB)</span>
                 </label>
@@ -198,14 +198,14 @@
         {{-- Kuota Cuti --}}
         @if ($kuotaCuti)
             <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-                <h3 class="font-black text-[#1E3A5F]   italic text-[11px] mb-4
+                <h3 class="font-black text-[#1E3A5F] italic text-[11px] mb-4
                            flex items-center gap-2">
                     <span class="w-1 h-4 bg-purple-500 rounded-full"></span>
-                    Kuota Cuti {{ now()->year }}
+                    Jatah Cuti {{ now()->year }}
                 </h3>
                 <div class="text-center mb-3">
                     <p class="text-4xl font-black text-[#1E3A5F]">{{ $kuotaCuti->sisa }}</p>
-                    <p class="text-[9px] text-gray-400 font-black   mt-1">Hari Tersisa</p>
+                    <p class="text-[9px] text-gray-400 font-black mt-1">Hari Tersisa</p>
                 </div>
                 <div class="w-full bg-gray-100 rounded-full h-2 mb-2">
                     @php $pct = $kuotaCuti->kuota_total > 0 ? ($kuotaCuti->sisa / $kuotaCuti->kuota_total) * 100 : 0 @endphp
@@ -219,14 +219,15 @@
             </div>
         @endif
 
-        {{-- Aturan --}}
+        {{-- Aturan Ringkas --}}
         <div class="bg-blue-50 rounded-2xl border border-blue-100 p-4">
-            <p class="text-[10px] font-black text-blue-700   mb-2">Aturan Perizinan</p>
-            <ul class="space-y-1.5 text-[9px] text-blue-600 font-semibold">
-                <li>• <strong>Cuti:</strong> Uang makan dipotong Rp 35.000/hari. Kuota tidak berkurang.</li>
-                <li>• <strong>Izin Pribadi:</strong> Memotong kuota cuti.</li>
-                <li>• <strong>Sakit + Surat:</strong> Tidak potong cuti. Wajib upload surat dokter.</li>
-                <li>• <strong>Sakit Tanpa Surat:</strong> Memotong kuota cuti.</li>
+            <p class="text-[10px] font-black text-blue-700 mb-2  tracking-tighter">Aturan Perizinan PT CBN</p>
+            <ul class="space-y-1.5 text-[9px] text-blue-600 font-semibold leading-relaxed">
+                <li class="flex gap-1.5"><span>•</span> <strong>Cuti:</strong> Potong uang makan Rp 35k/hari. Kuota tetap.</li>
+                <li class="flex gap-1.5"><span>•</span> <strong>Izin:</strong> Memotong jatah cuti 12 hari.</li>
+                <li class="flex gap-1.5"><span>•</span> <strong>Sakit + Surat:</strong> Tidak potong jatah cuti (Limit 12 hari).</li>
+                <li class="flex gap-1.5"><span>•</span> <strong>Sakit Tanpa Surat:</strong> Memotong jatah cuti.</li>
+                <li class="flex gap-1.5"><span>•</span> <strong>Lembur:</strong> Berdasarkan hitungan jam & ACC Pimpinan.</li>
             </ul>
         </div>
 
@@ -256,7 +257,6 @@
 var sisaKuota = {{ $kuotaCuti?->sisa ?? 0 }};
 
 function onJenisChange(jenis) {
-    // Tampilkan/sembunyikan upload surat dokter
     var wrapDokter = document.getElementById('wrap-dokter');
     if (jenis === 'sakit_surat') {
         wrapDokter.classList.remove('hidden');
@@ -289,7 +289,6 @@ function hitungHari() {
     labelHari.textContent = diff;
     infoHari.classList.remove('hidden');
 
-    // Cek kuota
     var jenis = document.querySelector('input[name="jenis_izin"]:checked')?.value;
     var memotongCuti = ['izin_pribadi', 'sakit_no_surat'].includes(jenis);
 
@@ -303,16 +302,16 @@ function hitungHari() {
             infoKuota.className = 'text-[9px] text-blue-500 font-semibold';
         }
     } else if (jenis === 'cuti') {
-        infoKuota.textContent = 'Uang makan dipotong Rp ' + (35000 * diff).toLocaleString('id-ID') + ' total.';
-        infoKuota.className = 'text-[9px] text-blue-500 font-semibold';
+        infoKuota.textContent = 'Uang makan akan dipotong Rp ' + (35000 * diff).toLocaleString('id-ID');
+        infoKuota.className = 'text-[9px] text-indigo-600 font-semibold';
     } else {
-        infoKuota.textContent = '';
+        infoKuota.textContent = 'Sakit dengan surat dokter tidak memotong kuota cuti.';
+        infoKuota.className = 'text-[9px] text-purple-600 font-semibold';
     }
 
     lucide.createIcons();
 }
 
-// Restore jika ada old value
 var oldJenis = '{{ old("jenis_izin") }}';
 if (oldJenis) {
     onJenisChange(oldJenis);

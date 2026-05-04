@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 
 class KaryawanController extends Controller
 {
@@ -133,9 +134,22 @@ class KaryawanController extends Controller
             ]);
 
             // 7. Buat komponen gaji default
+            $standardSalaries = Cache::get('standar_gaji_jabatan', []);
+            $defaultGaji = $standardSalaries[$jabatan] ?? 0;
+
+            if ($defaultGaji == 0) {
+                $defaultGaji = KomponenGaji::whereHas('karyawan', function($q) use ($jabatan) {
+                    $q->where('jabatan', $jabatan);
+                })->max('gaji_pokok') ?? 0;
+            }
+
+            if ($defaultGaji == 0 && !$gaji_atas_umr) {
+                $defaultGaji = config('cbn.umr_tahun_ini', 2994031);
+            }
+
             KomponenGaji::create([
                 'karyawan_id'     => $karyawan->id,
-                'gaji_pokok'      => 0,
+                'gaji_pokok'      => $defaultGaji,
                 'uang_makan'      => $uang_makan_mitra ? null : 35000,
                 'uang_transport'  => $uang_makan_mitra ? null : 45000,
                 'persen_bpjs_kes' => 9.24,
