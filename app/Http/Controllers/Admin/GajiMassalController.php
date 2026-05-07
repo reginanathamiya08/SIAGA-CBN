@@ -29,7 +29,7 @@ class GajiMassalController extends Controller
         }
 
         // 2. KARYAWAN KONTRAK
-        $jabatanHCSpesialisKontrak = ['Marketing', 'Call Centre', 'Card Center', 'Teknisi', 'Monitoring ATM dan jaringan', 'PPI'];
+        $jabatanHCSpesialisKontrak = ['Marketing', 'Call Centre', 'Card Center', 'Teknisi', 'Monitoring ATM Dan Jaringan', 'PPI'];
         $jabatanHCUmrKontrak = ['Satpam', 'Sopir', 'Pramusaji', 'Pramubakti', 'E-Channel', 'Juru Parkir'];
         $jabatanUmumKontrak = ['CS', 'CS ATM', 'Ekspedisi'];
 
@@ -39,9 +39,10 @@ class GajiMassalController extends Controller
             ->groupBy('karyawan.jabatan')
             ->pluck('gaji', 'jabatan')->toArray();
 
-        // Gabungkan dengan "Standar Gaji" dari Cache (agar inputan user tidak hilang)
+        // Gabungkan: Nilai dari Cache (Input Standar User) menimpa Nilai DB (Kondisi Saat Ini)
+        // Agar jika di DB masih 0, angka yang baru saja diinput user tidak hilang.
         $cachedSalaries = Cache::get('standar_gaji_jabatan', []);
-        $currentSalaries = array_merge($cachedSalaries, $dbSalaries);
+        $currentSalaries = array_merge($dbSalaries, $cachedSalaries);
 
         // Statistik
         $countTetap = Karyawan::where('jenis_karyawan', 'tetap')->count();

@@ -32,7 +32,61 @@
     </div>
 </div>
 
-{{-- Daftar Mitra --}}
+{{-- ── KANTOR PUSAT ────────────────────────────────────────── --}}
+@if($kantorPusat)
+    <div class="mb-8">
+        <h3 class="font-black text-[#1E3A5F] italic text-[11px] mb-4 flex items-center gap-2">
+            <span class="w-1 h-4 bg-blue-600 rounded-full"></span>
+            KANTOR PUSAT (PT CBN)
+        </h3>
+        <div class="bg-blue-50/30 rounded-3xl border-2 border-blue-100 shadow-sm overflow-hidden border-dashed">
+            <div class="flex items-center justify-between px-6 py-5">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center
+                                justify-center font-black text-lg shrink-0 shadow-lg shadow-blue-200">
+                        <i data-lucide="building-2" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p class="text-base font-black text-[#1E3A5F] flex items-center gap-2">
+                            {{ $kantorPusat->nama_mitra }}
+                            <span class="px-2 py-0.5 bg-blue-600 text-white text-[8px] rounded-full uppercase tracking-widest italic">Pusat</span>
+                        </p>
+                        <div class="flex items-center gap-3 mt-1">
+                            <span class="text-[10px] text-blue-500 font-black italic">
+                                {{ substr($kantorPusat->jam_masuk, 0, 5) }} - {{ substr($kantorPusat->jam_pulang, 0, 5) }}
+                            </span>
+                            <span class="text-[9px] text-gray-300">|</span>
+                            <span class="text-[10px] text-gray-500 font-mono">
+                                {{ $kantorPusat->latitude }}, {{ $kantorPusat->longitude }}
+                            </span>
+                            <span class="text-[9px] text-gray-300">|</span>
+                            <span class="text-[10px] text-green-600 font-bold">
+                                {{ $kantorPusat->penempatan_count }} karyawan tetap
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('admin.mitra.show', $kantorPusat->id) }}"
+                       class="p-2.5 rounded-xl bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                    </a>
+                    <a href="{{ route('admin.mitra.edit', $kantorPusat->id) }}"
+                       class="p-2.5 rounded-xl bg-amber-100 text-amber-700 hover:bg-amber-200 transition-all">
+                        <i data-lucide="pencil" class="w-4 h-4"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+@endif
+
+{{-- ── DAFTAR MITRA KERJA ──────────────────────────────────── --}}
+<h3 class="font-black text-[#1E3A5F] italic text-[11px] mb-4 flex items-center gap-2">
+    <span class="w-1 h-4 bg-orange-500 rounded-full"></span>
+    DAFTAR MITRA KERJA & CABANG
+</h3>
+
 @forelse ($mitraInduk as $mitra)
     <div class="bg-white rounded-3xl border border-gray-100 shadow-sm mb-4 overflow-hidden">
 
@@ -56,6 +110,10 @@
                         <span class="text-[9px] text-gray-400">|</span>
                         <span class="text-[9px] text-green-600 font-semibold">
                             {{ $mitra->penempatan_count }} karyawan aktif
+                        </span>
+                        <span class="text-[9px] text-gray-400">|</span>
+                        <span class="text-[9px] text-orange-600 font-black italic">
+                            {{ substr($mitra->jam_masuk, 0, 5) }} - {{ substr($mitra->jam_pulang, 0, 5) }}
                         </span>
                     </div>
                 </div>
@@ -104,6 +162,10 @@
                                     </span>
                                     <span class="text-[9px] text-blue-500 font-semibold">
                                         Radius: {{ $cabang->radius_meter }}m
+                                    </span>
+                                    <span class="text-[9px] text-gray-400">|</span>
+                                    <span class="text-[9px] text-orange-500 font-black italic">
+                                        {{ substr($cabang->jam_masuk, 0, 5) }} - {{ substr($cabang->jam_pulang, 0, 5) }}
                                     </span>
                                 </div>
                             </div>

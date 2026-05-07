@@ -11,7 +11,7 @@
 @section('content')
 
 <header class="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
-    <a href="{{ route('admin.mitra.show', $mitra->id) }}"
+    <a href="{{ route('admin.mitra.index') }}"
        class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-all text-gray-500">
         <i data-lucide="arrow-left" class="w-4 h-4"></i>
     </a>
@@ -71,7 +71,7 @@
                         Nama Mitra <span class="text-red-500">*</span>
                     </label>
                     <input type="text" name="nama_mitra"
-                           value="{{ old('nama_mitra', $mitra->nama_mitra) }}"
+                           value="{{ old('nama_mitra', $mitra->nama_mitra) }}" required
                            class="w-full px-4 py-3 rounded-xl border text-sm font-semibold
                                   text-gray-700 outline-none transition-all
                                   @error('nama_mitra') border-red-400 bg-red-50
@@ -100,13 +100,65 @@
                     </select>
                 </div>
 
+                {{-- Jam Masuk & Jam Pulang --}}
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-black text-gray-500 tracking-widest mb-2">
+                            Jam Masuk <span class="text-red-500">*</span>
+                        </label>
+                        <input type="time" name="jam_masuk" value="{{ old('jam_masuk', substr($mitra->jam_masuk, 0, 5)) }}"
+                               required
+                               class="w-full px-4 py-3 rounded-xl border text-sm font-semibold
+                                      text-gray-700 outline-none transition-all
+                                      @error('jam_masuk') border-red-400 bg-red-50
+                                      @else border-gray-200 bg-gray-50 focus:border-[#1E3A5F] focus:bg-white
+                                      @enderror">
+                        @error('jam_masuk')
+                            <p class="mt-1 text-xs text-red-500 font-semibold">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-black text-gray-500 tracking-widest mb-2">
+                            Jam Pulang <span class="text-red-500">*</span>
+                        </label>
+                        <input type="time" name="jam_pulang" value="{{ old('jam_pulang', substr($mitra->jam_pulang, 0, 5)) }}"
+                               required
+                               class="w-full px-4 py-3 rounded-xl border text-sm font-semibold
+                                      text-gray-700 outline-none transition-all
+                                      @error('jam_pulang') border-red-400 bg-red-50
+                                      @else border-gray-200 bg-gray-50 focus:border-[#1E3A5F] focus:bg-white
+                                      @enderror">
+                        @error('jam_pulang')
+                            <p class="mt-1 text-xs text-red-500 font-semibold">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
+                {{-- Flag Pusat --}}
+                @if(!$hasPusat || $mitra->is_pusat)
+                <div class="p-4 bg-blue-50/50 border border-blue-100 rounded-2xl">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" name="is_pusat" value="1" {{ old('is_pusat', $mitra->is_pusat) ? 'checked' : '' }}
+                               class="w-5 h-5 rounded-lg border-gray-300 text-[#1E3A5F] focus:ring-[#1E3A5F]">
+                        <div>
+                            <p class="text-xs font-black text-[#1E3A5F] uppercase tracking-widest group-hover:text-blue-600 transition-colors">
+                                Jadikan Kantor Pusat (PT CBN)
+                            </p>
+                            <p class="text-[9px] text-gray-400 mt-0.5">
+                                Jika dicentang, seluruh <strong>karyawan tetap</strong> akan otomatis absen ke lokasi ini.
+                            </p>
+                        </div>
+                    </label>
+                </div>
+                @endif
+
                 <div>
                     <label class="block text-[11px] font-black text-gray-500 tracking-widest mb-2">
                         Latitude <span class="text-red-500">*</span>
                     </label>
                     <input type="number" name="latitude" id="input-lat"
                            value="{{ old('latitude', $mitra->latitude) }}" step="any"
-                           oninput="updateMarkerFromInput()"
+                           oninput="updateMarkerFromInput()" required
                            class="w-full px-4 py-3 rounded-xl border text-sm font-semibold
                                   font-mono text-gray-700 outline-none transition-all
                                   @error('latitude') border-red-400 bg-red-50
@@ -123,7 +175,7 @@
                     </label>
                     <input type="number" name="longitude" id="input-lon"
                            value="{{ old('longitude', $mitra->longitude) }}" step="any"
-                           oninput="updateMarkerFromInput()"
+                           oninput="updateMarkerFromInput()" required
                            class="w-full px-4 py-3 rounded-xl border text-sm font-semibold
                                   font-mono text-gray-700 outline-none transition-all
                                   @error('longitude') border-red-400 bg-red-50
@@ -141,7 +193,7 @@
                     <input type="number" name="radius_meter" id="input-radius"
                            value="{{ old('radius_meter', $mitra->radius_meter) }}"
                            min="10" max="5000"
-                           oninput="syncSlider(this.value)"
+                           oninput="syncSlider(this.value)" required
                            class="w-full px-4 py-3 rounded-xl border text-sm font-semibold
                                   text-gray-700 outline-none transition-all
                                   @error('radius_meter') border-red-400 bg-red-50
@@ -186,7 +238,7 @@
             Simpan Perubahan
         </button>
 
-        <a href="{{ route('admin.mitra.show', $mitra->id) }}"
+        <a href="{{ route('admin.mitra.index') }}"
            class="block text-center text-xs font-bold text-gray-400 hover:text-red-500 transition-colors">
             Batal
         </a>

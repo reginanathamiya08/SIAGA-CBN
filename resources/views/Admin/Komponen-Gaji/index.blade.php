@@ -10,13 +10,17 @@
         <p class="text-gray-500 mt-1 text-sm">Manajemen Penggajian dan BPJS</p>
     </div>
     
-    <div class="flex items-center gap-2">
-        <a href="{{ route('admin.gaji-massal.index') }}"
+    <div class="flex items-center gap-2" x-data="{ 
+        showChoice: false, 
+        showTetap: false, 
+        showKontrak: false 
+    }">
+        <button @click="showChoice = true"
            class="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white
                   font-black text-[10px] uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
             <i data-lucide="zap" class="w-3.5 h-3.5"></i>
             Auto-Fill Gaji
-        </a>
+        </button>
 
         <button onclick="document.getElementById('modal-bpjs').classList.remove('hidden')"
                 class="flex items-center gap-2 bg-[#1E3A5F] hover:bg-blue-700 text-white
@@ -24,6 +28,214 @@
             <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
             Update BPJS
         </button>
+
+        {{-- 1. MODAL PILIHAN KATEGORI --}}
+        <div x-show="showChoice" class="fixed inset-0 z-[60] flex items-center justify-center bg-[#1E3A5F]/40 backdrop-blur-md p-4" x-transition.fade>
+            <div class="bg-white rounded-[3rem] shadow-2xl p-10 w-full max-w-2xl border border-white/20 relative" @click.away="showChoice = false">
+                <button @click="showChoice = false" class="absolute top-6 right-6 text-gray-400 hover:text-red-500 transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+
+                <div class="text-center mb-10">
+                    <label class="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em] mb-2 block">Pilih Kategori</label>
+                    <h3 class="text-2xl font-black text-[#1E3A5F] uppercase italic">Auto-Fill Gaji Massal</h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <button @click="showChoice = false; showTetap = true" class="group bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 hover:bg-white hover:shadow-xl hover:border-blue-500/20 transition-all text-center relative overflow-hidden active:scale-95">
+                        <div class="w-16 h-16 bg-[#1E3A5F] rounded-2xl flex items-center justify-center text-white mb-6 mx-auto shadow-lg group-hover:rotate-6 transition-transform">
+                            <i data-lucide="user-check" class="w-8 h-8"></i>
+                        </div>
+                        <h4 class="text-lg font-black text-[#1E3A5F] uppercase italic mb-2">Karyawan Tetap</h4>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">Update Gaji Keuangan, Koordinator, & Umum</p>
+                    </button>
+
+                    <button @click="showChoice = false; showKontrak = true" class="group bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 hover:bg-white hover:shadow-xl hover:border-emerald-500/20 transition-all text-center relative overflow-hidden active:scale-95">
+                        <div class="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-white mb-6 mx-auto shadow-lg group-hover:-rotate-6 transition-transform">
+                            <i data-lucide="file-text" class="w-8 h-8"></i>
+                        </div>
+                        <h4 class="text-lg font-black text-[#1E3A5F] uppercase italic mb-2">Karyawan Kontrak</h4>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">Update Gaji UMR & HC Spesialis</p>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- 2. MODAL FORM GAJI TETAP --}}
+        <div x-show="showTetap" class="fixed inset-0 z-[70] flex items-center justify-center bg-[#1E3A5F]/60 backdrop-blur-xl p-4 overflow-y-auto" x-transition.fade>
+            <div class="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-4xl my-auto relative" @click.away="showTetap = false">
+                <div class="p-8 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md rounded-t-[3.5rem] z-10">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 bg-[#1E3A5F] rounded-xl flex items-center justify-center text-white">
+                            <i data-lucide="user-check" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-black text-[#1E3A5F] uppercase text-sm">Gaji Karyawan Tetap</h3>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Update Massal Berdasarkan Jabatan</p>
+                        </div>
+                    </div>
+                    <button @click="showTetap = false" class="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full transition-all">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+
+                <div class="p-10 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                    <form action="{{ route('admin.gaji-massal.update-spesialis') }}" method="POST">
+                        @csrf
+                        <div class="space-y-12">
+                            @foreach($jabatanTetapByDivisi as $divisi => $jabatans)
+                            <div>
+                                <div class="flex items-center gap-4 mb-6">
+                                    <h3 class="text-[10px] font-black text-blue-600 bg-blue-50 px-4 py-2 rounded-full uppercase tracking-[0.2em]">{{ str_replace(['_', '-'], ' ', strtoupper($divisi)) }}</h3>
+                                    <div class="h-[1px] flex-1 bg-gray-100"></div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    @foreach($jabatans as $js)
+                                    @php $val = $currentSalaries[$js] ?? 0; @endphp
+                                    <div class="bg-slate-50 p-5 rounded-[2rem] border border-transparent hover:border-blue-100 hover:bg-white transition-all shadow-sm group/card"
+                                         x-data="{ editing: {{ $val > 0 ? 'false' : 'true' }} }">
+                                        <div class="text-center mb-3 relative">
+                                            <label class="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">{{ $js }}</label>
+                                            @if($val > 0)
+                                            <button type="button" @click="editing = !editing" class="absolute -top-1 -right-1 p-1.5 text-slate-300 hover:text-blue-500">
+                                                <i data-lucide="edit-3" class="w-3 h-3"></i>
+                                            </button>
+                                            @endif
+                                        </div>
+                                        <div x-show="!editing" @click="editing = true" class="text-center cursor-pointer">
+                                            <p class="text-lg font-black text-[#1E3A5F] tracking-tight">
+                                                <span class="text-[10px] opacity-30 mr-0.5">Rp</span>{{ number_format($val, 0, ',', '.') }}
+                                            </p>
+                                        </div>
+                                        <div x-show="editing" class="relative">
+                                            <input type="number" name="gaji[{{ $js }}]" value="{{ $val > 0 ? $val : '' }}" placeholder="0"
+                                                   class="w-full py-1 bg-transparent text-center text-lg font-black text-[#1E3A5F] outline-none border-b-2 border-blue-100 focus:border-blue-500 transition-all">
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                        <div class="mt-12 flex items-center justify-center gap-4">
+                            <button type="submit" class="bg-[#1E3A5F] text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-blue-800 transition-all active:scale-95">Update Gaji Tetap</button>
+                            <button type="button" @click="showTetap = false" class="px-8 py-4 bg-gray-100 text-gray-400 rounded-2xl font-black text-xs uppercase tracking-widest">Batal</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {{-- 3. MODAL FORM GAJI KONTRAK --}}
+        <div x-show="showKontrak" class="fixed inset-0 z-[70] flex items-center justify-center bg-[#1E3A5F]/60 backdrop-blur-xl p-4 overflow-y-auto" x-transition.fade>
+            <div class="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-5xl my-auto relative" @click.away="showKontrak = false">
+                <div class="p-8 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md rounded-t-[3.5rem] z-10">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white">
+                            <i data-lucide="file-text" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-black text-[#1E3A5F] uppercase text-sm">Gaji Karyawan Kontrak</h3>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Update Massal (UMR & Above UMR)</p>
+                        </div>
+                    </div>
+                    <button @click="showKontrak = false" class="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full transition-all">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+
+                <div class="p-10 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                        {{-- Divisi HC --}}
+                        <div class="bg-slate-50/50 rounded-[2.5rem] border border-slate-100 p-8">
+                            <form action="{{ route('admin.gaji-massal.update-spesialis') }}" method="POST">
+                                @csrf
+                                <div class="flex items-center justify-between mb-8">
+                                    <h4 class="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">Divisi HC (Above UMR)</h4>
+                                    <div class="h-[1px] flex-1 ml-4 bg-blue-100/50"></div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                                    @foreach($jabatanHCSpesialisKontrak as $js)
+                                    @php $val = $currentSalaries[$js] ?? 0; @endphp
+                                    <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-transparent hover:border-blue-100 transition-all" 
+                                         x-data="{ editing: {{ $val > 0 ? 'false' : 'true' }} }">
+                                        <div class="text-center mb-4 relative">
+                                            <label class="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">{{ $js }}</label>
+                                            @if($val > 0)
+                                            <button type="button" @click="editing = !editing" class="absolute -top-1 -right-1 p-1.5 text-slate-300 hover:text-blue-500">
+                                                <i data-lucide="edit-3" class="w-3 h-3"></i>
+                                            </button>
+                                            @endif
+                                        </div>
+                                        <div x-show="!editing" @click="editing = true" class="text-center cursor-pointer">
+                                            <p class="text-lg font-black text-[#1E3A5F] tracking-tight">
+                                                <span class="text-[10px] opacity-30 mr-0.5">Rp</span>{{ number_format($val, 0, ',', '.') }}
+                                            </p>
+                                        </div>
+                                        <div x-show="editing">
+                                            <input type="number" name="gaji[{{ $js }}]" value="{{ $val > 0 ? $val : '' }}" placeholder="0" class="w-full py-1 bg-transparent text-center text-lg font-black text-[#1E3A5F] outline-none border-b-2 border-blue-100 focus:border-blue-500 transition-all">
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                </div>
+                                <button type="submit" class="w-full py-5 bg-[#1E3A5F] text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-blue-800 transition-all active:scale-95">Simpan HC Spesialis</button>
+                            </form>
+
+                            <form action="{{ route('admin.gaji-massal.update-umr') }}" method="POST" class="pt-10 mt-10 border-t border-slate-200">
+                                @csrf
+                                <input type="hidden" name="target" value="hc_umr">
+                                <h4 class="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-6 text-center">HC Standar (UMR)</h4>
+                                @php $umrVal = $currentSalaries['Satpam'] ?? 0; @endphp
+                                <div class="bg-white p-8 rounded-[2.5rem] border border-emerald-100 text-center shadow-sm" x-data="{ editing: {{ $umrVal > 0 ? 'false' : 'true' }} }">
+                                    <div x-show="!editing" class="flex flex-col items-center gap-3">
+                                        <span class="text-3xl font-black text-emerald-600 italic tracking-tighter">Rp {{ number_format($umrVal, 0, ',', '.') }}</span>
+                                        <button type="button" @click="editing = true" class="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:scale-105 transition-transform">Ubah UMR HC</button>
+                                    </div>
+                                    <div x-show="editing" class="space-y-4">
+                                        <input type="number" name="nominal_umr" value="{{ $umrVal > 0 ? $umrVal : '' }}" required placeholder="UMR HC" class="w-full py-3 bg-slate-50 border-none rounded-2xl text-xl font-black text-[#1E3A5F] text-center outline-none focus:ring-2 focus:ring-emerald-500/20">
+                                        <button type="submit" class="w-full py-4 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-emerald-600 transition-all">Update UMR HC</button>
+                                    </div>
+                                    <div class="flex flex-wrap gap-1.5 justify-center mt-6">
+                                        @foreach($jabatanHCUmrKontrak as $j)
+                                        <span class="px-2.5 py-1 bg-slate-50 text-[8px] font-black text-emerald-600 rounded-lg uppercase border border-emerald-50">{{ $j }}</span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        {{-- Divisi Umum --}}
+                        <div class="bg-slate-50/50 rounded-[2.5rem] border border-slate-100 p-8 h-full">
+                            <form action="{{ route('admin.gaji-massal.update-umr') }}" method="POST">
+                                @csrf
+                                <input type="hidden" name="target" value="umum_umr">
+                                <h4 class="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] mb-8 text-center">Divisi Umum (CBN)</h4>
+                                @php $umumVal = $currentSalaries['CS'] ?? 0; @endphp
+                                <div class="bg-white p-10 rounded-[3rem] border border-amber-100 text-center shadow-sm" x-data="{ editing: {{ $umumVal > 0 ? 'false' : 'true' }} }">
+                                    <div x-show="!editing" class="flex flex-col items-center gap-4">
+                                        <span class="text-4xl font-black text-amber-600 italic tracking-tighter">Rp {{ number_format($umumVal, 0, ',', '.') }}</span>
+                                        <button type="button" @click="editing = true" class="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:scale-105 transition-transform">Ubah UMR Umum</button>
+                                    </div>
+                                    <div x-show="editing" class="space-y-4">
+                                        <input type="number" name="nominal_umr" value="{{ $umumVal > 0 ? $umumVal : '' }}" required placeholder="0" class="w-full py-4 bg-slate-50 border-none rounded-2xl text-2xl font-black text-[#1E3A5F] text-center outline-none focus:ring-2 focus:ring-amber-500/20">
+                                        <button type="submit" class="w-full py-5 bg-amber-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-amber-600 transition-all">Update UMR Umum</button>
+                                    </div>
+                                    <div class="flex flex-wrap gap-1.5 justify-center mt-10">
+                                        @foreach($jabatanUmumKontrak as $j)
+                                        <span class="px-3 py-1 bg-slate-50 text-[8px] font-black text-amber-600 rounded-lg uppercase border border-amber-50">{{ $j }}</span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </form>
+                            <div class="mt-10 p-6 bg-white rounded-3xl border border-slate-100">
+                                <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest text-center">Catatan</p>
+                                <p class="text-[10px] text-slate-500 text-center mt-2 leading-relaxed">Update UMR akan langsung merubah gaji pokok seluruh karyawan pada jabatan yang tertera di atas.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </header>
 
@@ -213,6 +425,12 @@
         </form>
     </div>
 </div>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
+</style>
 
 @push('scripts')
 <script>

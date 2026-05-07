@@ -38,15 +38,58 @@ class KomponenGajiController extends Controller
         }
 
         $karyawan = $query->paginate(15)->withQueryString();
+        $totalKaryawan = Karyawan::where('is_active', true)->count();
 
         // Statistik
         $stats = [
             'belum_diisi'  => KomponenGaji::where('gaji_pokok', 0)->count(),
             'sudah_diisi'  => KomponenGaji::where('gaji_pokok', '>', 0)->count(),
-            'total'        => KomponenGaji::count(),
+            'total'        => $totalKaryawan,
         ];
 
-        return view('admin.komponen-gaji.index', compact('karyawan', 'stats'));
+        // ─────────────────────────────────────────────────────────────────
+        // DATA UNTUK MODAL AUTO-FILL GAJI
+        // ─────────────────────────────────────────────────────────────────
+        
+        // 1. KARYAWAN TETAP
+        $targetDivisiTetap = [
+            'keuangan' => ['Staff Keuangan'],
+            'koordinator_cs' => ['Koordinator CS'],
+            'adm_umum' => ['Staff Administrasi & Umum']
+        ];
+        $rawJabatanTetap = Karyawan::where('jenis_karyawan', 'tetap')->get(['divisi', 'jabatan'])->groupBy('divisi');
+        $jabatanTetapByDivisi = collect();
+        foreach ($targetDivisiTetap as $div => $defaultJabs) {
+            $dbJabs = isset($rawJabatanTetap[$div]) ? $rawJabatanTetap[$div]->pluck('jabatan')->unique()->toArray() : [];
+            $mergedJabs = array_unique(array_merge($defaultJabs, $dbJabs));
+            sort($mergedJabs);
+            $jabatanTetapByDivisi[$div] = $mergedJabs;
+        }
+
+        // 2. KARYAWAN KONTRAK
+        $jabatanHCSpesialisKontrak = ['Marketing', 'Call Centre', 'Card Center', 'Teknisi', 'Monitoring ATM Dan Jaringan', 'PPI'];
+        $jabatanHCUmrKontrak = ['Satpam', 'Sopir', 'Pramusaji', 'Pramubakti', 'E-Channel', 'Juru Parkir'];
+        $jabatanUmumKontrak = ['CS', 'CS ATM', 'Ekspedisi'];
+
+        // Ambil Gaji dari Database
+        $dbSalaries = KomponenGaji::join('karyawan', 'komponen_gaji.karyawan_id', '=', 'karyawan.id')
+            ->select('karyawan.jabatan', \Illuminate\Support\Facades\DB::raw('MAX(gaji_pokok) as gaji'))
+            ->groupBy('karyawan.jabatan')
+            ->pluck('gaji', 'jabatan')->toArray();
+
+        // Gabungkan dengan Cache
+        $cachedSalaries = \Illuminate\Support\Facades\Cache::get('standar_gaji_jabatan', []);
+        $currentSalaries = array_merge($dbSalaries, $cachedSalaries);
+
+        return view('admin.komponen-gaji.index', compact(
+            'karyawan', 
+            'stats',
+            'jabatanTetapByDivisi', 
+            'jabatanHCSpesialisKontrak', 
+            'jabatanHCUmrKontrak', 
+            'jabatanUmumKontrak',
+            'currentSalaries'
+        ));
     }
 
     // ─────────────────────────────────────────────────────────────────

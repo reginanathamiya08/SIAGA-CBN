@@ -16,12 +16,16 @@ class Mitra extends Model
         'ip_public',
         'mitra_induk_id',
         'is_cabang',
+        'jam_masuk',
+        'jam_pulang',
+        'is_pusat',
     ];
 
     protected $casts = [
         'latitude'  => 'float',
         'longitude' => 'float',
         'is_cabang' => 'boolean',
+        'is_pusat'  => 'boolean',
     ];
 
     // ── Relasi self-referencing (induk ↔ cabang) ─────────────────────────

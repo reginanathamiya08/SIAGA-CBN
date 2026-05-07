@@ -56,7 +56,7 @@
                 Lokasi Mitra
             </h3>
             <div id="map-detail"></div>
-            <div class="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-50">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-50">
                 <div class="text-center">
                     <p class="text-[9px] font-black text-gray-400   tracking-widest mb-1">Latitude</p>
                     <p class="text-xs font-black text-gray-700 font-mono">{{ $mitra->latitude }}</p>
@@ -65,9 +65,13 @@
                     <p class="text-[9px] font-black text-gray-400   tracking-widest mb-1">Longitude</p>
                     <p class="text-xs font-black text-gray-700 font-mono">{{ $mitra->longitude }}</p>
                 </div>
-                <div class="text-center">
+                <div class="text-center border-r border-gray-100">
                     <p class="text-[9px] font-black text-gray-400   tracking-widest mb-1">Radius</p>
                     <p class="text-xs font-black text-blue-600">{{ $mitra->radius_meter }} m</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-[9px] font-black text-gray-400   tracking-widest mb-1">IP Public</p>
+                    <p class="text-xs font-black text-emerald-600 font-mono">{{ $mitra->ip_public ?? '-' }}</p>
                 </div>
             </div>
         </div>
@@ -158,6 +162,29 @@
 
     {{-- Sidebar Kanan --}}
     <div class="space-y-5">
+        
+        {{-- Jam Kerja --}}
+        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+            <h3 class="font-black text-[#1E3A5F]   italic text-[11px] mb-4
+                       flex items-center gap-2">
+                <span class="w-1 h-4 bg-blue-600 rounded-full"></span>
+                Jam Kerja (Wajib)
+            </h3>
+            <div class="flex items-center justify-between p-3 rounded-xl bg-blue-50/50 border border-blue-100">
+                <div class="text-center flex-1">
+                    <p class="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Masuk</p>
+                    <p class="text-sm font-black text-[#1E3A5F]">{{ substr($mitra->jam_masuk, 0, 5) }}</p>
+                </div>
+                <div class="w-px h-8 bg-blue-200 mx-4"></div>
+                <div class="text-center flex-1">
+                    <p class="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Pulang</p>
+                    <p class="text-sm font-black text-[#1E3A5F]">{{ substr($mitra->jam_pulang, 0, 5) }}</p>
+                </div>
+            </div>
+            <p class="mt-3 text-[9px] text-gray-400 italic">
+                * Jam kerja ini berlaku untuk seluruh karyawan non-satpam di mitra ini.
+            </p>
+        </div>
 
         {{-- Cabang --}}
         @if (!$mitra->is_cabang)

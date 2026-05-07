@@ -32,12 +32,43 @@ class PenempatanController extends Controller
 
         $penempatan = $query->paginate(15)->withQueryString();
 
+        // Ambil daftar jabatan unik untuk filter karyawan tetap
+        $daftarJabatan = Karyawan::where('jenis_karyawan', 'tetap')
+                                 ->where('is_active', true)
+                                 ->distinct()
+                                 ->pluck('jabatan');
+
+        // Ambil data Karyawan Tetap (Otomatis Pusat)
+        $queryTetap = Karyawan::where('jenis_karyawan', 'tetap')
+                             ->where('is_active', true);
+        
+        if ($request->filled('cari')) {
+            $queryTetap->where('nama', 'LIKE', '%'.$request->cari.'%');
+        }
+
+        // Filter berdasarkan jabatan jika ada
+        if ($request->filled('jabatan')) {
+            $queryTetap->where('jabatan', $request->jabatan);
+        }
+
+        // Karyawan tetap hanya muncul jika filter mitra kosong atau mitra_id adalah Pusat
+        $kantorPusat = Mitra::where('is_pusat', true)->first();
+        $showTetap = true;
+        if ($request->filled('mitra_id') && (!$kantorPusat || $request->mitra_id != $kantorPusat->id)) {
+            $showTetap = false;
+        }
+        if ($request->filled('status') && $request->status !== 'aktif') {
+            $showTetap = false;
+        }
+
+        $karyawanTetap = $showTetap ? $queryTetap->get() : collect();
+
         // Data untuk filter dropdown
         $daftarMitra = Mitra::orderBy('nama_mitra')->get(['id','nama_mitra','is_cabang']);
 
         // Statistik
         $stats = [
-            'aktif'    => Penempatan::where('status','aktif')->count(),
+            'aktif'    => Penempatan::where('status','aktif')->count() + Karyawan::where('jenis_karyawan','tetap')->where('is_active', true)->count(),
             'selesai'  => Penempatan::where('status','selesai')->count(),
             'tersedia' => Karyawan::where('jenis_karyawan','kontrak')
                                   ->where('is_active', true)
@@ -47,7 +78,7 @@ class PenempatanController extends Controller
         ];
 
         return view('admin.penempatan.index', compact(
-            'penempatan', 'daftarMitra', 'stats'
+            'penempatan', 'karyawanTetap', 'kantorPusat', 'daftarMitra', 'daftarJabatan', 'stats'
         ));
     }
 

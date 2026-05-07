@@ -51,11 +51,23 @@
 @endif
 
 {{-- NO PENEMPATAN WARNING --}}
-@unless($penempatan)
+@unless($penempatan && isset($penempatan->mitra))
     <div class="bg-yellow-50 border border-yellow-200 rounded-3xl p-6 mb-6 text-center">
         <i data-lucide="map-pin-off" class="w-10 h-10 text-yellow-400 mx-auto mb-3"></i>
-        <p class="font-black text-yellow-700 text-sm">Belum Ada Penempatan Aktif</p>
-        <p class="text-yellow-600 text-xs mt-1">Hubungi admin untuk mendapatkan penempatan.</p>
+        <p class="font-black text-yellow-700 text-sm">
+            @if($karyawan->jenis_karyawan === 'tetap')
+                Data Kantor Pusat Belum Diatur
+            @else
+                Belum Ada Penempatan Aktif
+            @endif
+        </p>
+        <p class="text-yellow-600 text-xs mt-1">
+            @if($karyawan->jenis_karyawan === 'tetap')
+                Admin harus menandai salah satu mitra sebagai "Kantor Pusat" terlebih dahulu.
+            @else
+                Hubungi admin untuk mendapatkan penempatan.
+            @endif
+        </p>
     </div>
 @endunless
 
@@ -111,7 +123,7 @@
         </div>
 
         {{-- Info Mitra --}}
-        @if($penempatan)
+        @if($penempatan && isset($penempatan->mitra))
             <div class="bg-blue-50 rounded-2xl p-3 flex items-center gap-3">
                 <i data-lucide="building-2" class="w-4 h-4 text-blue-500 shrink-0"></i>
                 <div>
@@ -186,8 +198,9 @@
             </div>
         </div>
 
-        @if($penempatan)
-            @if(!$absensi?->waktu_masuk)
+        @if($penempatan && isset($penempatan->mitra))
+            <div class="grid grid-cols-2 gap-4">
+                {{-- Form Masuk --}}
                 <form method="POST" action="{{ route('karyawan.absensi.masuk') }}"
                       x-ref="formMasuk" @submit.prevent="submitAbsen($refs.formMasuk)">
                     @csrf
@@ -195,56 +208,58 @@
                     <input type="hidden" name="longitude" x-bind:value="lon">
 
                     <button type="submit"
-                            :disabled="!lat || !jarakValid || loading"
-                            class="w-full flex items-center justify-center gap-3 py-4
-                                   bg-[#1E3A5F] text-white rounded-2xl font-black italic
-                                   text-sm shadow-lg hover:bg-green-700 transition-all
-                                   disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i data-lucide="fingerprint" class="w-5 h-5"></i>
-                        <span x-show="!submitting">Absen Masuk Sekarang</span>
-                        <span x-show="submitting" class="animate-pulse">Memproses...</span>
+                            :disabled="!lat || !jarakValid || loading || {{ $absensi?->waktu_masuk ? 'true' : 'false' }}"
+                            class="w-full flex flex-col items-center justify-center gap-2 py-6
+                                   {{ !$absensi?->waktu_masuk ? 'bg-[#1E3A5F] hover:bg-[#2c5385]' : 'bg-gray-100 text-gray-400' }}
+                                   text-white rounded-3xl font-black italic
+                                   text-sm shadow-md transition-all
+                                   disabled:opacity-60 disabled:cursor-not-allowed">
+                        <i data-lucide="log-in" class="w-6 h-6 mb-1"></i>
+                        <span x-show="!submitting">Absensi Masuk</span>
+                        <span x-show="submitting" class="animate-pulse">Proses...</span>
                     </button>
                 </form>
 
-            @elseif(!$absensi?->waktu_pulang)
+                {{-- Form Pulang --}}
                 <form method="POST" action="{{ route('karyawan.absensi.pulang') }}"
                       x-ref="formPulang" @submit.prevent="submitAbsen($refs.formPulang)">
                     @csrf
                     <input type="hidden" name="latitude"  x-bind:value="lat">
                     <input type="hidden" name="longitude" x-bind:value="lon">
 
-                    @if(!$bolehPulang)
-                        <div class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
-                            <div class="flex items-center gap-2 text-amber-700 text-xs font-black italic mb-1">
-                                <i data-lucide="lock" class="w-4 h-4"></i>
-                                Belum Waktunya Pulang
-                            </div>
-                            <p class="text-[10px] font-bold text-amber-600 leading-tight">
-                                {{ $pesanBelumPulang }}
-                            </p>
-                        </div>
-                    @endif
-
                     <button type="submit"
-                            :disabled="!lat || !jarakValid || loading || !{{ $bolehPulang ? 'true' : 'false' }}"
-                            class="w-full flex items-center justify-center gap-3 py-4
-                                   {{ $bolehPulang ? 'bg-gray-700 hover:bg-red-600' : 'bg-gray-300' }} 
-                                   text-white rounded-2xl font-black italic
-                                   text-sm shadow-lg transition-all
-                                   disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i data-lucide="{{ $bolehPulang ? 'log-out' : 'lock' }}" class="w-5 h-5"></i>
-                        <span x-show="!submitting">{{ $bolehPulang ? 'Absen Pulang' : 'Tombol Terkunci' }}</span>
-                        <span x-show="submitting" class="animate-pulse">Memproses...</span>
+                            :disabled="!lat || !jarakValid || loading || !{{ ($absensi?->waktu_masuk && !$absensi?->waktu_pulang && $bolehPulang) ? 'true' : 'false' }}"
+                            class="w-full flex flex-col items-center justify-center gap-2 py-6
+                                   {{ ($absensi?->waktu_masuk && !$absensi?->waktu_pulang && $bolehPulang) ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-100 text-gray-400' }}
+                                   rounded-3xl font-black italic
+                                   text-sm shadow-md transition-all
+                                   disabled:opacity-60 disabled:cursor-not-allowed">
+                        <i data-lucide="log-out" class="w-6 h-6 mb-1"></i>
+                        <span x-show="!submitting">Absensi Pulang</span>
+                        <span x-show="submitting" class="animate-pulse">Proses...</span>
                     </button>
                 </form>
+            </div>
 
-            @else
-                <div class="bg-green-50 border border-green-200 rounded-2xl p-5 text-center">
-                    <i data-lucide="check-circle-2" class="w-8 h-8 text-green-500 mx-auto mb-2"></i>
-                    <p class="font-black text-green-700 text-sm">Absensi Hari Ini Selesai</p>
-                    <p class="text-green-600 text-xs mt-1">
-                        {{ $absensi->waktu_masuk->format('H:i') }} —
-                        {{ $absensi->waktu_pulang->format('H:i') }}
+            {{-- Pesan Kondisional --}}
+            @if($absensi?->waktu_masuk && !$absensi?->waktu_pulang && !$bolehPulang)
+                <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+                    <div class="flex items-center gap-2 text-amber-700 text-xs font-black italic mb-1">
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                        Belum Waktunya Pulang
+                    </div>
+                    <p class="text-[10px] font-bold text-amber-600 leading-tight">
+                        {{ $pesanBelumPulang }}
+                    </p>
+                </div>
+            @endif
+
+            @if($absensi?->waktu_masuk && $absensi?->waktu_pulang)
+                <div class="mt-4 bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
+                    <i data-lucide="check-circle-2" class="w-5 h-5 text-green-500 mx-auto mb-1"></i>
+                    <p class="font-black text-green-700 text-xs">Absensi Hari Ini Selesai</p>
+                    <p class="text-[10px] text-green-600 mt-0.5">
+                        {{ $absensi->waktu_masuk->format('H:i') }} — {{ $absensi->waktu_pulang->format('H:i') }}
                     </p>
                 </div>
             @endif

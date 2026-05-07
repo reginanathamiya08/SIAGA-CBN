@@ -11,11 +11,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        
+        $middleware->trustProxies(at: '*'); // ← TAMBAHKAN INI
 
-        // Tambahkan CheckActive ke grup 'web' agar berjalan di setiap request
         $middleware->appendToGroup('web', \App\Http\Middleware\CheckActive::class);
 
-        // Daftarkan alias middleware 'role'
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);

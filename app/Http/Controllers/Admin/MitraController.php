@@ -15,17 +15,38 @@ class MitraController extends Controller
     // ─────────────────────────────────────────────────────────────────
     public function index()
     {
+        // Ambil Kantor Pusat secara spesifik
+        $kantorPusat = Mitra::where('is_pusat', true)
+                            ->withCount(['cabang', 'penempatan' => fn($q) => $q->where('status','aktif')])
+                            ->first();
+
+        // Jika ada kantor pusat, hitung karyawan tetap sebagai "penempatan" otomatis
+        if ($kantorPusat) {
+            $jumlahTetap = \App\Models\Karyawan::where('jenis_karyawan', 'tetap')
+                                              ->where('is_active', true)
+                                              ->count();
+            // Kita tambahkan jumlah tetap ke penempatan_count
+            $kantorPusat->penempatan_count += $jumlahTetap;
+        }
+
+        // Ambil Mitra Induk lainnya (yang bukan pusat)
         $mitraInduk = Mitra::withCount(['cabang', 'penempatan' => fn($q) => $q->where('status','aktif')])
                            ->whereNull('mitra_induk_id')
+                           ->where('is_pusat', false)
                            ->orderBy('nama_mitra')
                            ->get();
 
         $totalMitra    = Mitra::whereNull('mitra_induk_id')->count();
         $totalCabang   = Mitra::whereNotNull('mitra_induk_id')->count();
-        $totalAktif    = \App\Models\Penempatan::where('status','aktif')->count();
+        
+        $totalAktifKontrak = \App\Models\Penempatan::where('status','aktif')->count();
+        $totalAktifTetap   = \App\Models\Karyawan::where('jenis_karyawan', 'tetap')
+                                                 ->where('is_active', true)
+                                                 ->count();
+        $totalAktif = $totalAktifKontrak + $totalAktifTetap;
 
         return view('admin.mitra.index', compact(
-            'mitraInduk', 'totalMitra', 'totalCabang', 'totalAktif'
+            'kantorPusat', 'mitraInduk', 'totalMitra', 'totalCabang', 'totalAktif'
         ));
     }
 
@@ -39,7 +60,9 @@ class MitraController extends Controller
                             ->orderBy('nama_mitra')
                             ->get(['id','nama_mitra']);
 
-        return view('admin.mitra.create', compact('daftarInduk'));
+        $hasPusat = Mitra::where('is_pusat', true)->exists();
+
+        return view('admin.mitra.create', compact('daftarInduk', 'hasPusat'));
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -51,6 +74,11 @@ class MitraController extends Controller
 
         // Jika ada mitra_induk_id, ini adalah cabang
         $data['is_cabang'] = !empty($data['mitra_induk_id']);
+        $data['is_pusat']  = $request->has('is_pusat');
+
+        if ($data['is_pusat']) {
+            Mitra::where('id', '>', 0)->update(['is_pusat' => false]);
+        }
 
         $mitra = Mitra::create($data);
 
@@ -100,7 +128,11 @@ class MitraController extends Controller
                             ->orderBy('nama_mitra')
                             ->get(['id','nama_mitra']);
 
-        return view('admin.mitra.edit', compact('mitra', 'daftarInduk'));
+        $hasPusat = Mitra::where('is_pusat', true)
+                         ->where('id', '!=', $mitra->id)
+                         ->exists();
+
+        return view('admin.mitra.edit', compact('mitra', 'daftarInduk', 'hasPusat'));
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -110,6 +142,12 @@ class MitraController extends Controller
     {
         $data = $request->validated();
         $data['is_cabang'] = !empty($data['mitra_induk_id']);
+        $data['is_pusat']  = $request->has('is_pusat');
+
+        if ($data['is_pusat']) {
+            Mitra::where('id', '!=', $mitra->id)->update(['is_pusat' => false]);
+        }
+
         $mitra->update($data);
 
         // Update Konfigurasi Shift
@@ -126,7 +164,7 @@ class MitraController extends Controller
         }
 
         return redirect()
-            ->route('admin.mitra.show', $mitra->id)
+            ->route('admin.mitra.index')
             ->with('success', 'Data mitra berhasil diperbarui.');
     }
 
