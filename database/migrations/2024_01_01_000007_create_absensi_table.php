@@ -8,13 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('absensi', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('karyawan_id')->constrained('karyawan')->cascadeOnDelete();
-            $table->foreignId('mitra_id')
-                  ->nullable()
-                  ->constrained('mitra')
-                  ->nullOnDelete();
+        Schema::create('detail_absensi', function (Blueprint $table) {
+            $table->string('id', 20)->primary();
+            $table->string('user_id', 20);
+            $table->string('mitra_id', 20)
+                  ->nullable();
+            
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('mitra_id')->references('id')->on('mitra')->nullOnDelete();
             $table->date('tanggal');
             $table->dateTime('waktu_masuk')->nullable();
             $table->dateTime('waktu_pulang')->nullable();
@@ -36,12 +37,12 @@ return new class extends Migration
             $table->boolean('is_telat')->default(false);
             $table->timestamps();
 
-            $table->unique(['karyawan_id', 'tanggal']);
+            $table->unique(['user_id', 'tanggal']);
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('absensi');
+        Schema::dropIfExists('detail_absensi');
     }
 };

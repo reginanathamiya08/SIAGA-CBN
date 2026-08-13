@@ -9,15 +9,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('mitra', function (Blueprint $table) {
-            $table->id();
+            $table->string('id', 20)->primary();
             $table->string('nama_mitra', 150);
             $table->decimal('latitude', 10, 7);
             $table->decimal('longitude', 10, 7);
             $table->integer('radius_meter')->default(100);
-            $table->foreignId('mitra_induk_id')
-                  ->nullable()
-                  ->constrained('mitra')
+            $table->string('mitra_induk_id', 20)
+                  ->nullable();
+            
+            $table->foreign('mitra_induk_id')
+                  ->references('id')
+                  ->on('mitra')
                   ->nullOnDelete();
+
             $table->boolean('is_cabang')->default(false);
             $table->timestamps();
         });

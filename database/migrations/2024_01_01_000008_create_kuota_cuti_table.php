@@ -9,15 +9,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('kuota_cuti', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('karyawan_id')->constrained('karyawan')->cascadeOnDelete();
+            $table->string('id', 20)->primary();
+            $table->string('user_id', 20);
+            
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->year('tahun');
             $table->integer('kuota_total')->default(12);
             $table->integer('terpakai')->default(0);
             $table->integer('sisa')->default(12);
             $table->timestamps();
 
-            $table->unique(['karyawan_id', 'tahun']);
+            $table->unique(['user_id', 'tahun']);
         });
     }
 

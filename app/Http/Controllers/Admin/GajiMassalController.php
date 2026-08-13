@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Karyawan;
-use App\Models\KomponenGaji;
+use App\Models\User;
+use App\Models\DetailGajiKomponen;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -13,110 +13,192 @@ class GajiMassalController extends Controller
 {
     public function index()
     {
-        // 1. KARYAWAN TETAP
-        $targetDivisiTetap = [
-            'keuangan' => ['Staff Keuangan'],
-            'koordinator_cs' => ['Koordinator CS'],
-            'adm_umum' => ['Staff Administrasi & Umum']
-        ];
-        $rawJabatanTetap = Karyawan::where('jenis_karyawan', 'tetap')->get(['divisi', 'jabatan'])->groupBy('divisi');
-        $jabatanTetapByDivisi = collect();
-        foreach ($targetDivisiTetap as $div => $defaultJabs) {
-            $dbJabs = isset($rawJabatanTetap[$div]) ? $rawJabatanTetap[$div]->pluck('jabatan')->unique()->toArray() : [];
-            $mergedJabs = array_unique(array_merge($defaultJabs, $dbJabs));
-            sort($mergedJabs);
-            $jabatanTetapByDivisi[$div] = $mergedJabs;
-        }
+        // 1. DATA KARYAWAN TETAP (Berdasarkan Pendidikan)
+        $levels = ['S3', 'S2', 'S1', 'D3', 'SMA/SMK'];
+        
+        $roleTetapIds = \App\Models\Role::where('slug', 'karyawan_tetap')->pluck('id');
+        $roleKontrakIds = \App\Models\Role::where('slug', 'karyawan_kontrak')->pluck('id');
 
-        // 2. KARYAWAN KONTRAK
-        $jabatanHCSpesialisKontrak = ['Marketing', 'Call Centre', 'Card Center', 'Teknisi', 'Monitoring ATM Dan Jaringan', 'PPI'];
-        $jabatanHCUmrKontrak = ['Satpam', 'Sopir', 'Pramusaji', 'Pramubakti', 'E-Channel', 'Juru Parkir'];
-        $jabatanUmumKontrak = ['CS', 'CS ATM', 'Ekspedisi'];
+        $dbTetapSalaries = DetailGajiKomponen::query()->join('users', 'detail_gaji_komponen.user_id', '=', 'users.id')
+            ->whereNull('detail_gaji_komponen.slip_gaji_periode_id')
+            ->where('detail_gaji_komponen.komponen_gaji_id', 'MKG-00001')
+            ->whereIn('users.role_id', $roleTetapIds)
+            ->select('users.pendidikan', DB::raw('MAX(detail_gaji_komponen.nominal) as gaji'))
+            ->whereNotNull('users.pendidikan')
+            ->groupBy('users.pendidikan')
+            ->pluck('gaji', 'pendidikan')->toArray();
 
-        // Ambil Gaji dari Database (yang sudah ada orangnya)
-        $dbSalaries = KomponenGaji::join('karyawan', 'komponen_gaji.karyawan_id', '=', 'karyawan.id')
-            ->select('karyawan.jabatan', DB::raw('MAX(gaji_pokok) as gaji'))
-            ->groupBy('karyawan.jabatan')
-            ->pluck('gaji', 'jabatan')->toArray();
+        $cachedTetap = Cache::get('standar_gaji_pendidikan', []);
+        $currentTetapSalaries = array_merge($dbTetapSalaries, $cachedTetap);
 
-        // Gabungkan: Nilai dari Cache (Input Standar User) menimpa Nilai DB (Kondisi Saat Ini)
-        // Agar jika di DB masih 0, angka yang baru saja diinput user tidak hilang.
-        $cachedSalaries = Cache::get('standar_gaji_jabatan', []);
-        $currentSalaries = array_merge($dbSalaries, $cachedSalaries);
+        // 2. DATA KARYAWAN KONTRAK
+        // Divisi HC (Berdasarkan Tamatan: SMA vs D3/S1)
+        $gajiKontrakHcSma = Cache::get('standar_gaji_kontrak_hc_sma', 3200000);
+        $gajiKontrakHcD3S1 = Cache::get('standar_gaji_kontrak_hc_d3_s1', 3800000);
+
+        // Divisi Umum (UMR Berjalan)
+        $umrTahunIni = (float) \App\Models\Configuration::getValue('umr_tahun_ini', 2994031);
+
+        $jabatanHCList = ['Marketing', 'Call Centre', 'Card Center', 'Teknisi', 'Monitoring ATM Dan Jaringan', 'PPID', 'PPI'];
+        $jabatanUmumList = ['CS', 'CS ATM', 'Ekspedisi'];
 
         // Statistik
-        $countTetap = Karyawan::where('jenis_karyawan', 'tetap')->count();
-        $countKontrakHC = Karyawan::where('jenis_karyawan', 'kontrak')->where('divisi', 'HC')->count();
-        $countKontrakUmum = Karyawan::where('jenis_karyawan', 'kontrak')->where('divisi', 'umum')->count();
-        $totalKaryawan = Karyawan::count();
-        $countSudahIsi = KomponenGaji::whereNotNull('gaji_pokok')->where('gaji_pokok', '>', 0)->count();
+        $statsTetap = [];
+        foreach ($levels as $lv) { 
+            $statsTetap[$lv] = User::query()->whereHas('role', fn($r) => $r->where('slug', 'karyawan_tetap'))->where('pendidikan', $lv)->count(); 
+        }
+
+        $countKontrakHcSma = User::query()->whereHas('role', fn($r) => $r->where('slug', 'karyawan_kontrak'))
+            ->where(function($q) use ($jabatanHCList) {
+                $q->whereIn('jabatan', $jabatanHCList)->orWhere('divisi', 'HC');
+            })
+            ->whereIn('pendidikan', ['SMA', 'SMK', 'SMA/SMK'])
+            ->count();
+
+        $countKontrakHcD3S1 = User::query()->whereHas('role', fn($r) => $r->where('slug', 'karyawan_kontrak'))
+            ->where(function($q) use ($jabatanHCList) {
+                $q->whereIn('jabatan', $jabatanHCList)->orWhere('divisi', 'HC');
+            })
+            ->whereNotIn('pendidikan', ['SMA', 'SMK', 'SMA/SMK'])
+            ->count();
+
+        $countKontrakUmum = User::query()->whereHas('role', fn($r) => $r->where('slug', 'karyawan_kontrak'))
+            ->where(function($q) use ($jabatanUmumList) {
+                $q->whereIn('jabatan', $jabatanUmumList)->orWhere('divisi', 'umum');
+            })
+            ->count();
+
+        $totalKaryawan = User::query()->where('is_active', true)->whereHas('role', fn($r) => $r->whereIn('slug', ['karyawan_tetap', 'karyawan_kontrak']))->count();
+        $countSudahIsi = User::where('is_active', true)
+            ->whereHas('role', fn($r) => $r->whereIn('slug', ['karyawan_tetap', 'karyawan_kontrak']))
+            ->whereHas('komponenGaji', fn($q) => $q->where('komponen_gaji_id', 'MKG-00001')->where('nominal', '>', 0))
+            ->count();
         $countBelumIsi = $totalKaryawan - $countSudahIsi;
 
+        $currentSalaries = array_merge($currentTetapSalaries, [
+            'kontrak_hc_sma'   => $gajiKontrakHcSma,
+            'kontrak_hc_d3_s1' => $gajiKontrakHcD3S1,
+            'umr_tahun_ini'    => $umrTahunIni,
+        ]);
+
         return view('admin.gaji-massal.index', compact(
-            'jabatanTetapByDivisi', 
-            'jabatanHCSpesialisKontrak', 
-            'jabatanHCUmrKontrak', 
-            'jabatanUmumKontrak',
+            'levels',
             'currentSalaries',
-            'countTetap', 
-            'countKontrakHC', 
+            'statsTetap',
+            'jabatanHCList',
+            'jabatanUmumList',
+            'countKontrakHcSma',
+            'countKontrakHcD3S1',
             'countKontrakUmum',
             'countBelumIsi',
-            'countSudahIsi'
+            'countSudahIsi',
+            'totalKaryawan'
         ));
     }
 
-    public function updateUmr(Request $request)
+    private function cleanNominal($nominal)
     {
-        $request->validate(['nominal_umr' => 'required|numeric|min:0', 'target' => 'required']);
-        
-        $jabatans = ($request->target == 'hc_umr') 
-            ? ['Satpam', 'Sopir', 'Pramusaji', 'Pramubakti', 'E-Channel', 'Juru Parkir']
-            : ['CS', 'CS ATM', 'Ekspedisi'];
-
-        // Simpan ke Cache agar angka tetap muncul di view
-        $cache = Cache::get('standar_gaji_jabatan', []);
-        foreach($jabatans as $j) { $cache[$j] = $request->nominal_umr; }
-        Cache::put('standar_gaji_jabatan', $cache, 60*24*30); // 30 hari
-
-        $karyawanIds = Karyawan::where('jenis_karyawan', 'kontrak')
-            ->where('divisi', ($request->target == 'hc_umr' ? 'HC' : 'umum'))
-            ->whereIn('jabatan', $jabatans)->pluck('id');
-
-        foreach ($karyawanIds as $id) {
-            KomponenGaji::updateOrCreate(['karyawan_id' => $id], ['gaji_pokok' => $request->nominal_umr]);
-        }
-
-        return back()->with(['success' => "Gaji UMR berhasil diperbarui.", 'mode' => 'kontrak']);
+        if (!$nominal) return 0;
+        $clean = preg_replace('/[^0-9]/', '', $nominal);
+        return (float) $clean;
     }
 
-    public function updateSpesialis(Request $request)
+    public function updateTetap(Request $request)
     {
         $request->validate(['gaji' => 'required|array']);
-        $mode = 'tetap';
         
-        // Simpan ke Cache agar angka tetap muncul di view
-        $cache = Cache::get('standar_gaji_jabatan', []);
-        foreach($request->gaji as $jabatan => $nominal) {
-            if ($nominal !== null && $nominal !== '') {
-                $cache[$jabatan] = $nominal;
+        $cache = Cache::get('standar_gaji_pendidikan', []);
+        foreach($request->gaji as $lv => $nominal) {
+            if ($nominal !== null && $nominal !== '') { 
+                $cache[$lv] = $this->cleanNominal($nominal); 
             }
         }
-        Cache::put('standar_gaji_jabatan', $cache, 60*24*30);
+        Cache::put('standar_gaji_pendidikan', $cache, 60*24*30);
 
-        DB::transaction(function() use ($request, &$mode) {
-            foreach ($request->gaji as $jabatan => $nominal) {
-                if ($nominal !== null && $nominal !== '') {
-                    $karyawans = Karyawan::where('jabatan', $jabatan)->get();
-                    if($karyawans->isNotEmpty() && $karyawans->first()->jenis_karyawan == 'kontrak') $mode = 'kontrak';
-                    
-                    foreach ($karyawans as $kar) {
-                        KomponenGaji::updateOrCreate(['karyawan_id' => $kar->id], ['gaji_pokok' => $nominal]);
+        DB::transaction(function() use ($request) {
+            foreach($request->gaji as $lv => $nominal) {
+                if ($nominal === null || $nominal === '') continue;
+                $cleanVal = $this->cleanNominal($nominal);
+                
+                $karyawanIds = User::query()->whereHas('role', fn($r) => $r->where('slug', 'karyawan_tetap'))->where('pendidikan', $lv)->pluck('id');
+                foreach($karyawanIds as $id) {
+                    $user = User::find($id);
+                    if ($user) {
+                        $user->updateKomponenGaji(['gaji_pokok' => $cleanVal]);
                     }
                 }
             }
         });
 
-        return back()->with(['success' => "Gaji pokok berhasil diperbarui.", 'mode' => $mode]);
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Gaji Karyawan Tetap (Tamatan) berhasil diperbarui.']);
+        }
+
+        return redirect()->route('admin.komponen-gaji-karyawan.index')->with(['success' => 'Gaji Karyawan Tetap (Tamatan) berhasil diperbarui.', 'mode' => 'tetap']);
+    }
+
+    public function updateKontrakHc(Request $request)
+    {
+        $request->validate([
+            'gaji_sma'   => 'required',
+            'gaji_d3_s1' => 'required',
+        ]);
+
+        $gajiSma  = $this->cleanNominal($request->gaji_sma);
+        $gajiD3S1 = $this->cleanNominal($request->gaji_d3_s1);
+
+        Cache::put('standar_gaji_kontrak_hc_sma', $gajiSma, 60*24*30);
+        Cache::put('standar_gaji_kontrak_hc_d3_s1', $gajiD3S1, 60*24*30);
+
+        $jabatanHCList = ['Marketing', 'Call Centre', 'Card Center', 'Teknisi', 'Monitoring ATM Dan Jaringan', 'PPID', 'PPI'];
+
+        DB::transaction(function() use ($jabatanHCList, $gajiSma, $gajiD3S1) {
+            $kontrakHc = User::whereHas('role', fn($r) => $r->where('slug', 'karyawan_kontrak'))
+                ->where(function($q) use ($jabatanHCList) {
+                    $q->whereIn('jabatan', $jabatanHCList)->orWhere('divisi', 'HC');
+                })->get();
+
+            foreach ($kontrakHc as $user) {
+                $gaji = in_array(strtoupper($user->pendidikan), ['SMA', 'SMK', 'SMA/SMK']) ? $gajiSma : $gajiD3S1;
+                $user->updateKomponenGaji(['gaji_pokok' => $gaji]);
+            }
+        });
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Gaji Kontrak Divisi HC berhasil diperbarui berdasarkan tamatan.']);
+        }
+
+        return redirect()->route('admin.komponen-gaji-karyawan.index')->with(['success' => 'Gaji Kontrak Divisi HC berhasil diperbarui.', 'mode' => 'kontrak']);
+    }
+
+    public function updateUmr(Request $request)
+    {
+        $request->validate(['nominal_umr' => 'required']);
+        $nominal = $this->cleanNominal($request->nominal_umr);
+        
+        \App\Models\Configuration::setValue('umr_tahun_ini', $nominal);
+        Cache::put('umr_tahun_ini', $nominal, 60*24*30);
+
+        $jabatanUmumList = ['CS', 'CS ATM', 'Ekspedisi'];
+
+        $kontrakUmum = User::whereHas('role', fn($r) => $r->where('slug', 'karyawan_kontrak'))
+            ->where(function($q) use ($jabatanUmumList) {
+                $q->whereIn('jabatan', $jabatanUmumList)->orWhere('divisi', 'umum');
+            })->get();
+
+        foreach ($kontrakUmum as $user) {
+            $user->updateKomponenGaji(['gaji_pokok' => $nominal]);
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Gaji UMR Kontrak berhasil diperbarui.']);
+        }
+
+        return redirect()->route('admin.komponen-gaji-karyawan.index')->with(['success' => "Gaji UMR Kontrak berhasil diperbarui.", 'mode' => 'kontrak']);
+    }
+
+    public function updateSpesialis(Request $request)
+    {
+        return $this->updateKontrakHc($request);
     }
 }

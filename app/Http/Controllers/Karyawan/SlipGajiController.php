@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Karyawan;
 
 use App\Http\Controllers\Controller;
-use App\Models\SlipGaji;
+use App\Models\SlipGajiPeriode;
 use Illuminate\Support\Facades\Auth;
 
 class SlipGajiController extends Controller
@@ -15,12 +15,12 @@ class SlipGajiController extends Controller
     {
         $karyawan = Auth::user()->karyawan;
 
-        $slipGaji = SlipGaji::with('periodeGaji')
-                            ->join('periode_gaji', 'periode_gaji.id', '=', 'slip_gaji.periode_id')
-                            ->where('slip_gaji.karyawan_id', $karyawan->id)
-                            ->where('slip_gaji.status', 'diterbitkan')
+        $slipGaji = SlipGajiPeriode::with('periodeGaji')
+                            ->join('periode_gaji', 'periode_gaji.id', '=', 'slip_gaji_periode.periode_id')
+                            ->where('slip_gaji_periode.user_id', $karyawan->id)
+                            ->where('slip_gaji_periode.status', 'diterbitkan')
                             ->orderBy('periode_gaji.tanggal_mulai', 'desc')
-                            ->select('slip_gaji.*')
+                            ->select('slip_gaji_periode.*')
                             ->paginate(12);
 
         return view('karyawan.slip-gaji.index', compact('slipGaji', 'karyawan'));
@@ -29,17 +29,34 @@ class SlipGajiController extends Controller
     // ─────────────────────────────────────────────────────────────────
     // SHOW - Detail slip gaji (bisa dicetak)
     // ─────────────────────────────────────────────────────────────────
-    public function show(SlipGaji $slipGaji)
+    public function show(SlipGajiPeriode $slipGaji)
     {
-        $karyawan = Auth::user()->karyawan;
+        $karyawan = Auth::user();
 
         // Pastikan slip ini milik karyawan yang login
-        if ($slipGaji->karyawan_id !== $karyawan->id) {
+        if ($slipGaji->user_id !== $karyawan->id) {
             abort(403, 'Akses ditolak.');
         }
 
-        $slipGaji->load(['karyawan.user', 'karyawan.komponenGaji', 'periodeGaji']);
+        $slipGaji->load(['karyawan', 'karyawan.komponenGaji', 'periodeGaji']);
 
         return view('karyawan.slip-gaji.show', compact('slipGaji'));
+    }
+
+    public function officialSlip(SlipGajiPeriode $slipGaji)
+    {
+        $karyawan = Auth::user();
+
+        if ($slipGaji->user_id !== $karyawan->id) {
+            abort(403, 'Akses ditolak.');
+        }
+
+        $slipGaji->load(['karyawan', 'karyawan.komponenGaji', 'periodeGaji']);
+
+        $admUmum = \App\Models\User::where('jabatan', 'Staff Administrasi & Umum')
+                                    ->where('nama', '!=', 'Administrator Utama')
+                                    ->first();
+
+        return view('admin.penggajian.slip_official', compact('slipGaji', 'admUmum'));
     }
 }

@@ -5,12 +5,12 @@
 
 <header class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
     <div>
-        <h1 class="text-2xl font-black text-[#1E3A5F] ">Kelola Mitra</h1>
+        <h1 class="text-2xl font-black text-[#1E3A5F]">Kelola Mitra</h1>
         <p class="text-gray-500 mt-1 text-sm">Manajemen perusahaan mitra <span class="text-red-600 font-bold">PT Citra Bangun Nagari</span></p>
     </div>
     <a href="{{ route('admin.mitra.create') }}"
-       class="flex items-center gap-2 bg-[#1E3A5F] hover:bg-red-600 text-white
-              font-black text-xs   italic px-5 py-3 rounded-xl transition-all shadow-sm">
+       class="flex items-center gap-2 bg-[#1E3A5F] hover:bg-blue-900 text-white
+              font-black text-xs px-5 py-3 rounded-xl transition-all shadow-lg shadow-blue-900/10 active:scale-95 uppercase">
         <i data-lucide="plus" class="w-4 h-4"></i>
         Tambah Mitra
     </a>
@@ -18,24 +18,24 @@
 
 {{-- Statistik --}}
 <div class="grid grid-cols-3 gap-4 mb-6">
-    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm text-center">
-        <p class="text-[9px] font-black text-gray-400   tracking-widest mb-1">Mitra Induk</p>
+    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-center hover:-translate-y-1 transition-all duration-300">
+        <p class="text-[10px] font-black text-gray-400 mb-1 uppercase tracking-tight">Mitra Induk</p>
         <p class="text-2xl font-black text-[#1E3A5F]">{{ $totalMitra }}</p>
     </div>
-    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm text-center">
-        <p class="text-[9px] font-black text-gray-400   tracking-widest mb-1">Cabang</p>
+    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-center hover:-translate-y-1 transition-all duration-300">
+        <p class="text-[10px] font-black text-gray-400 mb-1 uppercase tracking-tight">Cabang</p>
         <p class="text-2xl font-black text-blue-600">{{ $totalCabang }}</p>
     </div>
-    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm text-center">
-        <p class="text-[9px] font-black text-gray-400   tracking-widest mb-1">Karyawan Aktif</p>
-        <p class="text-2xl font-black text-green-600">{{ $totalAktif }}</p>
+    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-center hover:-translate-y-1 transition-all duration-300">
+        <p class="text-[10px] font-black text-gray-400 mb-1 uppercase tracking-tight">Karyawan Aktif</p>
+        <p class="text-2xl font-black text-emerald-600">{{ $totalAktif }}</p>
     </div>
 </div>
 
 {{-- ── KANTOR PUSAT ────────────────────────────────────────── --}}
 @if($kantorPusat)
     <div class="mb-8">
-        <h3 class="font-black text-[#1E3A5F] italic text-[11px] mb-4 flex items-center gap-2">
+        <h3 class="font-black text-[#1E3A5F] text-[11px] mb-4 flex items-center gap-2 uppercase tracking-tight">
             <span class="w-1 h-4 bg-blue-600 rounded-full"></span>
             KANTOR PUSAT (PT CBN)
         </h3>
@@ -49,19 +49,19 @@
                     <div>
                         <p class="text-base font-black text-[#1E3A5F] flex items-center gap-2">
                             {{ $kantorPusat->nama_mitra }}
-                            <span class="px-2 py-0.5 bg-blue-600 text-white text-[8px] rounded-full uppercase tracking-widest italic">Pusat</span>
+                            <span class="px-2.5 py-0.5 bg-blue-600 text-white text-[8px] rounded-full uppercase font-black">Pusat</span>
                         </p>
-                        <div class="flex items-center gap-3 mt-1">
-                            <span class="text-[10px] text-blue-500 font-black italic">
+                        <div class="flex items-center gap-3 mt-1.5">
+                            <span class="text-[10px] text-blue-600 font-black uppercase tracking-tight">
                                 {{ substr($kantorPusat->jam_masuk, 0, 5) }} - {{ substr($kantorPusat->jam_pulang, 0, 5) }}
                             </span>
-                            <span class="text-[9px] text-gray-300">|</span>
-                            <span class="text-[10px] text-gray-500 font-mono">
+                            <span class="text-[9px] text-gray-200">|</span>
+                            <span class="text-[10px] text-gray-400 font-mono">
                                 {{ $kantorPusat->latitude }}, {{ $kantorPusat->longitude }}
                             </span>
-                            <span class="text-[9px] text-gray-300">|</span>
-                            <span class="text-[10px] text-green-600 font-bold">
-                                {{ $kantorPusat->penempatan_count }} karyawan tetap
+                            <span class="text-[9px] text-gray-200">|</span>
+                            <span class="text-[10px] text-emerald-600 font-black uppercase tracking-tight">
+                                {{ $kantorPusat->penempatan_count }} karyawan aktif
                             </span>
                         </div>
                     </div>
@@ -82,7 +82,7 @@
 @endif
 
 {{-- ── DAFTAR MITRA KERJA ──────────────────────────────────── --}}
-<h3 class="font-black text-[#1E3A5F] italic text-[11px] mb-4 flex items-center gap-2">
+<h3 class="font-black text-[#1E3A5F] text-[11px] mb-4 flex items-center gap-2 uppercase tracking-tight">
     <span class="w-1 h-4 bg-orange-500 rounded-full"></span>
     DAFTAR MITRA KERJA & CABANG
 </h3>
@@ -103,24 +103,24 @@
                         <span class="text-[9px] text-gray-400 font-mono">
                             {{ $mitra->latitude }}, {{ $mitra->longitude }}
                         </span>
-                        <span class="text-[9px] text-gray-400">|</span>
-                        <span class="text-[9px] text-blue-600 font-semibold">
+                        <span class="text-[9px] text-gray-300">|</span>
+                        <span class="text-[9px] text-blue-600 font-black uppercase tracking-tight">
                             Radius: {{ $mitra->radius_meter }}m
                         </span>
-                        <span class="text-[9px] text-gray-400">|</span>
-                        <span class="text-[9px] text-green-600 font-semibold">
+                        <span class="text-[9px] text-gray-300">|</span>
+                        <span class="text-[9px] text-emerald-600 font-black uppercase tracking-tight">
                             {{ $mitra->penempatan_count }} karyawan aktif
                         </span>
-                        <span class="text-[9px] text-gray-400">|</span>
-                        <span class="text-[9px] text-orange-600 font-black italic">
+                        <span class="text-[9px] text-gray-300">|</span>
+                        <span class="text-[9px] text-orange-600 font-black uppercase tracking-tight">
                             {{ substr($mitra->jam_masuk, 0, 5) }} - {{ substr($mitra->jam_pulang, 0, 5) }}
                         </span>
                     </div>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <span class="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-lg
-                             text-[9px] font-black  ">
+                <span class="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full
+                             text-[9px] font-black uppercase">
                     {{ $mitra->cabang_count }} Cabang
                 </span>
                 <a href="{{ route('admin.mitra.show', $mitra->id) }}"
@@ -160,11 +160,15 @@
                                     <span class="text-[9px] text-gray-400 font-mono">
                                         {{ $cabang->latitude }}, {{ $cabang->longitude }}
                                     </span>
-                                    <span class="text-[9px] text-blue-500 font-semibold">
+                                    <span class="text-[9px] text-blue-600 font-black uppercase tracking-tight">
                                         Radius: {{ $cabang->radius_meter }}m
                                     </span>
-                                    <span class="text-[9px] text-gray-400">|</span>
-                                    <span class="text-[9px] text-orange-500 font-black italic">
+                                    <span class="text-[9px] text-gray-200">|</span>
+                                    <span class="text-[9px] text-emerald-600 font-black uppercase tracking-tight">
+                                        {{ $cabang->penempatan_count }} karyawan aktif
+                                    </span>
+                                    <span class="text-[9px] text-gray-200">|</span>
+                                    <span class="text-[9px] text-orange-600 font-black uppercase tracking-tight">
                                         {{ substr($cabang->jam_masuk, 0, 5) }} - {{ substr($cabang->jam_pulang, 0, 5) }}
                                     </span>
                                 </div>
@@ -206,8 +210,8 @@
         <i data-lucide="building" class="w-12 h-12 text-gray-200 mx-auto mb-3"></i>
         <p class="text-sm text-gray-400 font-semibold">Belum ada data mitra.</p>
         <a href="{{ route('admin.mitra.create') }}"
-           class="mt-3 inline-block text-xs font-black text-[#1E3A5F]
-                  hover:text-red-600   italic transition-colors">
+           class="mt-3 inline-block text-[10px] font-black text-[#1E3A5F]
+                  hover:text-blue-900 transition-colors uppercase tracking-tight">
             + Tambah Mitra Pertama
         </a>
     </div>

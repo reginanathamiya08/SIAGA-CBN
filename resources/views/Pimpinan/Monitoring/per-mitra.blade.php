@@ -24,7 +24,7 @@
             <select name="mitra_id" class="rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
                 <option value="">Semua Mitra</option>
                 @foreach($semuaMitra as $m)
-                    <option value="{{ $m->id }}" @selected($m->id == $mitraId)>{{ $m->nama_mitra }}</option>
+                    <option value="{{ $m->id }}" @selected($m->id == $mitraId)>{{ $m->nama_mitra }}{{ $m->is_pusat ? ' (Kantor Pusat / Utama)' : '' }}</option>
                 @endforeach
             </select>
             <select name="bulan" class="rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">

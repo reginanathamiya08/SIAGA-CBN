@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Pimpinan;
 
 use App\Http\Controllers\Controller;
 use App\Models\Absensi;
-use App\Models\Karyawan;
+use App\Models\User;
 use App\Models\Mitra;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -19,14 +19,19 @@ class MonitoringKehadiranController extends Controller
 {
     public function index(Request $request)
     {
+        \App\Helpers\AttendanceHelper::runAutoAlfaDeduction();
+
         $today         = Carbon::today();
         $mitraId       = $request->input('mitra_id');
         $statusFilter  = $request->input('status');
-        $tab           = $request->input('tab', 'tetap');
 
-        // 1. Hitung Statistik Keseluruhan (untuk Pie Chart Global jika ada)
+        // 1. Hitung Statistik Keseluruhan (untuk Pie Chart Global)
         $semuaAbsensiHariIni = Absensi::with('karyawan')->whereDate('tanggal', $today)->get();
-        $semuaKaryawanAktif = Karyawan::where('is_active', true)->get();
+        $semuaKaryawanAktif = User::where('is_active', true)
+            ->whereHas('role', function($q) {
+                $q->whereIn('slug', ['karyawan_tetap', 'karyawan_kontrak']);
+            })
+            ->get();
 
         // 2. Hitung Statistik Per Jenis (Tetap & Kontrak) - DIBUTUHKAN VIEW
         $stats = [];
@@ -34,8 +39,9 @@ class MonitoringKehadiranController extends Controller
         $pieDataKontrak = [];
 
         foreach (['tetap', 'kontrak'] as $jenis) {
-            $totalJ = $semuaKaryawanAktif->where('jenis_karyawan', $jenis)->count();
-            $absJ   = $semuaAbsensiHariIni->filter(fn($a) => ($a->karyawan?->jenis_karyawan ?? '') === $jenis);
+            $slug = ($jenis === 'tetap') ? 'karyawan_tetap' : 'karyawan_kontrak';
+            $totalJ = $semuaKaryawanAktif->filter(fn($u) => $u->role?->slug === $slug)->count();
+            $absJ   = $semuaAbsensiHariIni->filter(fn($a) => ($a->karyawan?->role?->slug ?? '') === $slug);
 
             $hadirJ  = $absJ->whereIn('status', ['hadir', 'telat'])->count();
             $telatJ  = $absJ->where('is_telat', true)->count();
@@ -66,19 +72,12 @@ class MonitoringKehadiranController extends Controller
             else $pieDataKontrak = $piePerJenis;
         }
 
-        // 3. Tentukan Data yang Aktif (Berdasarkan TAB)
-        if ($tab === 'semua') {
-            $totalKaryawan = $semuaKaryawanAktif->count();
-            $absensiAktif  = $semuaAbsensiHariIni;
-        } else {
-            $totalKaryawan = $stats[$tab]['total'] ?? 0;
-            $absensiAktif  = $semuaAbsensiHariIni->filter(fn($a) => ($a->karyawan?->jenis_karyawan ?? '') === $tab);
-        }
-
-        $hadirCount  = $absensiAktif->whereIn('status', ['hadir', 'telat'])->count();
-        $telatCount  = $absensiAktif->where('is_telat', true)->count();
-        $izinCount   = $absensiAktif->whereIn('status', ['izin', 'sakit', 'cuti', 'dinas_luar'])->count();
-        $alfaCount   = $absensiAktif->where('status', 'alfa')->count();
+        // Statistik Global (untuk Pie Chart dan Ringkasan)
+        $totalKaryawan = $semuaKaryawanAktif->count();
+        $hadirCount  = $semuaAbsensiHariIni->whereIn('status', ['hadir', 'telat'])->count();
+        $telatCount  = $semuaAbsensiHariIni->where('is_telat', true)->count();
+        $izinCount   = $semuaAbsensiHariIni->whereIn('status', ['izin', 'sakit', 'cuti', 'dinas_luar'])->count();
+        $alfaCount   = $semuaAbsensiHariIni->where('status', 'alfa')->count();
         $belumHadir  = max(0, $totalKaryawan - $hadirCount - $izinCount - $alfaCount);
         $persenHadir = $totalKaryawan > 0 ? round(($hadirCount / $totalKaryawan) * 100) : 0;
 
@@ -90,29 +89,105 @@ class MonitoringKehadiranController extends Controller
             'belum'       => $belumHadir,
         ];
 
-        // 4. Query untuk TABEL (Filter Mitra & Status)
-        $queryTabel = Absensi::with(['karyawan.penempatanAktif.mitra', 'mitra'])
-            ->whereDate('tanggal', $today);
+        // 3. Query untuk Tabel Karyawan Tetap
+        $dbTetap = Absensi::with(['karyawan'])
+            ->whereDate('tanggal', $today)
+            ->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->where('slug', 'karyawan_tetap')))
+            ->get();
 
-        if ($tab !== 'semua') {
-            $queryTabel->whereHas('karyawan', fn($q) => $q->where('jenis_karyawan', $tab));
+        $karyawanTetapList = User::where('is_active', true)
+            ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_tetap'))
+            ->get();
+
+        $mergedTetap = collect();
+        foreach ($karyawanTetapList as $karyawan) {
+            $existing = $dbTetap->firstWhere('user_id', $karyawan->id);
+            if ($existing) {
+                $mergedTetap->push($existing);
+            } else {
+                $virtualAbs = new Absensi([
+                    'user_id' => $karyawan->id,
+                    'tanggal' => $today,
+                    'status'  => 'belum_absen',
+                ]);
+                $virtualAbs->setRelation('karyawan', $karyawan);
+                $mergedTetap->push($virtualAbs);
+            }
         }
 
-        if ($mitraId) $queryTabel->where('mitra_id', $mitraId);
+        // Apply filters on Tetap
+        if ($statusFilter) {
+            if ($statusFilter === 'telat') {
+                $mergedTetap = $mergedTetap->where('is_telat', true);
+            } else {
+                $mergedTetap = $mergedTetap->where('status', $statusFilter);
+            }
+        }
+
+        // Sort Tetap: present/active status first, then name
+        $absensiTetap = $mergedTetap->sortBy(function($a) {
+            return ($a->status === 'belum_absen' ? 'z_' : 'a_') . strtolower($a->karyawan?->nama ?? '');
+        })->values();
+
+
+        // 4. Query untuk Tabel Karyawan Kontrak
+        $dbKontrak = Absensi::with(['karyawan.penempatanAktif.mitra', 'mitra'])
+            ->whereDate('tanggal', $today)
+            ->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->where('slug', 'karyawan_kontrak')))
+            ->get();
+
+        $karyawanKontrakList = User::with(['penempatanAktif.mitra'])
+            ->where('is_active', true)
+            ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_kontrak'))
+            ->get();
+
+        $mergedKontrak = collect();
+        foreach ($karyawanKontrakList as $karyawan) {
+            $existing = $dbKontrak->firstWhere('user_id', $karyawan->id);
+            if ($existing) {
+                $mergedKontrak->push($existing);
+            } else {
+                $virtualAbs = new Absensi([
+                    'user_id'  => $karyawan->id,
+                    'tanggal'  => $today,
+                    'status'   => 'belum_absen',
+                    'mitra_id' => $karyawan->penempatanAktif?->mitra_id,
+                ]);
+                $virtualAbs->setRelation('karyawan', $karyawan);
+                $virtualAbs->setRelation('mitra', $karyawan->penempatanAktif?->mitra);
+                $mergedKontrak->push($virtualAbs);
+            }
+        }
+
+        // Apply filters on Kontrak
+        if ($mitraId) {
+            $mergedKontrak = $mergedKontrak->filter(function($a) use ($mitraId) {
+                return $a->mitra_id == $mitraId;
+            });
+        }
 
         if ($statusFilter) {
-            if ($statusFilter === 'telat') $queryTabel->where('is_telat', true);
-            else $queryTabel->where('status', $statusFilter);
+            if ($statusFilter === 'telat') {
+                $mergedKontrak = $mergedKontrak->where('is_telat', true);
+            } else {
+                $mergedKontrak = $mergedKontrak->where('status', $statusFilter);
+            }
         }
 
-        $absensiHariIni = $queryTabel->latest('waktu_masuk')->get();
-        $semuaMitra     = Mitra::orderBy('nama_mitra')->get();
+        // Sort Kontrak: present/active status first, then name
+        $absensiKontrak = $mergedKontrak->sortBy(function($a) {
+            return ($a->status === 'belum_absen' ? 'z_' : 'a_') . strtolower($a->karyawan?->nama ?? '');
+        })->values();
+
+        $semuaMitra     = Mitra::where('id', '!=', 'MTR-00001')
+            ->orderByRaw('COALESCE(mitra_induk_id, id), is_cabang ASC, nama_mitra ASC')
+            ->get();
 
         return view('Pimpinan.Monitoring.index', compact(
             'today', 'totalKaryawan', 'hadirCount', 'telatCount',
             'izinCount', 'alfaCount', 'belumHadir', 'persenHadir',
-            'pieData', 'absensiHariIni', 'semuaMitra',
-            'mitraId', 'statusFilter', 'tab',
+            'pieData', 'absensiTetap', 'absensiKontrak', 'semuaMitra',
+            'mitraId', 'statusFilter',
             'stats', 'pieDataTetap', 'pieDataKontrak'
         ));
     }
@@ -123,19 +198,22 @@ class MonitoringKehadiranController extends Controller
         $sampai        = $request->input('sampai') ? Carbon::parse($request->input('sampai')) : Carbon::now()->endOfDay();
         $mitraId       = $request->input('mitra_id');
         $divisi        = $request->input('divisi');
-        $jenisKaryawan = $request->input('jenis_karyawan');
-        $karyawanId    = $request->input('karyawan_id');
+        $jenisKaryawan = $request->input('jenis_karyawan_id');
+        $karyawanId    = $request->input('user_id');
 
         $query = Absensi::with(['karyawan', 'mitra'])
             ->whereBetween('tanggal', [$dari->toDateString(), $sampai->toDateString()])
             ->orderBy('tanggal');
 
         if ($mitraId)    $query->where('mitra_id', $mitraId);
-        if ($karyawanId) $query->where('karyawan_id', $karyawanId);
+        if ($karyawanId) $query->where('user_id', $karyawanId);
         if ($divisi || $jenisKaryawan) {
             $query->whereHas('karyawan', function ($q) use ($divisi, $jenisKaryawan) {
                 if ($divisi)        $q->where('divisi', $divisi);
-                if ($jenisKaryawan) $q->where('jenis_karyawan', $jenisKaryawan);
+                if ($jenisKaryawan) {
+                    $slugTarget = in_array($jenisKaryawan, ['tetap', 'karyawan_tetap', 'JNS-00001']) ? 'karyawan_tetap' : 'karyawan_kontrak';
+                    $q->whereHas('role', fn($r) => $r->where('slug', $slugTarget));
+                }
             });
         }
 
@@ -147,7 +225,7 @@ class MonitoringKehadiranController extends Controller
             ->map(fn($rows) => $rows->whereNotIn('status', ['hadir', 'telat'])->count());
 
         $top10 = $absensiList
-            ->groupBy('karyawan_id')
+            ->groupBy('user_id')
             ->map(fn($rows) => [
                 'nama'  => $rows->first()->karyawan?->nama ?? '-',
                 'total' => $rows->where('is_telat', true)->count()
@@ -157,7 +235,7 @@ class MonitoringKehadiranController extends Controller
             ->take(10)
             ->values();
 
-        $rekapTabel = $absensiList->groupBy('karyawan_id')->map(function ($rows) use ($totalHariKerja) {
+        $rekapTabel = $absensiList->groupBy('user_id')->map(function ($rows) use ($totalHariKerja) {
             $k      = $rows->first()->karyawan;
             $hadir  = $rows->whereIn('status', ['hadir', 'telat'])->count();
             $persen = $totalHariKerja > 0 ? round(($hadir / $totalHariKerja) * 100, 1) : 0;
@@ -178,17 +256,26 @@ class MonitoringKehadiranController extends Controller
             ];
         })->values();
 
-        $semuaMitra    = Mitra::orderBy('nama_mitra')->get();
-        $semuaKaryawan = Karyawan::where('is_active', true)->orderBy('nama')->get();
+        $semuaMitra    = Mitra::orderByRaw('COALESCE(mitra_induk_id, id), is_cabang ASC, nama_mitra ASC')->get();
+        $semuaKaryawan = User::where('is_active', true)->orderBy('nama')->get();
+
+        $countTetap = User::where('is_active', true)
+            ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_tetap'))
+            ->count();
+        $countKontrak = User::where('is_active', true)
+            ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_kontrak'))
+            ->count();
+        $countSemua = $countTetap + $countKontrak;
 
         return view('Pimpinan.Monitoring.statistik', compact(
             'dari', 'sampai', 'trenPerHari', 'top10', 'rekapTabel',
             'totalHariKerja', 'semuaMitra', 'semuaKaryawan',
             'mitraId', 'divisi', 'jenisKaryawan', 'karyawanId',
+            'countTetap', 'countKontrak', 'countSemua',
         ));
     }
 
-    public function detail(Request $request, Karyawan $karyawan)
+    public function detail(Request $request, User $karyawan)
     {
         $dari   = $request->input('dari')
             ? Carbon::parse($request->input('dari'))->startOfDay()
@@ -199,7 +286,7 @@ class MonitoringKehadiranController extends Controller
         $statusFilter = $request->input('status');
 
         $query = Absensi::with('mitra')
-            ->where('karyawan_id', $karyawan->id)
+            ->where('user_id', $karyawan->id)
             ->whereBetween('tanggal', [$dari->toDateString(), $sampai->toDateString()])
             ->orderByDesc('tanggal');
 
@@ -223,7 +310,7 @@ class MonitoringKehadiranController extends Controller
             'dinas' => $riwayat->where('status', 'dinas_luar')->count(),
         ];
 
-        $kuotaCuti  = $karyawan->kuotaCutiTahunIni();
+        $kuotaCuti  = $karyawan->kuotaPerizinanTahunIni();
         $kalender = $riwayat->keyBy(fn($a) => $a->tanggal->format('Y-m-d'))
             ->map(fn($a) => $this->warnaBadgeStatus($a));
 
@@ -258,7 +345,7 @@ class MonitoringKehadiranController extends Controller
                 ->whereBetween('tanggal', [$dari->toDateString(), $sampai->toDateString()])
                 ->get();
 
-            $totalKary = \App\Models\Penempatan::where('mitra_id', $m->id)
+            $totalKary = \App\Models\DetailRiwayatPenempatan::where('mitra_id', $m->id)
                 ->where('status', 'aktif')->count();
             $totalSlot = $totalKary * $totalHariKerja;
             $hadir     = $absMitra->whereIn('status', ['hadir', 'telat'])->count();
@@ -277,14 +364,14 @@ class MonitoringKehadiranController extends Controller
 
         $karyawanMitra = [];
         if ($mitraId) {
-            $penempatan = \App\Models\Penempatan::with('karyawan')
+            $penempatan = \App\Models\DetailRiwayatPenempatan::with('karyawan')
                 ->where('mitra_id', $mitraId)
                 ->where('status', 'aktif')
                 ->get();
 
             foreach ($penempatan as $p) {
                 $k    = $p->karyawan;
-                $absK = Absensi::where('karyawan_id', $k->id)
+                $absK = Absensi::where('user_id', $k->id)
                     ->whereBetween('tanggal', [$dari->toDateString(), $sampai->toDateString()])
                     ->get();
 
@@ -307,7 +394,7 @@ class MonitoringKehadiranController extends Controller
             }
         }
 
-        $semuaMitra = Mitra::orderBy('nama_mitra')->get();
+        $semuaMitra = Mitra::orderByRaw('COALESCE(mitra_induk_id, id), is_cabang ASC, nama_mitra ASC')->get();
         return view('Pimpinan.Monitoring.per-mitra', compact(
             'semuaMitraInduk', 'dataMitra', 'karyawanMitra',
             'mitraId', 'bulan', 'tahun', 'totalHariKerja',
@@ -326,19 +413,22 @@ class MonitoringKehadiranController extends Controller
         $sampai        = Carbon::parse($request->input('sampai'));
         $mitraId       = $request->input('mitra_id');
         $divisi        = $request->input('divisi');
-        $jenisKaryawan = $request->input('jenis_karyawan');
-        $karyawanId    = $request->input('karyawan_id');
+        $jenisKaryawan = $request->input('jenis_karyawan_id');
+        $karyawanId    = $request->input('user_id');
 
-        $query = Absensi::with(['karyawan.user', 'mitra'])
+        $query = Absensi::with(['karyawan', 'mitra'])
             ->whereBetween('tanggal', [$dari->toDateString(), $sampai->toDateString()])
-            ->orderBy('tanggal')->orderBy('karyawan_id');
+            ->orderBy('tanggal')->orderBy('user_id');
 
         if ($mitraId)    $query->where('mitra_id', $mitraId);
-        if ($karyawanId) $query->where('karyawan_id', $karyawanId);
+        if ($karyawanId) $query->where('user_id', $karyawanId);
         if ($divisi || $jenisKaryawan) {
             $query->whereHas('karyawan', function ($q) use ($divisi, $jenisKaryawan) {
                 if ($divisi)        $q->where('divisi', $divisi);
-                if ($jenisKaryawan) $q->where('jenis_karyawan', $jenisKaryawan);
+                if ($jenisKaryawan) {
+                    $slugTarget = in_array($jenisKaryawan, ['tetap', 'karyawan_tetap', 'JNS-00001']) ? 'karyawan_tetap' : 'karyawan_kontrak';
+                    $q->whereHas('role', fn($r) => $r->where('slug', $slugTarget));
+                }
             });
         }
 
@@ -368,7 +458,7 @@ class MonitoringKehadiranController extends Controller
             $gpsPlg  = ($abs->lat_pulang && $abs->long_pulang) ? "{$abs->lat_pulang}, {$abs->long_pulang}" : '-';
             
             $data = [
-                $i + 1, $k?->user?->username ?? '-', $k?->nama ?? '-', $k?->jabatan ?? '-',
+                $i + 1, $k?->nip ?? '-', $k?->nama ?? '-', $k?->jabatan ?? '-',
                 $abs->mitra?->nama_mitra ?? ($k?->isTetap() ? 'Kantor CBN' : '-'),
                 $abs->tanggal?->format('d/m/Y'), $abs->waktu_masuk?->format('H:i'), $gpsMsk,
                 $abs->waktu_pulang?->format('H:i'), $gpsPlg, $this->labelStatus($abs), ''

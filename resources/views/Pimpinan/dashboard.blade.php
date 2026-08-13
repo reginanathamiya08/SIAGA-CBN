@@ -7,48 +7,73 @@
     <header class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
         <div>
             <h1 class="text-2xl font-black text-[#1E3A5F]">Dashboard Pimpinan</h1>
-            <p class="text-gray-500 mt-1 text-sm">Monitoring & Persetujuan <span class="text-red-600 font-bold ">PT CBN</span></p>
+            <p class="text-sm text-gray-500 mt-1">Monitoring & Persetujuan <span class="text-red-600 font-bold">PT CBN</span></p>
         </div>
-        <span class="hidden md:block text-[11px] font-black bg-[#1E3A5F] text-white px-5 py-2.5 rounded-xl italic shadow-md  tracking-widest">
+        <span class="hidden md:block text-[11px] font-black bg-[#1E3A5F] text-white px-5 py-2.5 rounded-xl shadow-md uppercase">
             {{ now()->translatedFormat('d M Y') }}
         </span>
     </header>
 
+    @php
+        $periodeMenungguPersetujuan = \App\Models\PeriodeGaji::where('status', 'proses')->get();
+    @endphp
+    @if ($periodeMenungguPersetujuan->isNotEmpty())
+        @foreach($periodeMenungguPersetujuan as $pGaji)
+            <div class="mb-6 p-5 bg-amber-50 border border-amber-200 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-amber-100 text-amber-800 rounded-xl flex items-center justify-center shrink-0">
+                        <i data-lucide="wallet" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-black text-amber-900">Persetujuan Gaji Diperlukan</h4>
+                        <p class="text-[10px] text-amber-700 font-semibold mt-0.5">
+                            Periode <strong>{{ $pGaji->nama_periode }}</strong> saat ini sedang menunggu persetujuan Anda agar slip gaji dapat resmi dirilis ke karyawan.
+                        </p>
+                    </div>
+                </div>
+                <a href="{{ route('pimpinan.monitoring-gaji.index', ['periode_id' => $pGaji->id]) }}" 
+                   class="px-4 py-2 bg-[#1E3A5F] hover:bg-blue-900 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-md active:scale-95 text-center w-full sm:w-auto shrink-0">
+                    Tinjau & Setujui
+                </a>
+            </div>
+        @endforeach
+    @endif
+
     <!-- Stat Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-50 flex items-center gap-4 group hover:shadow-md transition-all">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-50 flex items-center gap-4 group hover:shadow-md hover:-translate-y-1 transition-all duration-300">
             <div class="p-3 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-100 group-hover:scale-110 transition-transform">
                 <i data-lucide="users" class="w-6 h-6"></i>
             </div>
             <div>
-                <p class="text-[10px] font-black text-gray-400  tracking-widest mb-1">Total Karyawan</p>
+                <p class="text-[10px] font-black text-gray-400 mb-1 uppercase">Total Karyawan</p>
                 <p class="text-xl font-black text-[#1E3A5F]">{{ $totalKaryawan }}</p>
             </div>
         </div>
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-50 flex items-center gap-4 group hover:shadow-md transition-all">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-50 flex items-center gap-4 group hover:shadow-md hover:-translate-y-1 transition-all duration-300">
             <div class="p-3 bg-green-600 text-white rounded-xl shadow-lg shadow-green-100 group-hover:scale-110 transition-transform">
                 <i data-lucide="user-check" class="w-6 h-6"></i>
             </div>
             <div>
-                <p class="text-[10px] font-black text-gray-400  tracking-widest mb-1">Hadir Hari Ini</p>
+                <p class="text-[10px] font-black text-gray-400 mb-1 uppercase">Hadir Hari Ini</p>
                 <p class="text-xl font-black text-green-700">{{ $hadirHariIni }} <span class="text-xs text-gray-400">({{ $persenHadir }}%)</span></p>
             </div>
         </div>
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-50 flex items-center gap-4 group hover:shadow-md transition-all">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-50 flex items-center gap-4 group hover:shadow-md hover:-translate-y-1 transition-all duration-300">
             <div class="p-3 bg-yellow-500 text-white rounded-xl shadow-lg shadow-yellow-100 group-hover:scale-110 transition-transform">
                 <i data-lucide="clock" class="w-6 h-6"></i>
             </div>
             <div>
-                <p class="text-[10px] font-black text-gray-400  tracking-widest mb-1">Pengajuan Masuk</p>
+                <p class="text-[10px] font-black text-gray-400 mb-1 uppercase">Pengajuan Masuk</p>
                 <p class="text-xl font-black text-yellow-600">{{ $totalMenunggu }}</p>
             </div>
         </div>
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-50 flex items-center gap-4 group hover:shadow-md transition-all">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-50 flex items-center gap-4 group hover:shadow-md hover:-translate-y-1 transition-all duration-300">
             <div class="p-3 bg-[#1E3A5F] text-white rounded-xl shadow-lg shadow-blue-900/20 group-hover:scale-110 transition-transform">
                 <i data-lucide="wallet" class="w-6 h-6"></i>
             </div>
             <div>
-                <p class="text-[10px] font-black text-gray-400  tracking-widest mb-1">Periode Aktif</p>
+                <p class="text-[10px] font-black text-gray-400 mb-1 uppercase">Periode Aktif</p>
                 <p class="text-sm font-black text-[#1E3A5F]">{{ $periodeAktif?->nama_periode ?? 'Belum ada' }}</p>
             </div>
         </div>
@@ -99,13 +124,13 @@
     <!-- Absensi Terbaru -->
     <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mb-8">
         <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xs font-black text-[#1E3A5F]  tracking-widest">Absensi Terbaru Hari Ini</h3>
-            <a href="{{ route('pimpinan.monitoring.index') }}" class="text-[10px] font-black text-blue-600 hover:underline  tracking-tighter">Selengkapnya</a>
+            <h3 class="text-xs font-black text-[#1E3A5F] uppercase">Absensi Terbaru Hari Ini</h3>
+            <a href="{{ route('pimpinan.monitoring.index') }}" class="text-[10px] font-black text-blue-600 hover:underline">Selengkapnya</a>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left">
                 <thead>
-                    <tr class="text-[10px] font-black text-gray-400  tracking-widest">
+                    <tr class="text-[12px] font-black text-gray-400">
                         <th class="pb-4 px-2">Karyawan</th>
                         <th class="pb-4 px-2">Jam Masuk</th>
                         <th class="pb-4 px-2">Mitra</th>

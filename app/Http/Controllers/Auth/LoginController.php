@@ -16,7 +16,7 @@ class LoginController extends Controller
     public function showLogin()
     {
         if (Auth::check()) {
-            return $this->redirectByRole(Auth::user()->role);
+            return $this->redirectByRole(Auth::user()->role?->slug ?? '');
         }
 
         return view('auth.login');
@@ -28,30 +28,33 @@ class LoginController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'username' => 'required|string',
+            'email'    => 'required|string',
             'password' => 'required|string',
         ], [
-            'username.required' => 'Username wajib diisi.',
+            'email.required'    => 'Email atau NIP wajib diisi.',
             'password.required' => 'Password wajib diisi.',
         ]);
 
-        // Cari user manual by username dan is_active
-        $user = User::where('username', $request->username)
-                    ->where('is_active', true)
-                    ->first();
+        // Cari user manual by email atau nip dan is_active
+        $user = User::where(function($q) use ($request) {
+                    $q->where('email', $request->email)
+                      ->orWhere('nip', $request->email);
+                })
+                ->where('is_active', true)
+                ->first();
 
         // Cek user ada dan password cocok
         if (!$user || !Hash::check($request->password, $user->password)) {
             return back()
-                ->withInput($request->only('username'))
-                ->withErrors(['username' => 'Username atau password salah, atau akun tidak aktif.']);
+                ->withInput($request->only('email'))
+                ->withErrors(['email' => 'Email/NIP atau password salah, atau akun tidak aktif.']);
         }
 
         // Login manual - tidak bergantung pada getAuthIdentifierName()
        Auth::login($user, false);
         $request->session()->regenerate();
 
-        return $this->redirectByRole($user->role);
+        return $this->redirectByRole($user->role?->slug ?? '');
     }
 
     /**

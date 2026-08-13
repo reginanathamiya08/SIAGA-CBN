@@ -9,8 +9,8 @@
         <p class="text-gray-500 mt-1 text-sm">Riwayat penggajian bulanan PT CBN</p>
     </div>
     <a href="{{ route('admin.penggajian.create') }}"
-       class="flex items-center gap-2 bg-[#1E3A5F] hover:bg-green-600 text-white
-              font-black text-xs uppercase italic px-5 py-3 rounded-xl transition-all shadow-sm">
+       class="flex items-center gap-2 bg-[#1E3A5F] hover:bg-blue-900 text-white
+              font-black text-xs px-5 py-3 rounded-xl transition-all shadow-lg shadow-blue-900/10 active:scale-95 uppercase">
         <i data-lucide="calculator" class="w-4 h-4"></i>
         Proses Gaji Baru
     </a>
@@ -19,48 +19,48 @@
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     @forelse ($periode as $p)
         <a href="{{ route('admin.penggajian.show', $p->id) }}"
-           class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5
-                  hover:border-blue-200 hover:shadow-md transition-all group">
+           class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6
+                  hover:border-blue-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
             <div class="flex justify-between items-start mb-4">
                 <div>
-                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                    <p class="text-[10px] font-black text-gray-400 mb-1 uppercase tracking-tight">
                         Periode
                     </p>
-                    <p class="text-lg font-black text-[#1E3A5F] uppercase">
+                    <p class="text-lg font-black text-[#1E3A5F]">
                         {{ $p->nama_periode }}
                     </p>
-                    <p class="text-[10px] text-gray-400 font-medium mt-0.5">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-tighter mt-1">
                         {{ $p->tanggal_mulai->format('d M') }} —
                         {{ $p->tanggal_selesai->format('d M Y') }}
                     </p>
                 </div>
-                <span class="px-2.5 py-1 rounded-xl text-[9px] font-black uppercase
-                             {{ $p->status === 'final'  ? 'bg-green-100 text-green-700' :
-                                ($p->status === 'proses' ? 'bg-amber-100 text-amber-700' :
-                                                            'bg-gray-100 text-gray-500') }}">
+                <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase
+                             {{ $p->status === 'final'  ? 'bg-emerald-50 text-emerald-600' : 
+                                ($p->status === 'proses' ? 'bg-amber-50 text-amber-600' : 
+                                                            'bg-gray-50 text-gray-400') }}">
                     {{ $p->labelStatus() }}
                 </span>
             </div>
-            <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="grid grid-cols-2 gap-3 mb-5 py-4 border-y border-gray-50">
                 <div>
-                    <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-0.5">
+                    <p class="text-[10px] text-gray-400 font-black uppercase tracking-tight mb-1">
                         Karyawan
                     </p>
-                    <p class="text-xl font-black text-gray-700">{{ $p->slip_gaji_count }}</p>
+                    <p class="text-xl font-black text-[#1E3A5F]">{{ $p->slip_gaji_count }}</p>
                 </div>
                 <div>
-                    <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-0.5">
+                    <p class="text-[10px] text-gray-400 font-black uppercase tracking-tight mb-1">
                         Finalisasi
                     </p>
-                    <p class="text-[10px] font-semibold text-gray-500">
+                    <p class="text-[10px] font-black text-gray-500 uppercase">
                         {{ $p->finalisasi_at ? $p->finalisasi_at->format('d M Y') : '-' }}
                     </p>
                 </div>
             </div>
-            <div class="flex items-center gap-1 text-[10px] font-black text-blue-500
-                        group-hover:text-blue-700 transition-colors">
+            <div class="flex items-center gap-1.5 text-[10px] font-black text-blue-600
+                        group-hover:text-blue-800 transition-colors uppercase tracking-tight">
                 Lihat Detail
-                <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform"></i>
             </div>
         </a>
     @empty
@@ -69,8 +69,8 @@
             <i data-lucide="calculator" class="w-12 h-12 text-gray-200 mx-auto mb-3"></i>
             <p class="text-sm text-gray-400 font-semibold">Belum ada riwayat penggajian.</p>
             <a href="{{ route('admin.penggajian.create') }}"
-               class="mt-3 inline-block text-xs font-black text-[#1E3A5F]
-                      hover:text-red-600 uppercase italic transition-colors">
+               class="mt-3 inline-block text-[10px] font-black text-[#1E3A5F]
+                      hover:text-blue-900 uppercase transition-colors tracking-tight">
                 + Proses Gaji Pertama
             </a>
         </div>

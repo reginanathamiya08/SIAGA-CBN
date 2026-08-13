@@ -54,7 +54,7 @@
             </h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-8">
                 @foreach ([
-                    ['Username / Login', $karyawan->user->username],
+                    ['ID Karyawan (Login)', $karyawan->nip],
                     ['Nama Lengkap',     $karyawan->nama],
                     ['Email',            $karyawan->email ?? '-'],
                     ['Jenis Karyawan',   $karyawan->isTetap() ? 'Karyawan Tetap' : 'Karyawan Kontrak'],
@@ -191,14 +191,14 @@
             @endif
         </div>
 
-        {{-- Kuota Cuti --}}
+        {{-- Kuota Perizinan --}}
         <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
             <h3 class="font-black text-[#1E3A5F]  italic text-[11px] mb-4
                        flex items-center gap-2">
                 <span class="w-1 h-4 bg-purple-500 rounded-full"></span>
-                Kuota Cuti {{ now()->year }}
+                Kuota Perizinan {{ now()->year }}
             </h3>
-            @if ($kuota = $karyawan->kuotaCuti->first())
+            @if ($kuota = $karyawan->kuotaPerizinan->first())
                 <div class="text-center mb-3">
                     <p class="text-4xl font-black text-[#1E3A5F]">{{ $kuota->sisa }}</p>
                     <p class="text-[9px] text-gray-400 font-black  mt-1">Hari Tersisa</p>
@@ -212,7 +212,7 @@
                     <span>Total: {{ $kuota->kuota_total }}</span>
                 </div>
             @else
-                <p class="text-xs text-gray-400 text-center py-4">Belum ada data kuota cuti.</p>
+                <p class="text-xs text-gray-400 text-center py-4">Belum ada data kuota perizinan.</p>
             @endif
         </div>
 

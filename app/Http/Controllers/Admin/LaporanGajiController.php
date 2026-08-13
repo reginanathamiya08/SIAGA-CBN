@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Mitra;
 use App\Models\PeriodeGaji;
-use App\Models\SlipGaji;
+use App\Models\SlipGajiPeriode;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -14,19 +14,26 @@ class LaporanGajiController extends Controller
 {
     public function index(Request $request)
     {
-        $periodeId = $request->input('periode_id');
-        $mitraId   = $request->input('mitra_id');
+        $periodeId     = $request->input('periode_id');
+        $mitraId       = $request->input('mitra_id');
+        $jenisKaryawan = $request->input('jenis_karyawan_id', 'tetap');
 
         $semuaPeriode = PeriodeGaji::orderBy('tanggal_mulai', 'desc')->get();
-        $semuaMitra   = Mitra::orderBy('nama_mitra')->get();
+        $semuaMitra   = Mitra::where('is_pusat', false)->orderByRaw('COALESCE(mitra_induk_id, id), is_cabang ASC, nama_mitra ASC')->get();
 
-        $query = SlipGaji::with(['karyawan.user', 'karyawan.penempatanAktif.mitra', 'periodeGaji']);
+        $query = SlipGajiPeriode::with(['karyawan', 'karyawan.penempatanAktif.mitra', 'periodeGaji'])
+            ->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->whereIn('slug', ['karyawan_tetap', 'karyawan_kontrak'])));
+
+        if ($jenisKaryawan) {
+            $roleSlug = in_array($jenisKaryawan, ['tetap', 'karyawan_tetap', 'JNS-00001']) ? 'karyawan_tetap' : 'karyawan_kontrak';
+            $query->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->where('slug', $roleSlug)));
+        }
 
         if ($periodeId) {
             $query->where('periode_id', $periodeId);
         }
 
-        if ($mitraId) {
+        if ($mitraId && in_array($jenisKaryawan, ['kontrak', 'karyawan_kontrak', 'JNS-00002'])) {
             $query->whereHas('karyawan.penempatanAktif', function ($q) use ($mitraId) {
                 $q->where('mitra_id', $mitraId);
             });
@@ -39,25 +46,33 @@ class LaporanGajiController extends Controller
             'semuaPeriode',
             'semuaMitra',
             'periodeId',
-            'mitraId'
+            'mitraId',
+            'jenisKaryawan'
         ));
     }
 
     public function export(Request $request)
     {
-        $periodeId = $request->input('periode_id');
-        $mitraId   = $request->input('mitra_id');
+        $periodeId     = $request->input('periode_id');
+        $mitraId       = $request->input('mitra_id');
+        $jenisKaryawan = $request->input('jenis_karyawan_id', 'tetap');
 
         $periode = PeriodeGaji::find($periodeId);
         $mitra   = Mitra::find($mitraId);
 
-        $query = SlipGaji::with(['karyawan.user', 'karyawan.penempatanAktif.mitra', 'periodeGaji']);
+        $query = SlipGajiPeriode::with(['karyawan', 'karyawan.penempatanAktif.mitra', 'periodeGaji'])
+            ->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->whereIn('slug', ['karyawan_tetap', 'karyawan_kontrak'])));
+
+        if ($jenisKaryawan) {
+            $roleSlug = in_array($jenisKaryawan, ['tetap', 'karyawan_tetap', 'JNS-00001']) ? 'karyawan_tetap' : 'karyawan_kontrak';
+            $query->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->where('slug', $roleSlug)));
+        }
 
         if ($periodeId) {
             $query->where('periode_id', $periodeId);
         }
 
-        if ($mitraId) {
+        if ($mitraId && $jenisKaryawan === 'JNS-00002') {
             $query->whereHas('karyawan.penempatanAktif', function ($q) use ($mitraId) {
                 $q->where('mitra_id', $mitraId);
             });
@@ -96,7 +111,7 @@ class LaporanGajiController extends Controller
 
             $data = [
                 $i + 1,
-                $k?->user?->username ?? '-',
+                $k?->nip ?? '-',
                 $k?->nama ?? '-',
                 $k?->jabatan ?? '-',
                 $m,
@@ -105,9 +120,9 @@ class LaporanGajiController extends Controller
                 $slip->total_izin,
                 $slip->total_alfa,
                 $slip->total_cuti,
-                $slip->gaji_pokok,
-                $slip->uang_makan,
-                $slip->uang_transport,
+                $slip->getNominal('Gaji Pokok'),
+                $slip->getNominal('Uang Makan'),
+                $slip->getNominal('Uang Transport'),
                 $slip->total_potongan,
                 $slip->gaji_bersih,
             ];

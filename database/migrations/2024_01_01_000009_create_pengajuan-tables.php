@@ -15,8 +15,8 @@ return new class extends Migration
         //   sakit_surat    → tidak potong cuti, limit 12 hari
         //   sakit_no_surat → potong kuota cuti
         Schema::create('perizinan', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('karyawan_id')->constrained('karyawan')->cascadeOnDelete();
+            $table->string('id', 20)->primary();
+            $table->string('user_id', 20);
             $table->enum('jenis_izin', [
                 'cuti',
                 'izin_pribadi',
@@ -33,21 +33,20 @@ return new class extends Migration
                 'disetujui',
                 'ditolak',
             ])->default('menunggu');
-            $table->foreignId('approved_by')
-                  ->nullable()
-                  ->constrained('users')
-                  ->nullOnDelete();
+            $table->string('approved_by', 20)
+                  ->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->text('alasan_tolak')->nullable();
             $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('approved_by')->references('id')->on('users')->nullOnDelete();
         });
 
         // ── LEMBUR ─────────────────────────────────────────────────
-        // Hanya karyawan tetap CBN. Tidak masuk slip gaji,
-        // hanya butuh ACC pimpinan.
         Schema::create('lembur', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('karyawan_id')->constrained('karyawan')->cascadeOnDelete();
+            $table->string('id', 20)->primary();
+            $table->string('user_id', 20);
             $table->date('tanggal');
             $table->time('jam_mulai');
             $table->time('jam_selesai');
@@ -58,20 +57,20 @@ return new class extends Migration
                 'disetujui',
                 'ditolak',
             ])->default('menunggu');
-            $table->foreignId('approved_by')
-                  ->nullable()
-                  ->constrained('users')
-                  ->nullOnDelete();
+            $table->string('approved_by', 20)
+                  ->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->text('alasan_tolak')->nullable();
             $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('approved_by')->references('id')->on('users')->nullOnDelete();
         });
 
         // ── DINAS LUAR ─────────────────────────────────────────────
-        // Hanya karyawan tetap CBN, dilengkapi SPJ.
         Schema::create('dinas_luar', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('karyawan_id')->constrained('karyawan')->cascadeOnDelete();
+            $table->string('id', 20)->primary();
+            $table->string('user_id', 20);
             $table->string('tujuan', 200);
             $table->date('tanggal_berangkat');
             $table->date('tanggal_kembali');
@@ -81,13 +80,14 @@ return new class extends Migration
                 'disetujui',
                 'ditolak',
             ])->default('menunggu');
-            $table->foreignId('approved_by')
-                  ->nullable()
-                  ->constrained('users')
-                  ->nullOnDelete();
+            $table->string('approved_by', 20)
+                  ->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->text('alasan_tolak')->nullable();
             $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('approved_by')->references('id')->on('users')->nullOnDelete();
         });
     }
 

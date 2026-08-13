@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Karyawan;
+use App\Models\User;
 use App\Models\Mitra;
 use App\Models\Absensi;
-use App\Models\Perizinan;
+use App\Models\DetailPerizinan;
 use App\Models\Lembur;
-use App\Models\DinasLuar;
-use App\Models\SlipGaji;
+use App\Models\SlipGajiPeriode;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -20,26 +19,37 @@ class DashboardController extends Controller
 
         // Statistik kartu atas
         $stats = [
-            'karyawan_tetap'    => Karyawan::where('jenis_karyawan', 'tetap')->where('is_active', true)->count(),
-            'karyawan_kontrak'  => Karyawan::where('jenis_karyawan', 'kontrak')->where('is_active', true)->count(),
+            'karyawan_tetap'    => User::where('is_active', true)
+                                    ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_tetap'))
+                                    ->count(),
+            'karyawan_kontrak'  => User::where('is_active', true)
+                                    ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_kontrak'))
+                                    ->count(),
             'mitra_aktif'       => Mitra::whereNull('mitra_induk_id')->count(),
-            'karyawan_tersedia' => \App\Models\Penempatan::where('status', 'tersedia')->count(),
+            'karyawan_tersedia' => \App\Models\DetailRiwayatPenempatan::where('status', 'tersedia')->count(),
         ];
 
-        // Kehadiran hari ini
+        // Kehadiran hari ini (Lebih Akurat)
         $totalKaryawan = $stats['karyawan_tetap'] + $stats['karyawan_kontrak'];
-        $hadirHariIni  = Absensi::whereDate('tanggal', $today)
-                                ->whereIn('status', ['hadir', 'telat'])
-                                ->count();
-        $telatHariIni  = Absensi::whereDate('tanggal', $today)
-                                ->where('is_telat', true)
-                                ->count();
-        $persenHadir   = $totalKaryawan > 0
-                            ? round(($hadirHariIni / $totalKaryawan) * 100)
+        
+        $kehadiran = Absensi::whereDate('tanggal', $today)
+                                ->selectRaw('status, COUNT(*) as total, SUM(CASE WHEN is_telat = 1 THEN 1 ELSE 0 END) as total_telat')
+                                ->groupBy('status')
+                                ->get()
+                                ->pluck('total', 'status');
+
+        $hadirHariIni  = ($kehadiran['hadir'] ?? 0) + ($kehadiran['telat'] ?? 0);
+        $telatHariIni  = Absensi::whereDate('tanggal', $today)->where('is_telat', true)->count();
+        $izinSakit     = ($kehadiran['izin'] ?? 0) + ($kehadiran['sakit'] ?? 0) + ($kehadiran['cuti'] ?? 0);
+        
+        // Persentase "Kepatuhan" (Siapa yang sudah absen/lapor vs Total Karyawan)
+        $terdataHariIni = $hadirHariIni + $izinSakit;
+        $persenHadir    = $totalKaryawan > 0
+                            ? round(($terdataHariIni / $totalKaryawan) * 100)
                             : 0;
 
         // Absensi terbaru (10 data)
-        $absensiTerbaru = Absensi::with(['karyawan.user'])
+        $absensiTerbaru = Absensi::with(['karyawan.role'])
                                  ->whereDate('tanggal', $today)
                                  ->latest('waktu_masuk')
                                  ->take(10)
@@ -48,7 +58,7 @@ class DashboardController extends Controller
         // Pengajuan menunggu approval
         $pengajuanMenunggu = collect()
             ->merge(
-                Perizinan::with('karyawan')
+                DetailPerizinan::with(['karyawan', 'jenisPerizinan'])
                     ->where('status_approval', 'menunggu')
                     ->latest()
                     ->take(5)
@@ -57,7 +67,7 @@ class DashboardController extends Controller
                         'type'        => 'perizinan',
                         'model'       => $p,
                         'karyawan'    => $p->karyawan,
-                        'label'       => ucfirst(str_replace('_', ' ', $p->jenis_izin)),
+                        'label'       => $p->labelJenis(),
                         'created_at'  => $p->created_at,
                     ])
             )
@@ -75,27 +85,13 @@ class DashboardController extends Controller
                         'created_at' => $l->created_at,
                     ])
             )
-            ->merge(
-                DinasLuar::with('karyawan')
-                    ->where('status_approval', 'menunggu')
-                    ->latest()
-                    ->take(3)
-                    ->get()
-                    ->map(fn ($d) => [
-                        'type'       => 'dinas_luar',
-                        'model'      => $d,
-                        'karyawan'   => $d->karyawan,
-                        'label'      => 'Dinas Luar Kota',
-                        'created_at' => $d->created_at,
-                    ])
-            )
             ->sortByDesc('created_at')
             ->take(5)
             ->values();
 
         // Karyawan kontrak dengan status tersedia (pool)
-        $poolKaryawan = Karyawan::with(['penempatan' => fn ($q) => $q->where('status', 'tersedia')])
-                                ->where('jenis_karyawan', 'kontrak')
+        $poolKaryawan = User::with(['penempatan' => fn ($q) => $q->where('status', 'tersedia')])
+                                ->whereHas('role', fn ($q) => $q->where('slug', 'karyawan_kontrak'))
                                 ->where('is_active', true)
                                 ->whereHas('penempatan', fn ($q) => $q->where('status', 'tersedia'))
                                 ->take(5)
@@ -105,6 +101,7 @@ class DashboardController extends Controller
             'stats',
             'hadirHariIni',
             'telatHariIni',
+            'izinSakit',
             'persenHadir',
             'absensiTerbaru',
             'pengajuanMenunggu',

@@ -11,54 +11,68 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // ── 0. DATA ROLES ────────────────────────────────────────────────
+        $roles = [
+            ['nama_role' => 'Administrator',     'slug' => 'admin'],
+            ['nama_role' => 'Pimpinan',          'slug' => 'pimpinan'],
+            ['nama_role' => 'Karyawan Tetap',    'slug' => 'karyawan_tetap'],
+            ['nama_role' => 'Karyawan Kontrak', 'slug' => 'karyawan_kontrak'],
+        ];
+
+        foreach ($roles as $r) {
+            \App\Models\Role::create($r);
+        }
+
         // ── 1. AKUN ADMIN ────────────────────────────────────────────────
-        // Username mengikuti format: ADM-CBN-0001
-        // Admin bertugas membuat akun karyawan lewat sistem.
+        $roleAdmin = \App\Models\Role::where('slug', 'admin')->first();
         User::create([
-            'username'  => 'ADM-CBN-0001',
-            'password'  => Hash::make('admin123'),
-            'role'      => 'admin',
-            'is_active' => true,
+            'role_id'        => $roleAdmin->id,
+            'nip'            => 'ADM-CBN-0001',
+            'password'       => Hash::make('admin123'),
+            'nama'           => 'Administrator Utama',
+            'divisi'         => 'adm_umum',
+            'jabatan'        => 'Staff Administrasi & Umum',
+            'tanggal_masuk'  => now(),
+            'is_active'      => true,
         ]);
 
         // ── 2. AKUN PIMPINAN ─────────────────────────────────────────────
-        // Username mengikuti format: PM-CBN-0001
+        $rolePimpinan = \App\Models\Role::where('slug', 'pimpinan')->first();
         User::create([
-            'username'  => 'PM-CBN-0001',
-            'password'  => Hash::make('pimpinan123'),
-            'role'      => 'pimpinan',
-            'is_active' => true,
+            'role_id'        => $rolePimpinan->id,
+            'nip'            => 'PM-CBN-0001',
+            'password'       => Hash::make('pimpinan123'),
+            'nama'           => 'Pimpinan PT CBN',
+            'divisi'         => 'manajemen',
+            'jabatan'        => 'Direktur Utama',
+            'tanggal_masuk'  => now(),
+            'is_active'      => true,
         ]);
 
         // ── 3. DATA SHIFT ─────────────────────────────────────────────────
         // Shift default untuk satpam, card center, monitoring ATM & jaringan.
         // Admin bisa menambah/mengubah shift lewat sistem.
-        Shift::insert([
+        $shifts = [
             [
                 'nama_shift'  => 'Pagi',
-                'jam_masuk'   => '06:00:00',
-                'jam_keluar'  => '14:00:00',
-                'batas_telat' => '06:15:00',
-                'created_at'  => now(),
-                'updated_at'  => now(),
+                'jam_mulai'   => '06:00:00',
+                'jam_selesai' => '14:00:00',
             ],
             [
                 'nama_shift'  => 'Siang',
-                'jam_masuk'   => '14:00:00',
-                'jam_keluar'  => '22:00:00',
-                'batas_telat' => '14:15:00',
-                'created_at'  => now(),
-                'updated_at'  => now(),
+                'jam_mulai'   => '14:00:00',
+                'jam_selesai' => '22:00:00',
             ],
             [
                 'nama_shift'  => 'Malam',
-                'jam_masuk'   => '22:00:00',
-                'jam_keluar'  => '06:00:00',
-                'batas_telat' => '22:15:00',
-                'created_at'  => now(),
-                'updated_at'  => now(),
+                'jam_mulai'   => '22:00:00',
+                'jam_selesai' => '06:00:00',
             ],
-        ]);
+        ];
+
+        foreach ($shifts as $shift) {
+            Shift::create($shift);
+        }
 
         // ── RINGKASAN ─────────────────────────────────────────────────────
         $this->command->info('');

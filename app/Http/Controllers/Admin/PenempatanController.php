@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Karyawan;
+use App\Models\User;
 use App\Models\Mitra;
-use App\Models\Penempatan;
+use App\Models\DetailRiwayatPenempatan;
 use Illuminate\Http\Request;
 
 class PenempatanController extends Controller
@@ -15,7 +15,7 @@ class PenempatanController extends Controller
     // ─────────────────────────────────────────────────────────────────
     public function index(Request $request)
     {
-        $query = Penempatan::with(['karyawan','mitra'])
+        $query = DetailRiwayatPenempatan::with(['karyawan','mitra'])
                            ->orderBy('created_at','desc');
 
         if ($request->filled('status')) {
@@ -33,14 +33,14 @@ class PenempatanController extends Controller
         $penempatan = $query->paginate(15)->withQueryString();
 
         // Ambil daftar jabatan unik untuk filter karyawan tetap
-        $daftarJabatan = Karyawan::where('jenis_karyawan', 'tetap')
-                                 ->where('is_active', true)
+        $daftarJabatan = User::where('is_active', true)
+                                 ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_tetap'))
                                  ->distinct()
                                  ->pluck('jabatan');
 
         // Ambil data Karyawan Tetap (Otomatis Pusat)
-        $queryTetap = Karyawan::where('jenis_karyawan', 'tetap')
-                             ->where('is_active', true);
+        $queryTetap = User::where('is_active', true)
+                             ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_tetap'));
         
         if ($request->filled('cari')) {
             $queryTetap->where('nama', 'LIKE', '%'.$request->cari.'%');
@@ -64,13 +64,16 @@ class PenempatanController extends Controller
         $karyawanTetap = $showTetap ? $queryTetap->get() : collect();
 
         // Data untuk filter dropdown
-        $daftarMitra = Mitra::orderBy('nama_mitra')->get(['id','nama_mitra','is_cabang']);
+        $daftarMitra = Mitra::orderByRaw('COALESCE(mitra_induk_id, id), is_cabang ASC, nama_mitra ASC')->get(['id','nama_mitra','is_cabang','is_pusat']);
 
         // Statistik
         $stats = [
-            'aktif'    => Penempatan::where('status','aktif')->count() + Karyawan::where('jenis_karyawan','tetap')->where('is_active', true)->count(),
-            'selesai'  => Penempatan::where('status','selesai')->count(),
-            'tersedia' => Karyawan::where('jenis_karyawan','kontrak')
+            'aktif'    => DetailRiwayatPenempatan::where('status','aktif')->count() + 
+                         User::where('is_active', true)
+                             ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_tetap'))
+                             ->count(),
+            'selesai'  => DetailRiwayatPenempatan::where('status','selesai')->count(),
+            'tersedia' => User::whereHas('role', fn($q) => $q->where('slug', 'karyawan_kontrak'))
                                   ->where('is_active', true)
                                   ->whereDoesntHave('penempatan', fn($q) =>
                                       $q->where('status','aktif')
@@ -88,22 +91,19 @@ class PenempatanController extends Controller
     public function create(Request $request)
     {
         // Karyawan kontrak yang belum punya penempatan aktif
-        $karyawanTersedia = Karyawan::with('user')
-            ->where('jenis_karyawan','kontrak')
+        $karyawanTersedia = User::whereHas('role', fn($q) => $q->where('slug', 'karyawan_kontrak'))
             ->where('is_active', true)
             ->whereDoesntHave('penempatan', fn($q) => $q->where('status','aktif'))
             ->orderBy('nama')
             ->get();
 
-        // Semua mitra (induk + cabang)
-        $daftarMitra = Mitra::with('induk')
-                            ->orderBy('is_cabang')
-                            ->orderBy('nama_mitra')
+        $daftarMitra = Mitra::with('cabang')
+                            ->orderByRaw('COALESCE(mitra_induk_id, id), is_cabang ASC, nama_mitra ASC')
                             ->get();
 
         // Jika ada karyawan yang dipilih dari halaman lain (misal dari pool di dashboard)
-        $karyawanDipilih = $request->filled('karyawan_id')
-            ? Karyawan::find($request->karyawan_id)
+        $karyawanDipilih = $request->filled('user_id')
+            ? User::find($request->user_id)
             : null;
 
         return view('admin.penempatan.create', compact(
@@ -117,12 +117,12 @@ class PenempatanController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'karyawan_id'   => 'required|exists:karyawan,id',
+            'user_id'   => 'required|exists:users,id',
             'mitra_id'      => 'required|exists:mitra,id',
             'tanggal_mulai' => 'required|date',
         ], [
-            'karyawan_id.required'   => 'Karyawan wajib dipilih.',
-            'karyawan_id.exists'     => 'Karyawan tidak ditemukan.',
+            'user_id.required'   => 'Karyawan wajib dipilih.',
+            'user_id.exists'     => 'Karyawan tidak ditemukan.',
             'mitra_id.required'      => 'Mitra wajib dipilih.',
             'mitra_id.exists'        => 'Mitra tidak ditemukan.',
             'tanggal_mulai.required' => 'Tanggal mulai wajib diisi.',
@@ -130,7 +130,7 @@ class PenempatanController extends Controller
         ]);
 
         // Cek apakah karyawan sudah punya penempatan aktif
-        $sudahAktif = Penempatan::where('karyawan_id', $request->karyawan_id)
+        $sudahAktif = DetailRiwayatPenempatan::where('user_id', $request->user_id)
                                 ->where('status','aktif')
                                 ->exists();
 
@@ -139,8 +139,8 @@ class PenempatanController extends Controller
                 ->with('error', 'Karyawan ini sudah memiliki penempatan aktif. Selesaikan penempatan lama terlebih dahulu.');
         }
 
-        Penempatan::create([
-            'karyawan_id'   => $request->karyawan_id,
+        DetailRiwayatPenempatan::create([
+            'user_id'   => $request->user_id,
             'mitra_id'      => $request->mitra_id,
             'tanggal_mulai' => $request->tanggal_mulai,
             'status'        => 'aktif',
@@ -154,7 +154,7 @@ class PenempatanController extends Controller
     // ─────────────────────────────────────────────────────────────────
     // SELESAI - Akhiri penempatan aktif
     // ─────────────────────────────────────────────────────────────────
-    public function selesai(Request $request, Penempatan $penempatan)
+    public function selesai(Request $request, DetailRiwayatPenempatan $penempatan)
     {
         $request->validate([
             'tanggal_selesai' => 'required|date|after_or_equal:' . $penempatan->tanggal_mulai,

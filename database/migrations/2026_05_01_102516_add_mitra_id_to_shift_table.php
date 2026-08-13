@@ -12,7 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('shift', function (Blueprint $table) {
-            //
+            $table->string('mitra_id', 20)->nullable()->after('id');
+            
+            $table->foreign('mitra_id')
+                  ->references('id')
+                  ->on('mitra')
+                  ->cascadeOnDelete();
         });
     }
 
@@ -22,7 +27,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('shift', function (Blueprint $table) {
-            //
+            $table->dropForeign(['mitra_id']);
+            $table->dropColumn('mitra_id');
         });
     }
 };

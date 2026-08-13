@@ -6,7 +6,6 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
-
 class RoleMiddleware
 {
     /**
@@ -32,8 +31,19 @@ class RoleMiddleware
                 ->with('error', 'Akun Anda telah dinonaktifkan. Hubungi admin.');
         }
 
-        if (!in_array($user->role, $roles)) {
-            abort(403, 'Anda tidak memiliki akses ke halaman ini.');
+        $userRole = strtolower($user->role?->slug ?? '');
+        $allowedRoles = array_map('strtolower', $roles);
+
+        // DEBUG LOG
+        \Log::info("Role Check for user: " . $user->username, [
+            'user_role_slug' => $user->role?->slug,
+            'user_role_slug_lower' => $userRole,
+            'allowed_roles' => $roles,
+            'match' => in_array($userRole, $allowedRoles)
+        ]);
+
+        if (!in_array($userRole, $allowedRoles)) {
+            abort(403, 'ANDA TIDAK MEMILIKI AKSES KE HALAMAN INI.');
         }
 
         return $next($request);

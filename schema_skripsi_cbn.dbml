@@ -1,0 +1,161 @@
+// Database Schema PT CBN for dbdiagram.io (DBML Syntax)
+
+Table roles {
+  id varchar(20) [primary key]
+  nama_role varchar(50) [not null]
+  slug varchar(50) [unique, not null]
+}
+
+Table users {
+  id varchar(20) [primary key]
+  role_id varchar(20) [not null, ref: > roles.id]
+  nip varchar(50) [unique, not null]
+  password varchar(255) [not null]
+  nama varchar(100) [not null]
+  email varchar(150) [unique]
+  divisi varchar(50)
+  jabatan varchar(100)
+  pendidikan varchar(20)
+  tanggal_masuk date
+  no_hp varchar(20)
+  gaji_atas_umr int [default: 0]
+  is_shift int [default: 0]
+  uang_makan_by_mitra int [default: 0]
+  is_active int [default: 1]
+  remember_token varchar(100)
+}
+
+Table mitra {
+  id varchar(20) [primary key]
+  nama_mitra varchar(150) [not null]
+  alamat text
+  latitude decimal(10,7)
+  longitude decimal(10,7)
+  radius_meter int [default: 200]
+  ip_public varchar(45)
+  jam_masuk time
+  jam_pulang time
+  is_pusat int [default: 0]
+  is_cabang int [default: 0]
+  mitra_induk_id varchar(20) [ref: > mitra.id]
+}
+
+Table shifts {
+  id varchar(20) [primary key]
+  mitra_id varchar(20) [ref: > mitra.id]
+  nama_shift varchar(50) [not null]
+  jam_mulai time [not null]
+  jam_selesai time [not null]
+}
+
+Table detail_riwayat_penempatan {
+  id varchar(20) [primary key]
+  user_id varchar(20) [not null, ref: > users.id]
+  mitra_id varchar(20) [not null, ref: > mitra.id]
+  tanggal_mulai date [not null]
+  tanggal_selesai date
+  status varchar(20) [default: 'aktif']
+}
+
+Table absensi {
+  id varchar(20) [primary key]
+  user_id varchar(20) [not null, ref: > users.id]
+  mitra_id varchar(20) [ref: > mitra.id]
+  shift_id varchar(20) [ref: > shifts.id]
+  tanggal date [not null]
+  waktu_masuk datetime
+  waktu_pulang datetime
+  lat_masuk decimal(10,7)
+  long_masuk decimal(10,7)
+  ip_masuk varchar(45)
+  lat_pulang decimal(10,7)
+  long_pulang decimal(10,7)
+  ip_pulang varchar(45)
+  status varchar(20) [default: 'hadir']
+  is_telat int [default: 0]
+}
+
+Table jenis_perizinan {
+  id varchar(20) [primary key]
+  slug varchar(50) [unique, not null]
+  nama_jenis varchar(100) [not null]
+  memotong_kuota int [default: 0]
+  memotong_uang_makan int [default: 0]
+  wajib_upload_bukti int [default: 0]
+}
+
+Table kuota_perizinan {
+  id varchar(20) [primary key]
+  user_id varchar(20) [not null, ref: > users.id]
+  tahun int [not null]
+  kuota_total int [default: 12]
+  terpakai int [default: 0]
+  sisa int [default: 12]
+}
+
+Table detail_perizinan {
+  id varchar(20) [primary key]
+  user_id varchar(20) [not null, ref: > users.id]
+  jenis_perizinan_id varchar(20) [not null, ref: > jenis_perizinan.id]
+  kuota_perizinan_id varchar(20) [ref: > kuota_perizinan.id]
+  tanggal_mulai date [not null]
+  tanggal_selesai date [not null]
+  alasan text [not null]
+  file_bukti varchar(255)
+  status_approval varchar(20) [default: 'menunggu']
+  approved_by varchar(20) [ref: > users.id]
+  catatan_pimpinan text
+}
+
+Table lembur {
+  id varchar(20) [primary key]
+  user_id VARCHAR(20) [not null, ref: > users.id]
+  tanggal date [not null]
+  jam_mulai time [not null]
+  jam_selesai time [not null]
+  alasan text [not null]
+  status_approval varchar(20) [default: 'menunggu']
+  approved_by varchar(20) [ref: > users.id]
+  catatan_pimpinan text
+}
+
+Table master_komponen_gaji {
+  id varchar(20) [primary key]
+  nama_komponen varchar(100) [not null]
+  tipe varchar(20) [not null]
+}
+
+Table periode_gaji {
+  id varchar(20) [primary key]
+  bulan int [not null]
+  tahun int [not null]
+  status varchar(20) [default: 'draft']
+}
+
+Table slip_gaji_periode {
+  id varchar(20) [primary key]
+  user_id varchar(20) [not null, ref: > users.id]
+  periode_id varchar(20) [not null, ref: > periode_gaji.id]
+  gaji_pokok decimal(12,2) [default: 0]
+  tunjangan decimal(12,2) [default: 0]
+  potongan decimal(12,2) [default: 0]
+  gaji_bersih decimal(12,2) [default: 0]
+  status varchar(20) [default: 'draft']
+  alasan_tolak text
+}
+
+Table detail_gaji_komponen {
+  id varchar(20) [primary key]
+  user_id varchar(20) [not null, ref: > users.id]
+  slip_gaji_periode_id varchar(20) [ref: > slip_gaji_periode.id]
+  komponen_gaji_id varchar(20) [not null, ref: > master_komponen_gaji.id]
+  nominal decimal(12,2) [default: 0]
+}
+
+Table dokumen_user {
+  id int [primary key]
+  user_id varchar(20) [not null, ref: > users.id]
+  jenis_dokumen varchar(50) [not null]
+  file_path varchar(255) [not null]
+  uploaded_at datetime [not null]
+}

@@ -24,12 +24,13 @@
             {{ $slipGaji->karyawan->nama }} — {{ $slipGaji->periodeGaji->nama_periode }}
         </p>
     </div>
-    <button onclick="window.print()"
-            class="flex items-center gap-2 bg-[#1E3A5F] text-white font-black text-xs
-                   uppercase italic px-5 py-3 rounded-xl hover:bg-green-600 transition-all no-print">
-        <i data-lucide="printer" class="w-4 h-4"></i>
-        Cetak
-    </button>
+    <a href="{{ route('admin.penggajian.slip-official', $slipGaji->id) }}"
+       target="_blank"
+       class="flex items-center gap-2 bg-green-600 text-white font-black text-xs
+              uppercase italic px-5 py-3 rounded-xl hover:bg-green-700 transition-all no-print">
+        <i data-lucide="file-text" class="w-4 h-4"></i>
+        Cetak Official
+    </a>
 </header>
 
 @include('admin.penggajian._slip-template', ['slipGaji' => $slipGaji])

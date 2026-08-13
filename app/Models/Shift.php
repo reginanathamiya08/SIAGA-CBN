@@ -3,9 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasCustomId;
 
 class Shift extends Model
 {
+    use HasCustomId;
+
+    const ID_PREFIX = 'SFT';
+    public $incrementing = false;
+    protected $keyType = 'string';
     protected $table = 'shift';
 
     protected $fillable = [
@@ -43,8 +49,5 @@ class Shift extends Model
         return $this->belongsTo(Mitra::class);
     }
 
-    public function jadwal()
-    {
-        return $this->hasMany(JadwalShift::class);
-    }
+
 }

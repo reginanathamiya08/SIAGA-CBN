@@ -8,7 +8,7 @@ class UsernameGeneratorService
 {
     /**
      * ─────────────────────────────────────────────────────────────────────
-     * FORMAT USERNAME:
+     * FORMAT NIP:
      *   Admin                        → ADM-CBN-0001
      *   Pimpinan                     → PM-CBN-0001
      *   Karyawan Tetap               → KT-CBN-0001
@@ -18,7 +18,7 @@ class UsernameGeneratorService
      */
 
     /**
-     * Generate username baru berdasarkan role dan divisi.
+     * Generate NIP baru berdasarkan role dan divisi.
      */
     public function generate(string $role, ?string $divisi = null): string
     {
@@ -55,9 +55,9 @@ class UsernameGeneratorService
      */
     private function getNextNomor(string $prefix): int
     {
-        $last = User::where('username', 'LIKE', $prefix . '-%')
-                    ->orderBy('username', 'desc')
-                    ->value('username');
+        $last = User::where('nip', 'LIKE', $prefix . '-%')
+                    ->orderBy('nip', 'desc')
+                    ->value('nip');
 
         if (!$last) {
             return 1;
@@ -74,12 +74,41 @@ class UsernameGeneratorService
     // ─────────────────────────────────────────────────────────────────────
 
     /**
-     * Daftar divisi berdasarkan jenis karyawan.
+     * Resolve role parameter to role slug ('karyawan_tetap' or 'karyawan_kontrak').
+     */
+    private static function resolveRoleSlug(int|string|\App\Models\Role $role): string
+    {
+        if ($role instanceof \App\Models\Role) {
+            return $role->slug;
+        }
+
+        $str = (string) $role;
+
+        if (in_array($str, ['karyawan_tetap', 'tetap', 'JNS-00001'])) {
+            return 'karyawan_tetap';
+        }
+
+        if (in_array($str, ['karyawan_kontrak', 'kontrak', 'JNS-00002'])) {
+            return 'karyawan_kontrak';
+        }
+
+        $found = \App\Models\Role::find($str);
+        if ($found) {
+            return $found->slug;
+        }
+
+        return $str;
+    }
+
+    /**
+     * Daftar divisi berdasarkan role karyawan.
      * Return: array ['value' => 'label']
      */
-    public static function daftarDivisi(string $jenisKaryawan): array
+    public static function daftarDivisi(int|string|\App\Models\Role $role): array
     {
-        if ($jenisKaryawan === 'tetap') {
+        $slug = self::resolveRoleSlug($role);
+
+        if ($slug === 'karyawan_tetap') {
             return [
                 'keuangan'       => 'Keuangan',
                 'koordinator_cs' => 'Koordinator CS',
@@ -87,7 +116,7 @@ class UsernameGeneratorService
             ];
         }
 
-        if ($jenisKaryawan === 'kontrak') {
+        if ($slug === 'karyawan_kontrak') {
             return [
                 'HC'   => 'HC (Human Capital)',
                 'umum' => 'Umum',
@@ -98,39 +127,14 @@ class UsernameGeneratorService
     }
 
     /**
-     * Daftar jabatan berdasarkan jenis karyawan dan divisi.
+     * Daftar jabatan berdasarkan role karyawan dan divisi.
      * Return: array ['value' => 'label'] atau array string
-     *
-     * KARYAWAN TETAP:
-     *   - Keuangan       : Staff Keuangan
-     *   - Koordinator CS : Koordinator CS
-     *   - Adm & Umum     : Staff Administrasi & Umum
-     *
-     * KARYAWAN KONTRAK DIVISI HC:
-     *   Satpam, Sopir, Marketing, Pramusaji, Pramubakti,
-     *   Call Centre, Card Center, E-Channel, Juru Parkir,
-     *   Teknisi, Monitoring ATM dan Jaringan, PPI
-     *   → Catatan:
-     *     - Satpam   : wajib KTA, bersifat shift
-     *     - Card Center          : bersifat shift
-     *     - Monitoring ATM & Jar.: bersifat shift
-     *     - Marketing, Call Centre, Card Center,
-     *       Teknisi, Monitoring ATM, PPI : gaji di atas UMR
-     *     - Lainnya  : UMR tahun berjalan
-     *     - Uang makan dibayar oleh mitra (bukan CBN)
-     *     - Sopir    : wajib SIM
-     *     - Pramubakti: wajib pengalaman
-     *
-     * KARYAWAN KONTRAK DIVISI UMUM:
-     *   CS, CS ATM, Ekspedisi
-     *   → Catatan:
-     *     - Gaji UMR tahun berjalan
-     *     - Uang makan dibayar oleh CBN (35.000/hari)
-     *     - CS: absen 1 jam sebelum jam operasional perusahaan mitra
      */
-    public static function daftarJabatan(string $jenisKaryawan, ?string $divisi = null): array
+    public static function daftarJabatan(int|string|\App\Models\Role $role, ?string $divisi = null): array
     {
-        if ($jenisKaryawan === 'tetap') {
+        $slug = self::resolveRoleSlug($role);
+
+        if ($slug === 'karyawan_tetap') {
             return match ($divisi) {
                 'keuangan'       => ['Staff Keuangan'],
                 'koordinator_cs' => ['Koordinator CS'],
@@ -139,7 +143,7 @@ class UsernameGeneratorService
             };
         }
 
-        if ($jenisKaryawan === 'kontrak') {
+        if ($slug === 'karyawan_kontrak') {
             return match (strtolower($divisi ?? '')) {
                 'hc' => [
                     'Satpam',
@@ -148,15 +152,15 @@ class UsernameGeneratorService
                     'Pramusaji',
                     'Pramubakti',
                     'Call Centre',
-                    'Card Center',
+                    'Card Centre',
                     'E-Channel',
                     'Juru Parkir',
                     'Teknisi',
                     'Monitoring ATM dan Jaringan',
-                    'PPI',
+                    'PPID',
                 ],
                 'umum' => [
-                    'CS',
+                    'Cleaning Service',
                     'CS ATM',
                     'Ekspedisi',
                 ],
@@ -169,13 +173,14 @@ class UsernameGeneratorService
 
     /**
      * Jabatan yang bersifat shift.
-     * (Satpam, Card Center, Monitoring ATM dan Jaringan)
+     * (Satpam, Card Center / Card Centre, Monitoring ATM dan Jaringan)
      */
     public static function jabatanShift(): array
     {
         return [
             'Satpam',
             'Card Center',
+            'Card Centre',
             'Monitoring ATM dan Jaringan',
         ];
     }
@@ -188,10 +193,13 @@ class UsernameGeneratorService
         return [
             'Marketing',
             'Call Centre',
+            'Call Center',
             'Card Center',
+            'Card Centre',
             'Teknisi',
             'Monitoring ATM dan Jaringan',
             'PPI',
+            'PPID',
         ];
     }
 
@@ -240,11 +248,11 @@ class UsernameGeneratorService
     }
 
     /**
-     * Apakah CS (divisi Umum) perlu absen lebih awal?
+     * Apakah CS / Cleaning Service (divisi Umum) perlu absen lebih awal?
      * CS absen 1 jam sebelum jam operasional perusahaan mitra.
      */
     public static function isAbsenLebihAwal(string $jabatan): bool
     {
-        return in_array($jabatan, ['CS', 'CS ATM']);
+        return in_array($jabatan, ['CS', 'CS ATM', 'Cleaning Service']);
     }
 }

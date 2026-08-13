@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Pimpinan;
 
 use App\Http\Controllers\Controller;
-use App\Models\Karyawan;
+use App\Models\User;
 use App\Models\Absensi;
-use App\Models\Perizinan;
+use App\Models\DetailPerizinan;
 use App\Models\Lembur;
-use App\Models\DinasLuar;
-use App\Models\SlipGaji;
+use App\Models\SlipGajiPeriode;
 use App\Models\PeriodeGaji;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -17,10 +16,12 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        \App\Helpers\AttendanceHelper::runAutoAlfaDeduction();
+
         $today = Carbon::today();
         $startOfWeek = Carbon::now()->subDays(6);
 
-        $totalKaryawan = Karyawan::where('is_active', true)->count();
+        $totalKaryawan = User::where('is_active', true)->count();
         $hadirHariIni  = Absensi::whereDate('tanggal', $today)
                                 ->whereIn('status', ['hadir', 'telat'])
                                 ->count();
@@ -28,10 +29,10 @@ class DashboardController extends Controller
                             ? round(($hadirHariIni / $totalKaryawan) * 100)
                             : 0;
 
-        // Total pengajuan menunggu
-        $totalMenunggu = Perizinan::where('status_approval', 'menunggu')->count()
+        // Total pengajuan menunggu (termasuk persetujuan gaji)
+        $totalMenunggu = DetailPerizinan::where('status_approval', 'menunggu')->count()
                        + Lembur::where('status_approval', 'menunggu')->count()
-                       + DinasLuar::where('status_approval', 'menunggu')->count();
+                       + PeriodeGaji::where('status', 'proses')->count();
 
         // Periode gaji terakhir
         $periodeAktif = PeriodeGaji::whereIn('status', ['draft', 'proses'])->latest()->first();
@@ -65,10 +66,10 @@ class DashboardController extends Controller
         // Pengajuan Terbaru (Pending)
         $pengajuanTerbaru = collect();
         
-        $perizinan = Perizinan::with('karyawan')->where('status_approval', 'menunggu')->latest()->take(5)->get()->map(function($item) {
-            $item->tipe = 'Perizinan';
-            $item->icon = 'file-text';
-            $item->color = 'purple';
+        $perizinan = DetailPerizinan::with(['karyawan', 'jenisPerizinan'])->where('status_approval', 'menunggu')->latest()->take(5)->get()->map(function($item) {
+            $item->tipe = $item->jenisPerizinan?->slug === 'dinas_luar' ? 'Dinas Luar' : 'Perizinan';
+            $item->icon = $item->jenisPerizinan?->slug === 'dinas_luar' ? 'map-pin' : 'file-text';
+            $item->color = $item->jenisPerizinan?->slug === 'dinas_luar' ? 'emerald' : 'purple';
             return $item;
         });
         
@@ -79,14 +80,7 @@ class DashboardController extends Controller
             return $item;
         });
 
-        $dinas = DinasLuar::with('karyawan')->where('status_approval', 'menunggu')->latest()->take(5)->get()->map(function($item) {
-            $item->tipe = 'Dinas Luar';
-            $item->icon = 'map-pin';
-            $item->color = 'blue';
-            return $item;
-        });
-
-        $pengajuanTerbaru = $pengajuanTerbaru->concat($perizinan)->concat($lembur)->concat($dinas)
+        $pengajuanTerbaru = $pengajuanTerbaru->concat($perizinan)->concat($lembur)
             ->sortByDesc('created_at')
             ->take(5);
 

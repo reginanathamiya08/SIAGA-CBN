@@ -14,19 +14,17 @@
     </div>
 </header>
 
-@if ($sudahAda)
-    <div class="mb-6 p-5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
-        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
-        <div>
-            <p class="text-sm font-black text-amber-700">
-                Penggajian bulan ini sudah pernah diproses.
-            </p>
-            <p class="text-xs text-amber-600 mt-1">
-                Kamu masih bisa memproses bulan lain dengan mengubah pilihan bulan di bawah.
-            </p>
-        </div>
+<div id="warningSudahAda" class="hidden mb-6 p-5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
+    <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+    <div>
+        <p class="text-sm font-black text-amber-700">
+            Periode penggajian ini sudah pernah dibuat.
+        </p>
+        <p class="text-xs text-amber-600 mt-1">
+            Silakan pilih bulan atau tahun lainnya yang belum pernah dibuat.
+        </p>
     </div>
-@endif
+</div>
 
 @if ($karyawanBelumAda > 0)
     <div class="mb-6 p-5 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3">
@@ -37,7 +35,7 @@
             </p>
             <p class="text-xs text-red-500 mt-1">
                 Karyawan tersebut tidak diikutkan dalam penggajian ini.
-                <a href="{{ route('admin.komponen-gaji.index') }}"
+                <a href="{{ route('admin.komponen-gaji-karyawan.index') }}"
                    class="font-black underline">Isi sekarang →</a>
             </p>
         </div>
@@ -64,7 +62,7 @@
                                       uppercase tracking-widest mb-2">
                             Bulan <span class="text-red-500">*</span>
                         </label>
-                        <select name="bulan"
+                        <select name="bulan" id="selectBulan"
                                 class="w-full px-4 py-3 rounded-xl border border-gray-200
                                        bg-gray-50 text-sm font-semibold text-gray-700
                                        outline-none focus:border-[#1E3A5F] focus:bg-white">
@@ -85,18 +83,20 @@
                                       uppercase tracking-widest mb-2">
                             Tahun <span class="text-red-500">*</span>
                         </label>
-                        <select name="tahun"
-                                class="w-full px-4 py-3 rounded-xl border border-gray-200
-                                       bg-gray-50 text-sm font-semibold text-gray-700
-                                       outline-none focus:border-[#1E3A5F] focus:bg-white">
-                            @for ($y = now()->year; $y >= now()->year - 3; $y--)
-                                <option value="{{ $y }}"
-                                        {{ $tahunIni === $y ? 'selected' : '' }}>
-                                    {{ $y }}
-                                </option>
-                            @endfor
-                        </select>
+                        <input type="number" name="tahun" id="selectTahun"
+                               min="2020" max="2099" value="{{ $tahunIni }}"
+                               class="w-full px-4 py-3 rounded-xl border border-gray-200
+                                      bg-gray-50 text-sm font-semibold text-gray-700
+                                      outline-none focus:border-[#1E3A5F] focus:bg-white">
                     </div>
+                </div>
+
+                {{-- Preview periode terpilih --}}
+                <div id="previewPeriode" class="mb-4 px-4 py-3 bg-[#1E3A5F]/5 rounded-xl border border-[#1E3A5F]/10 flex items-center gap-2">
+                    <i data-lucide="calendar" class="w-4 h-4 text-[#1E3A5F] shrink-0"></i>
+                    <p class="text-[11px] font-black text-[#1E3A5F] uppercase tracking-wide">
+                        Periode dipilih: <span id="labelPeriode" class="text-blue-600"></span>
+                    </p>
                 </div>
 
                 <div class="p-4 bg-blue-50 rounded-2xl border border-blue-100 mb-5">
@@ -112,13 +112,12 @@
                     </ul>
                 </div>
 
-                <button type="submit"
-                        onclick="return confirm('Proses penggajian? Tindakan ini tidak dapat dibatalkan.')"
-                        class="w-full bg-[#1E3A5F] hover:bg-green-600 text-white font-black
+                 <button type="submit" id="btnSubmitPeriode"
+                        class="w-full bg-[#1E3A5F] hover:bg-blue-800 text-white font-black
                                text-sm uppercase tracking-widest py-4 rounded-2xl transition-all
                                shadow-sm active:scale-95 italic flex items-center justify-center gap-2">
-                    <i data-lucide="calculator" class="w-5 h-5"></i>
-                    Proses Penggajian Sekarang
+                    <i data-lucide="calendar-plus" class="w-5 h-5"></i>
+                    Buat Periode Baru (Draft)
                 </button>
             </form>
         </div>
@@ -207,5 +206,59 @@
     </div>
 
 </div>
+
+@push('scripts')
+<script>
+    const namaBulan = {
+        1:'Januari',2:'Februari',3:'Maret',4:'April',
+        5:'Mei',6:'Juni',7:'Juli',8:'Agustus',
+        9:'September',10:'Oktober',11:'November',12:'Desember'
+    };
+
+    // Data periode dari PHP
+    const periodeTerdaftar = @json($periodeTerdaftar);
+
+    function updatePreviewPeriode() {
+        const bulanSelect = document.getElementById('selectBulan');
+        const tahunSelect = document.getElementById('selectTahun');
+        const warningBox = document.getElementById('warningSudahAda');
+        const submitBtn = document.getElementById('btnSubmitPeriode');
+        
+        const bulan = parseInt(bulanSelect.value);
+        const tahun = parseInt(tahunSelect.value);
+        
+        // Update label preview
+        document.getElementById('labelPeriode').textContent = namaBulan[bulan] + ' ' + tahun;
+        
+        // Cek duplikasi
+        const isDuplikat = periodeTerdaftar.some(p => p.bulan === bulan && p.tahun === tahun);
+        
+        if (isDuplikat) {
+            warningBox.classList.remove('hidden');
+            submitBtn.disabled = true;
+            submitBtn.classList.remove('bg-[#1E3A5F]', 'hover:bg-blue-800');
+            submitBtn.classList.add('bg-gray-300', 'cursor-not-allowed');
+            submitBtn.innerHTML = '<i data-lucide="x-circle" class="w-5 h-5 shrink-0"></i> Periode Sudah Ada';
+        } else {
+            warningBox.classList.add('hidden');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('bg-gray-300', 'cursor-not-allowed');
+            submitBtn.classList.add('bg-[#1E3A5F]', 'hover:bg-blue-800');
+            submitBtn.innerHTML = '<i data-lucide="calendar-plus" class="w-5 h-5 shrink-0"></i> Buat Periode Baru (Draft)';
+        }
+        
+        // Refresh icons
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    }
+
+    document.getElementById('selectBulan').addEventListener('change', updatePreviewPeriode);
+    document.getElementById('selectTahun').addEventListener('change', updatePreviewPeriode);
+
+    // Inisialisasi saat halaman load
+    document.addEventListener('DOMContentLoaded', updatePreviewPeriode);
+</script>
+@endpush
 
 @endsection

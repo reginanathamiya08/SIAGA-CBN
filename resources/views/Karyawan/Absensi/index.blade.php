@@ -5,313 +5,282 @@
 @push('styles')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-#map { height: 260px; border-radius: 16px; z-index: 1; }
-.leaflet-container { border-radius: 16px; }
+    #map { height: 200px; border-radius: 16px; z-index: 1; }
+    @media (min-width: 768px) {
+        #map { height: 280px; border-radius: 20px; }
+    }
+    .leaflet-container { border-radius: 16px; }
 </style>
 @endpush
 
 @section('content')
 
-<header class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
-    <div>
-        <h1 class="text-2xl font-black text-[#1E3A5F]">Absensi</h1>
-        <p class="text-gray-500 mt-1 text-sm">
-            {{ now()->translatedFormat('l, d F Y') }}
-        </p>
-    </div>
-    <a href="{{ route('karyawan.absensi.riwayat') }}"
-       class="flex items-center gap-2 text-[11px] font-black text-[#1E3A5F] bg-blue-50
-              px-4 py-2 rounded-xl hover:bg-blue-100 transition-all">
-        <i data-lucide="history" class="w-4 h-4"></i>
-        Riwayat Absensi
-    </a>
-</header>
-
-{{-- ALERT MESSAGES --}}
-@if(session('success'))
-    <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-2xl text-green-700
-                text-sm font-semibold flex items-center gap-3">
-        <i data-lucide="check-circle" class="w-5 h-5 shrink-0"></i>
-        {{ session('success') }}
-    </div>
-@endif
-@if(session('warning'))
-    <div class="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl text-yellow-700
-                text-sm font-semibold flex items-center gap-3">
-        <i data-lucide="alert-triangle" class="w-5 h-5 shrink-0"></i>
-        {{ session('warning') }}
-    </div>
-@endif
-@if(session('error'))
-    <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700
-                text-sm font-semibold flex items-center gap-3">
-        <i data-lucide="x-circle" class="w-5 h-5 shrink-0"></i>
-        {{ session('error') }}
-    </div>
-@endif
-
-{{-- NO PENEMPATAN WARNING --}}
-@unless($penempatan && isset($penempatan->mitra))
-    <div class="bg-yellow-50 border border-yellow-200 rounded-3xl p-6 mb-6 text-center">
-        <i data-lucide="map-pin-off" class="w-10 h-10 text-yellow-400 mx-auto mb-3"></i>
-        <p class="font-black text-yellow-700 text-sm">
-            @if($karyawan->jenis_karyawan === 'tetap')
-                Data Kantor Pusat Belum Diatur
-            @else
-                Belum Ada Penempatan Aktif
-            @endif
-        </p>
-        <p class="text-yellow-600 text-xs mt-1">
-            @if($karyawan->jenis_karyawan === 'tetap')
-                Admin harus menandai salah satu mitra sebagai "Kantor Pusat" terlebih dahulu.
-            @else
-                Hubungi admin untuk mendapatkan penempatan.
-            @endif
-        </p>
-    </div>
-@endunless
-
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-    {{-- STATUS ABSENSI HARI INI --}}
-    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-        <h3 class="font-black text-[#1E3A5F] italic text-[11px] mb-5 flex items-center gap-2">
-            <span class="w-1 h-4 bg-blue-500 rounded-full"></span>
-            Status Hari Ini
-        </h3>
-
-        <div class="grid grid-cols-2 gap-4 mb-5">
-            {{-- Masuk --}}
-            <div class="bg-gray-50 rounded-2xl p-4">
-                <p class="text-[9px] font-black text-gray-400 tracking-widest mb-2">MASUK</p>
-                @if($absensi?->waktu_masuk)
-                    <p class="text-2xl font-black text-green-600">
-                        {{ $absensi->waktu_masuk->format('H:i') }}
-                    </p>
-                    @if($absensi->is_telat)
-                        <span class="inline-block mt-1 text-[9px] font-black bg-yellow-100
-                                     text-yellow-700 px-2 py-0.5 rounded-full">TELAT</span>
-                    @else
-                        <span class="inline-block mt-1 text-[9px] font-black bg-green-100
-                                     text-green-700 px-2 py-0.5 rounded-full">TEPAT WAKTU</span>
-                    @endif
-                @else
-                    <p class="text-2xl font-black text-gray-300">--:--</p>
-                    <span class="inline-block mt-1 text-[9px] font-black bg-gray-100
-                                 text-gray-400 px-2 py-0.5 rounded-full">BELUM ABSEN</span>
-                @endif
+<div class="mb-3">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
+        <div>
+            <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight">Absensi Kehadiran</h1>
+            <p class="text-gray-500 mt-1 text-sm">Pantau & Catat Kehadiran — <span class="text-red-600 font-bold">PT CBN</span></p>
+         </div>
+        <div class="flex items-center gap-2">
+            <div class="bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm flex items-center gap-2.5">
+                <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span class="text-sm font-black text-[#1E3A5F]">{{ now()->translatedFormat('d M Y') }}</span>
             </div>
-
-            {{-- Pulang --}}
-            <div class="bg-gray-50 rounded-2xl p-4">
-                <p class="text-[9px] font-black text-gray-400 tracking-widest mb-2">PULANG</p>
-                @if($absensi?->waktu_pulang)
-                    <p class="text-2xl font-black text-blue-600">
-                        {{ $absensi->waktu_pulang->format('H:i') }}
-                    </p>
-                    @php $durasi = $absensi->durasiMenit(); @endphp
-                    <span class="inline-block mt-1 text-[9px] font-black bg-blue-100
-                                 text-blue-700 px-2 py-0.5 rounded-full">
-                        {{ intdiv($durasi,60) }}j {{ $durasi%60 }}m
-                    </span>
-                @else
-                    <p class="text-2xl font-black text-gray-300">--:--</p>
-                    <span class="inline-block mt-1 text-[9px] font-black bg-gray-100
-                                 text-gray-400 px-2 py-0.5 rounded-full">BELUM PULANG</span>
-                @endif
-            </div>
+            <a href="{{ route('karyawan.absensi.riwayat') }}" 
+               class="w-10 h-10 bg-white border border-gray-100 text-[#1E3A5F] rounded-xl shadow-sm hover:bg-[#1E3A5F] hover:text-white transition-all flex items-center justify-center">
+                <i data-lucide="history" class="w-4 h-4"></i>
+            </a>
         </div>
-
-        {{-- Info Mitra --}}
-        @if($penempatan && isset($penempatan->mitra))
-            <div class="bg-blue-50 rounded-2xl p-3 flex items-center gap-3">
-                <i data-lucide="building-2" class="w-4 h-4 text-blue-500 shrink-0"></i>
-                <div>
-                    <p class="text-[9px] font-black text-blue-400 tracking-widest">LOKASI ABSENSI</p>
-                    <p class="text-xs font-black text-blue-700">{{ $penempatan->mitra->nama_mitra }}</p>
-                    <p class="text-[9px] text-blue-500 mt-0.5">
-                        Radius: {{ $penempatan->mitra->radius_meter }} m • Validasi IP: Aktif
-                    </p>
-                </div>
-            </div>
-        @endif
-
-        {{-- Rekap bulan ini --}}
-        <div class="mt-4 pt-4 border-t border-gray-100">
-            <p class="text-[9px] font-black text-gray-400 tracking-widest mb-3">REKAP BULAN INI</p>
-            <div class="grid grid-cols-3 gap-2">
-                @foreach(['hadir'=>['Hadir','green'],'telat'=>['Telat','yellow'],'alfa'=>['Alfa','red']] as $key=>[$label,$color])
-                    <div class="text-center bg-{{ $color }}-50 rounded-xl py-2">
-                        <p class="text-lg font-black text-{{ $color }}-600">{{ $rekapBulan[$key] ?? 0 }}</p>
-                        <p class="text-[8px] font-black text-{{ $color }}-400 tracking-widest">{{ $label }}</p>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    </div>
-
-    {{-- FORM ABSENSI --}}
-    <div class="space-y-4" x-data="absensiApp()" x-init="init()">
-
-        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="font-black text-[#1E3A5F] italic text-[11px] flex items-center gap-2">
-                    <span class="w-1 h-4 bg-green-500 rounded-full"></span>
-                    Lokasi GPS Kamu
-                </h3>
-                <button @click="getLocation()"
-                        class="text-[10px] font-black text-[#1E3A5F] bg-blue-50 px-3 py-1
-                               rounded-xl hover:bg-blue-100 transition-all flex items-center gap-1">
-                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Perbarui
-                </button>
-            </div>
-
-            <div id="map" class="mb-3"></div>
-
-            <div x-show="loading" class="text-center py-2">
-                <p class="text-xs text-gray-400 font-semibold animate-pulse">Mengambil lokasi GPS...</p>
-            </div>
-
-            <div x-show="!loading && lat" class="bg-gray-50 rounded-xl p-3">
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <p class="text-[8px] font-black text-gray-400 tracking-widest">LATITUDE</p>
-                        <p class="text-xs font-black text-gray-700" x-text="lat?.toFixed(7) ?? '-'"></p>
-                    </div>
-                    <div>
-                        <p class="text-[8px] font-black text-gray-400 tracking-widest">LONGITUDE</p>
-                        <p class="text-xs font-black text-gray-700" x-text="lon?.toFixed(7) ?? '-'"></p>
-                    </div>
-                </div>
-                <div class="mt-2" x-show="jarak !== null">
-                    <p class="text-[8px] font-black text-gray-400 tracking-widest">JARAK KE MITRA</p>
-                    <p class="text-xs font-black" :class="jarakValid ? 'text-green-600' : 'text-red-500'">
-                        <span x-text="jarak !== null ? Math.round(jarak) + ' m' : '-'"></span>
-                        <span x-show="jarakValid" class="ml-1">✓ Dalam radius</span>
-                        <span x-show="!jarakValid && jarak !== null" class="ml-1">✗ Di luar radius</span>
-                    </p>
-                </div>
-            </div>
-
-            <div x-show="errorGps" class="mt-2 bg-red-50 rounded-xl p-3">
-                <p class="text-[10px] font-semibold text-red-600" x-text="errorGps"></p>
-            </div>
-        </div>
-
-        @if($penempatan && isset($penempatan->mitra))
-            <div class="grid grid-cols-2 gap-4">
-                {{-- Form Masuk --}}
-                <form method="POST" action="{{ route('karyawan.absensi.masuk') }}"
-                      x-ref="formMasuk" @submit.prevent="submitAbsen($refs.formMasuk)">
-                    @csrf
-                    <input type="hidden" name="latitude"  x-bind:value="lat">
-                    <input type="hidden" name="longitude" x-bind:value="lon">
-
-                    <button type="submit"
-                            :disabled="!lat || !jarakValid || loading || {{ $absensi?->waktu_masuk ? 'true' : 'false' }}"
-                            class="w-full flex flex-col items-center justify-center gap-2 py-6
-                                   {{ !$absensi?->waktu_masuk ? 'bg-[#1E3A5F] hover:bg-[#2c5385]' : 'bg-gray-100 text-gray-400' }}
-                                   text-white rounded-3xl font-black italic
-                                   text-sm shadow-md transition-all
-                                   disabled:opacity-60 disabled:cursor-not-allowed">
-                        <i data-lucide="log-in" class="w-6 h-6 mb-1"></i>
-                        <span x-show="!submitting">Absensi Masuk</span>
-                        <span x-show="submitting" class="animate-pulse">Proses...</span>
-                    </button>
-                </form>
-
-                {{-- Form Pulang --}}
-                <form method="POST" action="{{ route('karyawan.absensi.pulang') }}"
-                      x-ref="formPulang" @submit.prevent="submitAbsen($refs.formPulang)">
-                    @csrf
-                    <input type="hidden" name="latitude"  x-bind:value="lat">
-                    <input type="hidden" name="longitude" x-bind:value="lon">
-
-                    <button type="submit"
-                            :disabled="!lat || !jarakValid || loading || !{{ ($absensi?->waktu_masuk && !$absensi?->waktu_pulang && $bolehPulang) ? 'true' : 'false' }}"
-                            class="w-full flex flex-col items-center justify-center gap-2 py-6
-                                   {{ ($absensi?->waktu_masuk && !$absensi?->waktu_pulang && $bolehPulang) ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-100 text-gray-400' }}
-                                   rounded-3xl font-black italic
-                                   text-sm shadow-md transition-all
-                                   disabled:opacity-60 disabled:cursor-not-allowed">
-                        <i data-lucide="log-out" class="w-6 h-6 mb-1"></i>
-                        <span x-show="!submitting">Absensi Pulang</span>
-                        <span x-show="submitting" class="animate-pulse">Proses...</span>
-                    </button>
-                </form>
-            </div>
-
-            {{-- Pesan Kondisional --}}
-            @if($absensi?->waktu_masuk && !$absensi?->waktu_pulang && !$bolehPulang)
-                <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
-                    <div class="flex items-center gap-2 text-amber-700 text-xs font-black italic mb-1">
-                        <i data-lucide="lock" class="w-4 h-4"></i>
-                        Belum Waktunya Pulang
-                    </div>
-                    <p class="text-[10px] font-bold text-amber-600 leading-tight">
-                        {{ $pesanBelumPulang }}
-                    </p>
-                </div>
-            @endif
-
-            @if($absensi?->waktu_masuk && $absensi?->waktu_pulang)
-                <div class="mt-4 bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
-                    <i data-lucide="check-circle-2" class="w-5 h-5 text-green-500 mx-auto mb-1"></i>
-                    <p class="font-black text-green-700 text-xs">Absensi Hari Ini Selesai</p>
-                    <p class="text-[10px] text-green-600 mt-0.5">
-                        {{ $absensi->waktu_masuk->format('H:i') }} — {{ $absensi->waktu_pulang->format('H:i') }}
-                    </p>
-                </div>
-            @endif
-        @endif
-
     </div>
 </div>
 
-@if($riwayat->count())
-<div class="mt-6 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-    <h3 class="font-black text-[#1E3A5F] italic text-[11px] mb-4 flex items-center gap-2">
-        <span class="w-1 h-4 bg-teal-500 rounded-full"></span>
-        Riwayat 30 Hari Terakhir
-    </h3>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4" x-data="absensiApp()" x-init="init()">
+    
+    {{-- SISI KIRI (MAP & BUTTONS) --}}
+    <div class="lg:col-span-8 flex flex-col gap-3.5 order-1">
+        {{-- MAP --}}
+        <div class="order-1 bg-white rounded-2xl p-1 border border-gray-100 shadow-sm relative group overflow-hidden">
+            <div id="map" class="w-full"></div>
+            <button @click="getLocation()" class="absolute bottom-3 right-3 z-[1000] w-8 h-8 bg-[#1E3A5F] text-white rounded-lg shadow-xl flex items-center justify-center hover:bg-red-600 transition-all">
+                <i data-lucide="refresh-cw" class="w-4 h-4" :class="loading ? 'animate-spin' : ''"></i>
+            </button>
+            @if($penempatan && isset($penempatan->mitra))
+                <div class="absolute top-3 left-3 z-[1000] bg-white/90 backdrop-blur-md p-2 rounded-lg border border-gray-100 shadow-xl flex items-center gap-2 max-w-[200px]">
+                    <div class="w-7 h-7 bg-[#1E3A5F] text-white rounded flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-[9px] font-bold text-gray-400 leading-none">Mitra</p>
+                        <p class="text-xs font-black text-[#1E3A5F] truncate leading-none mt-1">{{ $penempatan->mitra->nama_mitra }}</p>
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        {{-- BUTTONS (ULTRA COMPACT) --}}
+        <div class="order-2">
+            @if($penempatan && isset($penempatan->mitra))
+                @if($isLiburAtauIzin)
+                    <div class="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex flex-col items-center justify-center text-center group">
+                        <div class="w-10 h-10 bg-white text-blue-600 rounded-xl flex items-center justify-center mb-2 shadow-sm border border-blue-50">
+                            <i data-lucide="info" class="w-5 h-5"></i>
+                        </div>
+                        <h4 class="text-sm font-black text-blue-800 uppercase tracking-wider">
+                            Hari Ini Anda {{ $statusLiburAtauIzin }}
+                        </h4>
+                        <p class="text-xs font-semibold text-blue-600/70 mt-1 leading-relaxed max-w-md">
+                            Anda tidak perlu melakukan absensi karena status kehadiran Anda hari ini tercatat sebagai <strong class="text-blue-800">{{ strtoupper($statusLiburAtauIzin) }}</strong>.
+                        </p>
+                    </div>
+                @else
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {{-- TOMBOL MASUK --}}
+                        <form method="POST" action="{{ route('karyawan.absensi.masuk') }}" x-ref="formMasuk" class="w-full">
+                            @csrf
+                            <input type="hidden" name="latitude" x-model="lat">
+                            <input type="hidden" name="longitude" x-model="lon">
+                            <button type="button" @click="submitWithConfirm($refs.formMasuk, 'Masuk')"
+                                    :disabled="!lat || !jarakValid || loading || submitting || {{ $absensi?->waktu_masuk ? 'true' : 'false' }}"
+                                    class="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black transition-all shadow-sm active:scale-95 disabled:opacity-30 disabled:grayscale
+                                           {{ $absensi?->waktu_masuk ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-none' : 'bg-[#1E3A5F] text-white hover:bg-emerald-600 shadow-blue-900/10' }}">
+                                <i data-lucide="{{ $absensi?->waktu_masuk ? 'check-circle' : 'fingerprint' }}" class="w-5 h-5"></i>
+                                <span class="text-xs sm:text-sm">{{ $absensi?->waktu_masuk ? 'Sudah Masuk' : 'Absen Masuk' }}</span>
+                            </button>
+                        </form>
+
+                        {{-- TOMBOL PULANG --}}
+                        <form method="POST" action="{{ route('karyawan.absensi.pulang') }}" x-ref="formPulang" class="w-full">
+                            @csrf
+                            <input type="hidden" name="latitude" x-model="lat">
+                            <input type="hidden" name="longitude" x-model="lon">
+                            <button type="button" @click="submitWithConfirm($refs.formPulang, 'Pulang')"
+                                    :disabled="!lat || !jarakValid || loading || submitting || !{{ $absensi?->waktu_masuk ? 'true' : 'false' }} || {{ $absensi?->waktu_pulang ? 'true' : 'false' }} || !{{ $bolehPulang ? 'true' : 'false' }}"
+                                    class="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black transition-all shadow-sm active:scale-95 disabled:opacity-30 disabled:grayscale
+                                           {{ $absensi?->waktu_pulang ? 'bg-blue-50 text-blue-600 border border-blue-100 shadow-none' : 'bg-white border border-[#1E3A5F] text-[#1E3A5F] hover:bg-red-600 hover:text-white shadow-blue-900/5' }}">
+                                <i data-lucide="{{ $absensi?->waktu_pulang ? 'check-circle' : 'power' }}" class="w-5 h-5"></i>
+                                <span class="text-xs sm:text-sm">{{ $absensi?->waktu_pulang ? 'Sudah Pulang' : 'Absen Pulang' }}</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="mt-2.5">
+                        @if($absensi?->waktu_masuk && !$absensi?->waktu_pulang && !$bolehPulang)
+                            <div class="p-2.5 bg-amber-50 rounded-lg border border-amber-100 flex items-center gap-2">
+                                <i data-lucide="lock" class="w-4 h-4 text-amber-500"></i>
+                                <p class="text-xs font-bold text-amber-700 leading-tight">{{ $pesanBelumPulang }}</p>
+                            </div>
+                        @endif
+                        @if($absensi?->waktu_pulang)
+                            <div class="p-2.5 bg-emerald-50 rounded-lg border border-emerald-100 flex items-center gap-2">
+                                <i data-lucide="party-popper" class="w-4 h-4 text-emerald-500"></i>
+                                <p class="text-xs font-bold text-emerald-700 leading-tight">Presensi hari ini telah selesai. Selamat beristirahat!</p>
+                            </div>
+                        @endif
+                    </div>
+                @endif
+            @else
+                <div class="bg-rose-50 rounded-2xl p-5 border border-rose-100 flex flex-col items-center justify-center text-center group">
+                    <div class="w-10 h-10 bg-white text-rose-500 rounded-lg flex items-center justify-center mb-2 shadow-sm border border-rose-50 group-hover:shake transition-all">
+                        <i data-lucide="alert-octagon" class="w-5 h-5"></i>
+                    </div>
+                    <h4 class="text-xs font-black text-rose-800">Akses Dibatasi</h4>
+                    <p class="text-[11px] font-medium text-rose-600/70 mt-1 leading-relaxed">
+                        Data **Penempatan Mitra** tidak ditemukan. Hubungi Admin.
+                    </p>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    {{-- SISI KANAN (CLOCK & VERIFIKASI) --}}
+    <div class="lg:col-span-4 space-y-4 order-2">
+        {{-- CLOCK --}}
+        <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative overflow-hidden group">
+            <div class="absolute top-0 right-0 w-16 h-16 bg-blue-50/50 rounded-full -mr-8 -mt-8 blur-lg group-hover:bg-blue-100/50 transition-colors duration-700"></div>
+            <div class="relative z-10 text-center md:text-left">
+                <h3 class="text-xs font-bold text-[#1E3A5F] mb-3 flex items-center justify-center md:justify-start gap-1">
+                    <span class="w-1.5 h-1.5 bg-red-600 rounded-full"></span> Waktu Server
+                </h3>
+                <div class="mb-3">
+                    <p class="text-2xl md:text-3xl font-black text-[#1E3A5F] tracking-tighter tabular-nums leading-none" x-text="currentTime">00:00:00</p>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase mt-1 tracking-widest">WIB</p>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-gray-50/80 p-2 rounded-lg border border-gray-100">
+                        <p class="text-[10px] font-bold text-gray-400 mb-0.5">Masuk</p>
+                        <p class="text-sm font-black text-[#1E3A5F]">{{ $absensi?->waktu_masuk ? $absensi->waktu_masuk->format('H:i') : '--:--' }}</p>
+                    </div>
+                    <div class="bg-gray-50/80 p-2 rounded-lg border border-gray-100">
+                        <p class="text-[10px] font-bold text-gray-400 mb-0.5">Pulang</p>
+                        <p class="text-sm font-black text-[#1E3A5F]">{{ $absensi?->waktu_pulang ? $absensi->waktu_pulang->format('H:i') : '--:--' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- VERIFIKASI --}}
+        <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            <h3 class="text-xs font-bold text-[#1E3A5F] mb-3 flex items-center justify-center md:justify-start gap-1">
+                <span class="w-1.5 h-1.5 bg-blue-600 rounded-full"></span> Verifikasi
+            </h3>
+            <div class="space-y-2.5">
+                <div class="p-2.5 rounded-xl border transition-all duration-700"
+                     :class="lat ? (jarakValid ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50/50 border-rose-100') : 'bg-gray-50 border-gray-100'">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded flex items-center justify-center shadow-sm"
+                             :class="lat ? (jarakValid ? 'bg-white text-emerald-600' : 'bg-white text-rose-600') : 'bg-white text-gray-300'">
+                            <i data-lucide="map-pin" class="w-4 h-4" :class="lat && 'animate-bounce'"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-[10px] font-black text-gray-400 leading-none">GPS Status</p>
+                            <p class="text-xs font-black mt-1" :class="lat ? (jarakValid ? 'text-emerald-700' : 'text-rose-700') : 'text-gray-400'">
+                                <template x-if="!lat"><span>Mencari...</span></template>
+                                <template x-if="lat && jarakValid"><span x-text="'Aman (' + Math.round(jarak) + 'm)'"></span></template>
+                                <template x-if="lat && !jarakValid"><span x-text="'Diluar Jangkauan'"></span></template>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                @php
+                    $ipKaryawan = request()->ip();
+                    $ipValid = false;
+                    if ($penempatan && isset($penempatan->mitra) && $penempatan->mitra->ip_public) {
+                        $allowedIps = array_map('trim', explode(',', $penempatan->mitra->ip_public));
+                        foreach ($allowedIps as $allowed) {
+                            // Smart IPv6 Prefix Match
+                            if (filter_var($allowed, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+                                $partsKaryawan = explode(':', $ipKaryawan);
+                                $partsAllowed = explode(':', $allowed);
+                                if (count($partsKaryawan) >= 4 && count($partsAllowed) >= 4) {
+                                    if (implode(':', array_slice($partsKaryawan, 0, 4)) === implode(':', array_slice($partsAllowed, 0, 4))) {
+                                        $ipValid = true; break;
+                                    }
+                                }
+                            } 
+                            // IPv4 Wildcard Match
+                            elseif (str_contains($allowed, '*')) {
+                                if (str_starts_with($ipKaryawan, str_replace('*', '', $allowed))) {
+                                    $ipValid = true; break;
+                                }
+                            } 
+                            // Exact Match
+                            elseif ($ipKaryawan === $allowed) {
+                                $ipValid = true; break;
+                            }
+                        }
+                    }
+                @endphp
+
+                @if($penempatan && isset($penempatan->mitra) && $penempatan->mitra->ip_public)
+                    <div class="p-2.5 rounded-xl border {{ $ipValid ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50/50 border-rose-100' }}">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 bg-white rounded flex items-center justify-center shadow-sm {{ $ipValid ? 'text-emerald-600' : 'text-rose-600' }}">
+                                <i data-lucide="wifi" class="w-4 h-4"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-[10px] font-black text-gray-400 leading-none">WiFi Status</p>
+                                <p class="text-xs font-black mt-1 {{ $ipValid ? 'text-emerald-700' : 'text-rose-700' }}">
+                                    {{ $ipValid ? 'Terhubung' : 'Gunakan WiFi' }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- RIWAYAT --}}
+<div class="mt-4 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="px-4 py-3 border-b border-gray-50 flex items-center justify-between">
+        <h3 class="text-xs sm:text-sm font-black text-[#1E3A5F] flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 bg-red-600 rounded-full"></span> Riwayat Terkini
+        </h3>
+    </div>
     <div class="overflow-x-auto">
-        <table class="w-full text-xs">
+        <table class="w-full text-left">
             <thead>
-                <tr class="text-left text-[9px] font-black text-gray-400 tracking-widest border-b border-gray-100">
-                    <th class="pb-3 pr-4">TANGGAL</th>
-                    <th class="pb-3 pr-4">STATUS</th>
-                    <th class="pb-3 pr-4">MASUK</th>
-                    <th class="pb-3 pr-4">PULANG</th>
-                    <th class="pb-3">DURASI</th>
+                <tr class="text-[#1E3A5F] text-[10px] sm:text-xs font-black tracking-wider border-b border-gray-50 bg-gray-50/20 uppercase">
+                    <th class="px-4 py-2">Tanggal</th>
+                    <th class="px-4 py-2">Status</th>
+                    <th class="px-4 py-2 text-center">In</th>
+                    <th class="px-4 py-2 text-center">Out</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
                 @foreach($riwayat as $row)
                     @php
                         $statusMap = [
-                            'hadir'      => ['Hadir',      'bg-green-100 text-green-700'],
-                            'telat'      => ['Telat',      'bg-yellow-100 text-yellow-700'],
-                            'alfa'       => ['Alfa',       'bg-red-100 text-red-700'],
-                            'izin'       => ['Izin',       'bg-blue-100 text-blue-700'],
-                            'sakit'      => ['Sakit',      'bg-purple-100 text-purple-700'],
-                            'cuti'       => ['Cuti',       'bg-indigo-100 text-indigo-700'],
-                            'dinas_luar' => ['Dinas Luar', 'bg-orange-100 text-orange-700'],
+                            'hadir' => ['Hadir', 'bg-emerald-50 text-emerald-700 border-emerald-100'],
+                            'telat' => ['Telat', 'bg-amber-50 text-amber-700 border-amber-100'],
+                            'alfa' => ['Alfa', 'bg-rose-50 text-rose-700 border-rose-100'],
+                            'izin' => ['Izin', 'bg-blue-50 text-blue-700 border-blue-100'],
+                            'sakit' => ['Sakit', 'bg-purple-50 text-purple-700 border-purple-100'],
+                            'cuti' => ['Cuti', 'bg-indigo-50 text-indigo-700 border-indigo-100'],
+                            'dinas_luar' => ['Dinas Luar', 'bg-orange-50 text-orange-700 border-orange-100'],
                         ];
-                        [$label, $cls] = $statusMap[$row->status] ?? ['?', 'bg-gray-100 text-gray-500'];
+                        [$label, $cls] = $statusMap[$row->status] ?? ['?', 'bg-gray-50 text-gray-500 border-gray-100'];
                     @endphp
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="py-2.5 pr-4 font-semibold text-gray-600">{{ $row->tanggal->translatedFormat('d M Y') }}</td>
-                        <td class="py-2.5 pr-4"><span class="inline-block px-2 py-0.5 rounded-full text-[9px] font-black {{ $cls }}">{{ $label }}</span></td>
-                        <td class="py-2.5 pr-4 text-gray-600">{{ $row->waktu_masuk?->format('H:i') ?? '-' }}</td>
-                        <td class="py-2.5 pr-4 text-gray-600">{{ $row->waktu_pulang?->format('H:i') ?? '-' }}</td>
-                        <td class="py-2.5 text-gray-600">@if($row->durasiMenit()){{ intdiv($row->durasiMenit(), 60) }}j {{ $row->durasiMenit() % 60 }}m @else - @endif</td>
+                    <tr class="hover:bg-gray-50 transition-all text-xs sm:text-sm">
+                        <td class="px-4 py-2">
+                            <span class="text-[#1E3A5F] font-black block leading-none">{{ $row->tanggal->translatedFormat('d M Y') }}</span>
+                            <span class="text-[10px] text-gray-400 font-bold uppercase">{{ $row->tanggal->translatedFormat('l') }}</span>
+                        </td>
+                        <td class="px-4 py-2">
+                            <span class="inline-flex px-2 py-0.5 rounded-full border text-[10px] font-black {{ $cls }}">
+                                {{ $label }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-2 text-center font-bold text-gray-600">{{ $row->waktu_masuk?->format('H:i') ?? '--:--' }}</td>
+                        <td class="px-4 py-2 text-center font-bold text-gray-600">{{ $row->waktu_pulang?->format('H:i') ?? '--:--' }}</td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
     </div>
 </div>
-@endif
 
 @endsection
 
@@ -321,20 +290,38 @@
 function absensiApp() {
     return {
         lat: null, lon: null, jarak: null, jarakValid: false, loading: false, submitting: false, errorGps: null,
+        currentTime: '00:00:00',
         mitraLat: {{ $penempatan?->mitra->latitude ?? 'null' }},
         mitraLon: {{ $penempatan?->mitra->longitude ?? 'null' }},
         mitraRadius: {{ $penempatan?->mitra->radius_meter ?? 100 }},
         map: null, markerUser: null, markerMitra: null, circle: null,
-        init() { this.$nextTick(() => { this.initMap(); this.getLocation(); }); },
+        
+        init() {
+            this.updateTime();
+            setInterval(() => this.updateTime(), 1000);
+            this.$nextTick(() => {
+                this.initMap();
+                this.getLocation();
+            });
+        },
+        updateTime() {
+            const now = new Date();
+            this.currentTime = now.getHours().toString().padStart(2, '0') + ':' +
+                               now.getMinutes().toString().padStart(2, '0') + ':' +
+                               now.getSeconds().toString().padStart(2, '0');
+        },
         initMap() {
             const defaultLat = this.mitraLat ?? -0.9492;
             const defaultLon = this.mitraLon ?? 100.3543;
-            this.map = L.map('map').setView([defaultLat, defaultLon], 16);
+            this.map = L.map('map', { zoomControl: false }).setView([defaultLat, defaultLon], 16);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.map);
             if (this.mitraLat && this.mitraLon) {
-                const icon = L.divIcon({ html: `<div style="background:#1E3A5F;width:14px;height:14px;border-radius:50%;border:3px solid white;shadow:0 2px 6px rgba(0,0,0,.4)"></div>`, className: '', iconAnchor: [7, 7] });
+                const icon = L.divIcon({ 
+                    html: `<div class="w-1.5 h-1.5 bg-[#1E3A5F] rounded-full border border-white shadow-lg"></div>`, 
+                    className: '', iconSize: [8, 8], iconAnchor: [4, 4] 
+                });
                 this.markerMitra = L.marker([this.mitraLat, this.mitraLon], { icon }).addTo(this.map);
-                this.circle = L.circle([this.mitraLat, this.mitraLon], { radius: this.mitraRadius, color: '#1E3A5F', fillOpacity: 0.08 }).addTo(this.map);
+                this.circle = L.circle([this.mitraLat, this.mitraLon], { radius: this.mitraRadius, color: '#1E3A5F', fillOpacity: 0.1, weight: 1 }).addTo(this.map);
             }
         },
         getLocation() {
@@ -342,19 +329,43 @@ function absensiApp() {
             this.loading = true; this.errorGps = null;
             navigator.geolocation.getCurrentPosition((pos) => {
                 this.lat = pos.coords.latitude; this.lon = pos.coords.longitude; this.loading = false;
-                const icon = L.divIcon({ html: `<div style="background:#22c55e;width:12px;height:12px;border-radius:50%;border:3px solid white;shadow:0 2px 6px rgba(0,0,0,.4)"></div>`, className: '', iconAnchor: [6, 6] });
+                const icon = L.divIcon({ 
+                    html: `<div class="relative"><div class="absolute -inset-1 bg-green-500/30 rounded-full animate-ping"></div><div class="relative w-1.5 h-1.5 bg-green-500 rounded-full border border-white shadow-md"></div></div>`, 
+                    className: '', iconSize: [6, 6], iconAnchor: [3, 3] 
+                });
                 if (this.markerUser) this.markerUser.setLatLng([this.lat, this.lon]);
                 else this.markerUser = L.marker([this.lat, this.lon], { icon }).addTo(this.map);
-                if (this.mitraLat && this.mitraLon) { this.jarak = this.hitungJarak(this.lat, this.lon, this.mitraLat, this.mitraLon); this.jarakValid = this.jarak <= this.mitraRadius; }
+                if (this.mitraLat && this.mitraLon) { 
+                    this.jarak = this.hitungJarak(this.lat, this.lon, this.mitraLat, this.mitraLon); 
+                    this.jarakValid = this.jarak <= this.mitraRadius; 
+                }
                 const bounds = L.latLngBounds([[this.lat, this.lon]]);
                 if (this.mitraLat) bounds.extend([this.mitraLat, this.mitraLon]);
-                this.map.fitBounds(bounds, { padding: [30, 30] });
-                lucide.createIcons();
+                this.map.fitBounds(bounds, { padding: [15, 15] });
             }, (err) => { this.loading = false; this.errorGps = 'Gagal mengambil GPS: ' + err.message; }, { enableHighAccuracy: true, timeout: 10000 });
         },
-        submitAbsen(form) { if (!this.lat || !this.jarakValid) return; this.submitting = true; form.submit(); },
+        submitWithConfirm(form, tipe) {
+            if (!this.lat || !this.jarakValid) return;
+            Swal.fire({
+                title: `Absensi ${tipe}`,
+                text: `Lakukan absensi ${tipe.toLowerCase()}?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#1E3A5F',
+                cancelButtonColor: '#64748B',
+                confirmButtonText: 'Ya!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.submitting = true;
+                    form.submit();
+                }
+            });
+        },
         hitungJarak(lat1, lon1, lat2, lon2) {
-            const R = 6371000; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
+            const R = 6371000; 
+            const dLat = (lat2 - lat1) * Math.PI / 180; 
+            const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         },

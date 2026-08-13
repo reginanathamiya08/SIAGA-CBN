@@ -23,8 +23,8 @@
                 <input type="hidden" name="sampai"        value="{{ $sampai->toDateString() }}">
                 <input type="hidden" name="mitra_id"      value="{{ $mitraId }}">
                 <input type="hidden" name="divisi"        value="{{ $divisi }}">
-                <input type="hidden" name="jenis_karyawan" value="{{ $jenisKaryawan }}">
-                <input type="hidden" name="karyawan_id"   value="{{ $karyawanId }}">
+                <input type="hidden" name="jenis_karyawan_id" value="{{ $jenisKaryawan }}">
+                <input type="hidden" name="user_id"   value="{{ $karyawanId }}">
                 <button type="submit"
                     class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-xl transition">
                     <i data-lucide="download" class="w-4 h-4"></i> Export Excel
@@ -33,10 +33,53 @@
         </div>
     </div>
 
+    {{-- Tab Toggle Tetap / Kontrak / Semua --}}
+    <div class="flex flex-wrap gap-3">
+        {{-- Karyawan Tetap --}}
+        <a href="{{ route('pimpinan.monitoring.statistik', array_merge(request()->query(), ['jenis_karyawan_id' => 'tetap', 'mitra_id' => ''])) }}"
+           class="flex items-center gap-3 px-5 py-3 rounded-full font-black text-xs transition-all whitespace-nowrap shadow-sm border
+                  {{ ($jenisKaryawan === 'tetap' || $jenisKaryawan === 'JNS-00001')
+                       ? 'bg-[#1E3A5F] text-white shadow-xl shadow-blue-200/50 border-[#1E3A5F]'
+                       : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700' }}">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#34D399]"></span>
+            Karyawan Tetap
+            <span class="bg-emerald-100 text-emerald-800 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ml-1">
+                {{ $countTetap }}
+            </span>
+        </a>
+
+        {{-- Karyawan Kontrak --}}
+        <a href="{{ route('pimpinan.monitoring.statistik', array_merge(request()->query(), ['jenis_karyawan_id' => 'kontrak'])) }}"
+           class="flex items-center gap-3 px-5 py-3 rounded-full font-black text-xs transition-all whitespace-nowrap shadow-sm border
+                  {{ ($jenisKaryawan === 'kontrak' || $jenisKaryawan === 'JNS-00002')
+                       ? 'bg-[#1E3A5F] text-white shadow-xl shadow-blue-200/50 border-[#1E3A5F]'
+                       : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700' }}">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+            Karyawan Kontrak
+            <span class="bg-amber-100 text-amber-800 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ml-1">
+                {{ $countKontrak }}
+            </span>
+        </a>
+
+        {{-- Semua --}}
+        <a href="{{ route('pimpinan.monitoring.statistik', array_merge(request()->query(), ['jenis_karyawan_id' => ''])) }}"
+           class="flex items-center gap-3 px-5 py-3 rounded-full font-black text-xs transition-all whitespace-nowrap shadow-sm border
+                  {{ empty($jenisKaryawan)
+                       ? 'bg-[#1E3A5F] text-white shadow-xl shadow-blue-200/50 border-[#1E3A5F]'
+                       : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700' }}">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+            Semua
+            <span class="bg-blue-100 text-blue-800 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ml-1">
+                {{ $countSemua }}
+            </span>
+        </a>
+    </div>
+
     {{-- Filter --}}
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
         <form method="GET" action="{{ route('pimpinan.monitoring.statistik') }}"
-              class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
+              class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-{{ $jenisKaryawan === 'JNS-00001' ? '4' : '5' }} gap-3 items-end">
+            <input type="hidden" name="jenis_karyawan_id" value="{{ $jenisKaryawan }}">
             <div>
                 <label class="block text-xs font-bold text-slate-500 mb-1">Dari</label>
                 <input type="date" name="dari" value="{{ $dari->toDateString() }}"
@@ -47,15 +90,17 @@
                 <input type="date" name="sampai" value="{{ $sampai->toDateString() }}"
                     class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
             </div>
+            @if ($jenisKaryawan !== 'JNS-00001')
             <div>
                 <label class="block text-xs font-bold text-slate-500 mb-1">Mitra</label>
                 <select name="mitra_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                     <option value="">Semua Mitra</option>
                     @foreach($semuaMitra as $m)
-                        <option value="{{ $m->id }}" @selected($m->id == $mitraId)>{{ $m->nama_mitra }}</option>
+                        <option value="{{ $m->id }}" @selected($m->id == $mitraId)>{{ $m->nama_mitra }}{{ $m->is_pusat ? ' (Kantor Pusat / Utama)' : '' }}</option>
                     @endforeach
                 </select>
             </div>
+            @endif
             <div>
                 <label class="block text-xs font-bold text-slate-500 mb-1">Divisi</label>
                 <select name="divisi" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
@@ -65,14 +110,6 @@
                     <option value="keuangan"       @selected($divisi=='keuangan')>Keuangan</option>
                     <option value="koordinator_cs" @selected($divisi=='koordinator_cs')>Koordinator CS</option>
                     <option value="adm_umum"       @selected($divisi=='adm_umum')>Adm & Umum</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-500 mb-1">Jenis Karyawan</label>
-                <select name="jenis_karyawan" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    <option value="">Semua</option>
-                    <option value="tetap"   @selected($jenisKaryawan=='tetap')>Tetap</option>
-                    <option value="kontrak" @selected($jenisKaryawan=='kontrak')>Kontrak</option>
                 </select>
             </div>
             <div class="flex gap-2">

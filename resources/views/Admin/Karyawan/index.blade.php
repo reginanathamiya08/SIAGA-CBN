@@ -11,24 +11,24 @@
         <p class="text-gray-500 mt-1 text-sm">Manajemen data seluruh karyawan <span class="text-red-600 font-bold">PT Citra Bangun Nagari</span></p>
     </div>
     <a href="{{ route('admin.karyawan.create') }}"
-       class="flex items-center gap-2 bg-[#1E3A5F] hover:bg-red-600 text-white
-              font-black text-xs  italic px-5 py-3 rounded-xl
-              transition-all shadow-sm">
+       class="flex items-center gap-2 bg-[#1E3A5F] hover:bg-blue-900 text-white
+              font-black text-xs px-5 py-3 rounded-xl
+              transition-all shadow-lg shadow-blue-900/10 active:scale-95">
         <i data-lucide="user-plus" class="w-4 h-4"></i>
-        Tambah Karyawan
+        TAMBAH KARYAWAN
     </a>
 </header>
 
 {{-- Statistik --}}
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     @foreach ([
-        ['Jumlah Karyawan',    $stats['total'],    'text-[#1E3A5F]'],
-        ['Karyawan Tetap',    $stats['tetap'],    'text-blue-600'],
-        ['Karyawan Kontrak',  $stats['kontrak'],  'text-red-600'],
-        ['Karyawan Nonaktif', $stats['nonaktif'], 'text-gray-400'],
-    ] as [$label, $val, $color])
-        <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm text-center">
-            <p class="text-[9px] font-black text-gray-400   mb-1">
+        ['Jumlah Karyawan',    $stats['total'],    'text-[#1E3A5F]', 'users'],
+        ['Karyawan Tetap',    $stats['tetap'],    'text-blue-600', 'user-check'],
+        ['Karyawan Kontrak',  $stats['kontrak'],  'text-red-600', 'user-plus'],
+        ['Karyawan Nonaktif', $stats['nonaktif'], 'text-gray-400', 'user-x'],
+    ] as [$label, $val, $color, $icon])
+        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-center hover:-translate-y-1 transition-all duration-300 group">
+            <p class="text-[10px] font-black text-gray-400 mb-1 uppercase tracking-tight">
                 {{ $label }}
             </p>
             <p class="text-2xl font-black {{ $color }}">{{ $val }}</p>
@@ -40,60 +40,54 @@
 <div id="filter-container" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6">
     <form method="GET" action="{{ route('admin.karyawan.index') }}"
           id="filter-form" class="flex flex-wrap items-center gap-3">
-        <input type="text" name="cari" value="{{ request('cari') }}" id="search-input"
-               oninput="liveSearch(this)"
-               placeholder="Cari nama karyawan..."
-               class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold
-                      text-gray-700 outline-none focus:border-[#1E3A5F] bg-gray-50 w-52">
+        <div class="relative">
+            <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+            <input type="text" name="cari" value="{{ request('cari') }}" id="search-input"
+                   placeholder="Cari nama karyawan..."
+                   class="border-none rounded-xl pl-11 pr-4 py-3 text-sm font-bold
+                          text-[#1E3A5F] outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 w-64 transition-all">
+        </div>
 
-        <select name="jenis" onchange="this.form.divisi.value=''; updateTable(this.form)"
-                class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold
-                       text-gray-700 outline-none bg-gray-50 focus:border-[#1E3A5F]">
+        <select name="jenis" id="select-jenis" onchange="filterDivisiOptions(true)"
+                class="border-none rounded-xl px-4 py-3 text-sm font-bold
+                       text-[#1E3A5F] outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-all">
             <option value="">Semua Jenis</option>
-            <option value="tetap"   {{ request('jenis')==='tetap'   ?'selected':'' }}>
-                Karyawan Tetap
-            </option>
-            <option value="kontrak" {{ request('jenis')==='kontrak' ?'selected':'' }}>
-                Karyawan Kontrak
-            </option>
+            <option value="tetap"   {{ request('jenis')==='tetap' || request('jenis')==='JNS-00001' ?'selected':'' }}>Tetap</option>
+            <option value="kontrak" {{ request('jenis')==='kontrak' || request('jenis')==='JNS-00002' ?'selected':'' }}>Kontrak</option>
         </select>
 
-        <select name="divisi" onchange="updateTable(this.form)"
-                class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold
-                       text-gray-700 outline-none bg-gray-50 focus:border-[#1E3A5F]">
+        <select name="divisi" id="select-divisi"
+                class="border-none rounded-xl px-4 py-3 text-sm font-bold
+                       text-[#1E3A5F] outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-all">
             <option value="">Semua Divisi</option>
-            @if(request('jenis') == '' || request('jenis') == 'tetap')
-                <optgroup label="Karyawan Tetap">
-                    <option value="keuangan"       {{ request('divisi')==='keuangan'       ?'selected':'' }}>Keuangan</option>
-                    <option value="koordinator_cs" {{ request('divisi')==='koordinator_cs' ?'selected':'' }}>Koordinator CS</option>
-                    <option value="adm_umum"       {{ request('divisi')==='adm_umum'       ?'selected':'' }}>Adm & Umum</option>
-                </optgroup>
-            @endif
-            @if(request('jenis') == '' || request('jenis') == 'kontrak')
-                <optgroup label="Karyawan Kontrak">
-                    <option value="HC"   {{ request('divisi')==='HC'   ?'selected':'' }}>HC (Human Capital)</option>
-                    <option value="umum" {{ request('divisi')==='umum' ?'selected':'' }}>Umum</option>
-                </optgroup>
-            @endif
+            <optgroup label="Karyawan Tetap" id="optgroup-tetap">
+                <option value="keuangan"       {{ request('divisi')==='keuangan'       ?'selected':'' }}>Keuangan</option>
+                <option value="koordinator_cs" {{ request('divisi')==='koordinator_cs' ?'selected':'' }}>Koordinator CS</option>
+                <option value="adm_umum"       {{ request('divisi')==='adm_umum'       ?'selected':'' }}>Adm & Umum</option>
+            </optgroup>
+            <optgroup label="Karyawan Kontrak" id="optgroup-kontrak">
+                <option value="HC"   {{ request('divisi')==='HC'   ?'selected':'' }}>HC (Human Capital)</option>
+                <option value="umum" {{ request('divisi')==='umum' ?'selected':'' }}>Umum</option>
+            </optgroup>
         </select>
 
-        <select name="status" onchange="updateTable(this.form)"
-                class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold
-                       text-gray-700 outline-none bg-gray-50 focus:border-[#1E3A5F]">
+        <select name="status"
+                class="border-none rounded-xl px-4 py-3 text-sm font-bold
+                       text-[#1E3A5F] outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-all">
             <option value="">Semua Status</option>
             <option value="aktif"    {{ request('status')==='aktif'    ?'selected':'' }}>Aktif</option>
             <option value="nonaktif" {{ request('status')==='nonaktif' ?'selected':'' }}>Nonaktif</option>
         </select>
 
         <button type="submit"
-                class="bg-[#1E3A5F] text-white px-5 py-2.5 rounded-xl font-black
-                       text-xs  italic hover:bg-red-600 transition-all">
-            Cari
+                class="bg-[#1E3A5F] hover:bg-blue-900 text-white px-6 py-3 rounded-xl font-black
+                       text-xs transition-all active:scale-95 shadow-lg shadow-blue-900/10">
+            CARI
         </button>
 
         @if (request()->hasAny(['cari','jenis','divisi','status']))
             <a href="{{ route('admin.karyawan.index') }}"
-               class="text-xs font-bold text-gray-400 hover:text-red-500 transition-colors">
+               class="text-[10px] font-black text-gray-400 hover:text-red-500 transition-colors uppercase">
                 Reset
             </a>
         @endif
@@ -105,10 +99,9 @@
     <div class="overflow-x-auto">
         <table class="w-full text-left">
             <thead>
-                <tr class="text-[10px] font-black text-[#1E3A5F]  tracking-wider
-                           border-b border-gray-50 bg-gray-50/50">
+                <tr class="text-[10px] font-black text-[#1E3A5F] border-b border-gray-50 bg-gray-50/50 uppercase">
                     <th class="px-6 py-4" style="width: 30%">Nama</th>
-                    <th class="px-6 py-4" style="width: 15%">Username</th>
+                    <th class="px-6 py-4" style="width: 15%">NIP</th>
                     <th class="px-6 py-4" style="width: 20%">Jabatan / Divisi</th>
                     <th class="px-6 py-4 text-center" style="width: 10%">Jenis</th>
                     <th class="px-6 py-4 text-center" style="width: 10%">Status</th>
@@ -138,8 +131,8 @@
                             </div>
                         </td>
                         <td class="px-6 py-4">
-                            <span class="text-xs font-black text-gray-600 font-mono tracking-wider">
-                                {{ $kar->user->username }}
+                            <span class="text-xs font-bold text-[#1E3A5F] font-mono">
+                                {{ $kar->nip }}
                             </span>
                         </td>
                         <td class="px-6 py-4">
@@ -157,10 +150,10 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 text-center">
-                            <span class="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase
+                            <span class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase
                                          {{ $kar->is_active
-                                              ? 'bg-green-100 text-green-700'
-                                              : 'bg-gray-100 text-gray-500' }}">
+                                              ? 'bg-emerald-50 text-emerald-600'
+                                              : 'bg-gray-50 text-gray-400' }}">
                                 {{ $kar->is_active ? 'Aktif' : 'Nonaktif' }}
                             </span>
                         </td>
@@ -202,8 +195,8 @@
                                 Belum ada data karyawan.
                             </p>
                             <a href="{{ route('admin.karyawan.create') }}"
-                               class="mt-3 inline-block text-xs font-black text-[#1E3A5F]
-                                      hover:text-red-600  italic transition-colors">
+                               class="mt-3 inline-block text-[10px] font-black text-[#1E3A5F]
+                                      hover:text-blue-900 transition-colors uppercase tracking-tight">
                                 + Tambah Karyawan Pertama
                             </a>
                         </td>
@@ -223,6 +216,32 @@
 @push('scripts')
 <script>
 let searchTimeout = null;
+
+function filterDivisiOptions(resetSelected = false) {
+    const jenisSelect = document.getElementById('select-jenis');
+    const divisiSelect = document.getElementById('select-divisi');
+    const optTetap = document.getElementById('optgroup-tetap');
+    const optKontrak = document.getElementById('optgroup-kontrak');
+    if (!jenisSelect || !divisiSelect) return;
+
+    const val = jenisSelect.value;
+    if (resetSelected) {
+        divisiSelect.value = '';
+    }
+
+    if (val === 'tetap' || val === 'JNS-00001') {
+        if (optTetap) { optTetap.hidden = false; optTetap.style.display = ''; }
+        if (optKontrak) { optKontrak.hidden = true; optKontrak.style.display = 'none'; }
+    } else if (val === 'kontrak' || val === 'JNS-00002') {
+        if (optTetap) { optTetap.hidden = true; optTetap.style.display = 'none'; }
+        if (optKontrak) { optKontrak.hidden = false; optKontrak.style.display = ''; }
+    } else {
+        if (optTetap) { optTetap.hidden = false; optTetap.style.display = ''; }
+        if (optKontrak) { optKontrak.hidden = false; optKontrak.style.display = ''; }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => filterDivisiOptions(false));
 
 function updateTable(form) {
     const url = new URL(form.action || window.location.href);

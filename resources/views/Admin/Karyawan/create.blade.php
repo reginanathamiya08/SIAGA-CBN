@@ -12,7 +12,7 @@
     "dokumenWajib":   @json($dokumenWajib),
     "jabatanShift":   @json($jabatanShift),
     "jabatanAtasUmr": @json($jabatanAtasUmr),
-    "oldJenis":       "{{ old('jenis_karyawan') }}",
+    "oldJenis":       "{{ old('jenis_karyawan_id') }}",
     "oldDivisi":      "{{ old('divisi') }}",
     "oldJabatan":     "{{ old('jabatan') }}"
 }
@@ -27,7 +27,7 @@
         <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight  ">
             Tambah Karyawan
         </h1>
-        <p class="text-gray-500 mt-1 text-sm">Username di-generate otomatis oleh sistem</p>
+        <p class="text-gray-500 mt-1 text-sm">ID Karyawan (NIP) akan di-generate otomatis oleh sistem</p>
     </div>
 </header>
 
@@ -89,68 +89,75 @@
                         @enderror
                     </div>
 
-                    {{-- Jenis Karyawan --}}
+                    {{-- Role / Jenis Karyawan --}}
                     <div>
                         <label class="block text-[11px] font-black text-gray-500
-                                        mb-2">
+                                        mb-2 uppercase tracking-wider">
                             Jenis Karyawan <span class="text-red-500">*</span>
                         </label>
-                        <select name="jenis_karyawan" id="sel-jenis"
-                                class="w-full px-4 py-3 rounded-xl border text-sm font-semibold
-                                       text-gray-700 outline-none transition-all cursor-pointer
-                                       @error('jenis_karyawan') border-red-400 bg-red-50
-                                       @else border-gray-200 bg-gray-50 focus:border-[#1E3A5F] focus:bg-white
-                                       @enderror">
+                        <select name="role_id" id="sel-jenis"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm font-semibold
+                                       text-gray-700 outline-none focus:border-[#1E3A5F] transition-all cursor-pointer">
                             <option value="">-- Pilih Jenis Karyawan --</option>
-                            <option value="tetap"
-                                    {{ old('jenis_karyawan')==='tetap' ? 'selected' : '' }}>
-                                Karyawan Tetap (Internal CBN)
-                            </option>
-                            <option value="kontrak"
-                                    {{ old('jenis_karyawan')==='kontrak' ? 'selected' : '' }}>
-                                Karyawan Kontrak (Alih Daya)
-                            </option>
+                            @foreach($roles as $role)
+                                <option value="{{ $role->id }}" data-slug="{{ $role->slug }}"
+                                        {{ old('role_id') == $role->id ? 'selected' : '' }}>
+                                    {{ $role->nama_role }}
+                                </option>
+                            @endforeach
                         </select>
-                        @error('jenis_karyawan')
+                        @error('role_id')
                             <p class="mt-1 text-xs text-red-500 font-semibold">{{ $message }}</p>
                         @enderror
                     </div>
 
                     {{-- Divisi --}}
-                    <div>
-                        <label class="block text-[11px] font-black text-gray-500
-                                        mb-2">
+                    <div class="space-y-2">
+                        <label class="block text-[11px] font-black text-gray-500 uppercase tracking-wider">
                             Divisi <span class="text-red-500">*</span>
                         </label>
                         <select name="divisi" id="sel-divisi"
-                                class="w-full px-4 py-3 rounded-xl border text-sm font-semibold
-                                       text-gray-700 outline-none transition-all cursor-pointer
-                                       @error('divisi') border-red-400 bg-red-50
-                                       @else border-gray-200 bg-gray-50 focus:border-[#1E3A5F] focus:bg-white
-                                       @enderror">
-                            <option value="">-- Pilih jenis karyawan dulu --</option>
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm font-semibold
+                                       text-gray-700 outline-none focus:border-[#1E3A5F] transition-all cursor-pointer">
+                            <option value="">-- Pilih Divisi --</option>
                         </select>
+                        <p class="text-[10px] text-gray-400 font-medium italic" id="teks-info-divisi"></p>
                         @error('divisi')
                             <p class="mt-1 text-xs text-red-500 font-semibold">{{ $message }}</p>
                         @enderror
-                        <p class="mt-1 text-[9px] text-gray-400 font-medium" id="info-divisi"></p>
                     </div>
 
-                    {{-- Jabatan --}}
-                    <div>
-                        <label class="block text-[11px] font-black text-gray-500
-                                        mb-2">
-                            Jabatan <span class="text-red-500">*</span>
+                    {{-- Jabatan / Tenaga Kerja --}}
+                    <div class="space-y-2">
+                        <label class="block text-[11px] font-black text-gray-500 uppercase tracking-wider" id="lbl-jabatan">
+                            Tenaga Kerja / Jabatan <span class="text-red-500">*</span>
                         </label>
                         <select name="jabatan" id="sel-jabatan"
-                                class="w-full px-4 py-3 rounded-xl border text-sm font-semibold
-                                       text-gray-700 outline-none transition-all cursor-pointer
-                                       @error('jabatan') border-red-400 bg-red-50
-                                       @else border-gray-200 bg-gray-50 focus:border-[#1E3A5F] focus:bg-white
-                                       @enderror">
-                            <option value="">-- Pilih divisi dulu --</option>
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm font-semibold
+                                       text-gray-700 outline-none focus:border-[#1E3A5F] transition-all cursor-pointer">
+                            <option value="">-- Pilih Tenaga Kerja / Jabatan --</option>
                         </select>
                         @error('jabatan')
+                            <p class="mt-1 text-xs text-red-500 font-semibold">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    {{-- Tamatan / Pendidikan --}}
+                    <div class="space-y-2">
+                        <label class="block text-[11px] font-black text-gray-500 uppercase tracking-wider">
+                            Tamatan (Pendidikan) <span class="text-red-500">*</span>
+                        </label>
+                        <select name="pendidikan" required
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm font-semibold
+                                       text-gray-700 outline-none focus:border-[#1E3A5F] transition-all cursor-pointer">
+                            <option value="">-- Pilih Tamatan --</option>
+                            <option value="S3" {{ old('pendidikan')==='S3' ? 'selected' : '' }}>S3</option>
+                            <option value="S2" {{ old('pendidikan')==='S2' ? 'selected' : '' }}>S2</option>
+                            <option value="S1" {{ old('pendidikan')==='S1' ? 'selected' : '' }}>S1</option>
+                            <option value="D3" {{ old('pendidikan')==='D3' ? 'selected' : '' }}>D3</option>
+                            <option value="SMA/SMK" {{ old('pendidikan')==='SMA/SMK' ? 'selected' : '' }}>SMA/SMK</option>
+                        </select>
+                        @error('pendidikan')
                             <p class="mt-1 text-xs text-red-500 font-semibold">{{ $message }}</p>
                         @enderror
                     </div>
@@ -229,15 +236,15 @@
                 <h3 class="font-black text-[#1E3A5F]   italic text-[11px] mb-4
                            flex items-center gap-2">
                     <span class="w-1 h-4 bg-purple-500 rounded-full"></span>
-                    Username Otomatis
+                    ID Karyawan Otomatis
                 </h3>
                 <div class="bg-gray-50 rounded-2xl p-4 text-center mb-4">
                     <p class="text-[9px] font-black text-gray-400   mb-2">
-                        Username yang akan diberikan
+                        ID Karyawan yang akan diberikan
                     </p>
                     <p class="text-xl font-black text-[#1E3A5F] font-mono tracking-widest"
                        id="preview-username">—</p>
-                    <p class="text-[9px] text-gray-400 mt-1">Di-generate otomatis oleh sistem</p>
+                    <p class="text-xs text-slate-400 mt-1">ID Karyawan akan dibuat otomatis berdasarkan jenis karyawan.</p>
                 </div>
                 <div class="space-y-2 border-t border-gray-100 pt-3">
                     <p class="text-[9px] font-black text-gray-400   mb-1">Format:</p>
@@ -314,155 +321,123 @@
 
 </form>
 
+{{-- PINDAHKAN SCRIPT KE SINI BIAR LANGSUNG JALAN --}}
+<script>
+try {
+    // Baca data PHP
+    var PHP_DATA = JSON.parse(document.getElementById('data-php').textContent);
+    console.log('Sistem CBN: Form Karyawan Loaded', PHP_DATA);
+
+    var DIV_TETAP    = PHP_DATA.divisiTetap || {};
+    var DIV_KONTRAK  = PHP_DATA.divisiKontrak || {};
+    var JAB_MAP      = PHP_DATA.jabatanMap || {};
+    var DOK_WAJIB    = PHP_DATA.dokumenWajib || {};
+    var SHIFT_JAB    = PHP_DATA.jabatanShift || [];
+    var UMR_JAB      = PHP_DATA.jabatanAtasUmr || [];
+
+    // Elemen
+    var sJns = document.getElementById('sel-jenis');
+    var sDiv = document.getElementById('sel-divisi');
+    var sJab = document.getElementById('sel-jabatan');
+    var pNip = document.getElementById('preview-username');
+    var wDok = document.getElementById('wrap-dokumen');
+    var tDok = document.getElementById('teks-dokumen');
+    var iDok = document.getElementById('input-jenis-dokumen');
+    var wFlg = document.getElementById('wrap-flags');
+    var iFlg = document.getElementById('isi-flags');
+    var tInf = document.getElementById('teks-info-divisi');
+
+    function fillSel(el, data, placeholder) {
+        el.innerHTML = '';
+        var o = document.createElement('option');
+        o.value = ''; o.textContent = placeholder;
+        el.appendChild(o);
+        if (Array.isArray(data)) {
+            data.forEach(function(v) {
+                var opt = document.createElement('option');
+                opt.value = v; opt.textContent = v;
+                el.appendChild(opt);
+            });
+        } else {
+            Object.keys(data).forEach(function(k) {
+                var opt = document.createElement('option');
+                opt.value = k; opt.textContent = data[k];
+                el.appendChild(opt);
+            });
+        }
+    }
+
+    sJns.addEventListener('change', function() {
+        var opt  = this.options[this.selectedIndex];
+        var slug = opt ? opt.getAttribute('data-slug') : '';
+        fillSel(sDiv, [], '-- Pilih Divisi --');
+        fillSel(sJab, [], '-- Pilih Jabatan --');
+        wDok.classList.add('hidden'); wFlg.classList.add('hidden');
+        pNip.textContent = '—'; tInf.textContent = '';
+        if (!slug) return;
+        if (slug === 'karyawan_tetap') {
+            fillSel(sDiv, DIV_TETAP, '-- Pilih Divisi --');
+            tInf.textContent = 'Divisi internal PT Citra Bangun Nagari';
+        } else if (slug === 'karyawan_kontrak') {
+            fillSel(sDiv, DIV_KONTRAK, '-- Pilih Divisi --');
+            tInf.textContent = 'Divisi mitra alih daya (HC/Umum)';
+        }
+    });
+
+    sDiv.addEventListener('change', function() {
+        var d = this.value;
+        fillSel(sJab, [], '-- Pilih Jabatan --');
+        wDok.classList.add('hidden'); wFlg.classList.add('hidden');
+        pNip.textContent = '—';
+        if (!d) return;
+        var list = JAB_MAP[d] || [];
+        fillSel(sJab, list, '-- Pilih Jabatan --');
+        
+        var opt  = sJns.options[sJns.selectedIndex];
+        var slug = opt ? opt.getAttribute('data-slug') : '';
+        var prefix = '';
+        if (slug === 'karyawan_tetap') prefix = 'KT-CBN';
+        else if (d === 'HC') prefix = 'KK-HC';
+        else if (d === 'umum') prefix = 'KK-UM';
+        pNip.textContent = prefix ? prefix + '-XXXX' : '—';
+    });
+
+    sJab.addEventListener('change', function() {
+        var j = this.value;
+        wDok.classList.add('hidden'); wFlg.classList.add('hidden');
+        if (!j) return;
+        if (DOK_WAJIB[j]) {
+            tDok.textContent = DOK_WAJIB[j].keterangan;
+            iDok.value = DOK_WAJIB[j].jenis;
+            wDok.classList.remove('hidden');
+        }
+        
+        var f = [];
+        if (SHIFT_JAB.indexOf(j) !== -1) f.push('⚡ Bersifat shift');
+        if (UMR_JAB.indexOf(j) !== -1) f.push('💰 Gaji di atas UMR');
+        if (f.length > 0) {
+            iFlg.innerHTML = f.map(function(t){ return '<p class="text-[9px] text-blue-700 font-semibold">'+t+'</p>'; }).join('');
+            wFlg.classList.remove('hidden');
+        }
+    });
+
+    // Inisialisasi awal (jika ada old value / browser restore state)
+    if (sJns.value) {
+        sJns.dispatchEvent(new Event('change'));
+        if (PHP_DATA.oldDivisi) {
+            sDiv.value = PHP_DATA.oldDivisi;
+            sDiv.dispatchEvent(new Event('change'));
+            if (PHP_DATA.oldJabatan) {
+                sJab.value = PHP_DATA.oldJabatan;
+                sJab.dispatchEvent(new Event('change'));
+            }
+        }
+    }
+
+} catch (err) {
+    console.error('Sistem CBN Error:', err);
+}
+</script>
+
 @endsection
 
-@push('scripts')
-<script>
-// Baca data PHP
-var PHP = JSON.parse(document.getElementById('data-php').textContent);
-var DIVISI_TETAP    = PHP.divisiTetap;
-var DIVISI_KONTRAK  = PHP.divisiKontrak;
-var JABATAN_MAP     = PHP.jabatanMap;
-var DOKUMEN_WAJIB   = PHP.dokumenWajib;
-var JABATAN_SHIFT   = PHP.jabatanShift;
-var JABATAN_UMR     = PHP.jabatanAtasUmr;
-
-// Elemen
-var selJenis      = document.getElementById('sel-jenis');
-var selDivisi     = document.getElementById('sel-divisi');
-var selJabatan    = document.getElementById('sel-jabatan');
-var prevUsername  = document.getElementById('preview-username');
-var wrapDokumen   = document.getElementById('wrap-dokumen');
-var teksDokumen   = document.getElementById('teks-dokumen');
-var inputJenisDok = document.getElementById('input-jenis-dokumen');
-var wrapFlags     = document.getElementById('wrap-flags');
-var isiFlags      = document.getElementById('isi-flags');
-var infoDivisi    = document.getElementById('info-divisi');
-
-// Isi dropdown
-function isiSelect(el, data, placeholder) {
-    while (el.firstChild) el.removeChild(el.firstChild);
-    var o = document.createElement('option');
-    o.value = ''; o.textContent = placeholder;
-    el.appendChild(o);
-    if (Array.isArray(data)) {
-        data.forEach(function(item) {
-            var opt = document.createElement('option');
-            opt.value = item; opt.textContent = item;
-            el.appendChild(opt);
-        });
-    } else {
-        Object.keys(data).forEach(function(key) {
-            var opt = document.createElement('option');
-            opt.value = key; opt.textContent = data[key];
-            el.appendChild(opt);
-        });
-    }
-}
-
-function resetSelect(el, placeholder) {
-    while (el.firstChild) el.removeChild(el.firstChild);
-    var o = document.createElement('option');
-    o.value = ''; o.textContent = placeholder;
-    el.appendChild(o);
-}
-
-// EVENT: Jenis karyawan
-selJenis.addEventListener('change', function() {
-    var jenis = this.value;
-    resetSelect(selDivisi, '-- Pilih Divisi --');
-    resetSelect(selJabatan, '-- Pilih Jabatan --');
-    sembunyikanDokumen(); sembunyikanFlags();
-    prevUsername.textContent = '—'; infoDivisi.textContent = '';
-    if (!jenis) return;
-    if (jenis === 'tetap') {
-        isiSelect(selDivisi, DIVISI_TETAP, '-- Pilih Divisi --');
-        infoDivisi.textContent = 'Divisi internal PT Citra Bangun Nagari';
-    } else {
-        isiSelect(selDivisi, DIVISI_KONTRAK, '-- Pilih Divisi --');
-        infoDivisi.textContent = 'HC: Satpam, Sopir, Marketing dll | Umum: CS, CS ATM, Ekspedisi';
-    }
-});
-
-// EVENT: Divisi
-selDivisi.addEventListener('change', function() {
-    var divisi = this.value;
-    resetSelect(selJabatan, '-- Pilih Jabatan --');
-    sembunyikanDokumen(); sembunyikanFlags();
-    prevUsername.textContent = '—';
-    if (!divisi) return;
-    var daftar = JABATAN_MAP[divisi];
-    if (!daftar || daftar.length === 0) {
-        resetSelect(selJabatan, 'Tidak ada jabatan');
-        return;
-    }
-    isiSelect(selJabatan, daftar, '-- Pilih Jabatan --');
-    updatePreview();
-});
-
-// EVENT: Jabatan
-selJabatan.addEventListener('change', function() {
-    var jabatan = this.value;
-    sembunyikanDokumen(); sembunyikanFlags();
-    if (!jabatan) return;
-    if (DOKUMEN_WAJIB[jabatan]) {
-        var info = DOKUMEN_WAJIB[jabatan];
-        teksDokumen.textContent = info.keterangan;
-        inputJenisDok.value = info.jenis;
-        wrapDokumen.classList.remove('hidden');
-    }
-    tampilkanFlags(jabatan);
-});
-
-function updatePreview() {
-    var jenis = selJenis.value, divisi = selDivisi.value, prefix = '';
-    if (jenis === 'tetap') prefix = 'KT-CBN';
-    else if (divisi === 'HC') prefix = 'KK-HC';
-    else if (divisi === 'umum') prefix = 'KK-UM';
-    prevUsername.textContent = prefix ? prefix + '-XXXX' : '—';
-}
-
-function tampilkanFlags(jabatan) {
-    var flags = [], divisi = selDivisi.value;
-    if (JABATAN_SHIFT.indexOf(jabatan) !== -1)
-        flags.push('<p class="text-[9px] text-blue-700 font-semibold">⚡ Bersifat <strong>shift</strong></p>');
-    if (JABATAN_UMR.indexOf(jabatan) !== -1)
-        flags.push('<p class="text-[9px] text-blue-700 font-semibold">💰 Gaji <strong>di atas UMR</strong></p>');
-    if (divisi === 'HC')
-        flags.push('<p class="text-[9px] text-blue-700 font-semibold">🍱 Uang makan <strong>dibayar mitra</strong></p>');
-    else if (divisi === 'umum')
-        flags.push('<p class="text-[9px] text-blue-700 font-semibold">🍱 Uang makan <strong>dibayar CBN</strong> (Rp35.000/hari)</p>');
-    if (jabatan === 'CS' || jabatan === 'CS ATM')
-        flags.push('<p class="text-[9px] text-blue-700 font-semibold">🕐 Absen <strong>1 jam sebelum</strong> jam operasional mitra</p>');
-    if (flags.length > 0) { isiFlags.innerHTML = flags.join(''); wrapFlags.classList.remove('hidden'); }
-}
-
-function sembunyikanDokumen() {
-    wrapDokumen.classList.add('hidden');
-    inputJenisDok.value = ''; teksDokumen.textContent = '';
-}
-function sembunyikanFlags() {
-    wrapFlags.classList.add('hidden'); isiFlags.innerHTML = '';
-}
-
-// Restore nilai lama jika form error validasi
-(function() {
-    var oj = PHP.oldJenis, od = PHP.oldDivisi, ojab = PHP.oldJabatan;
-    if (!oj) return;
-    selJenis.value = oj;
-    isiSelect(selDivisi, oj === 'tetap' ? DIVISI_TETAP : DIVISI_KONTRAK, '-- Pilih Divisi --');
-    if (!od) return;
-    selDivisi.value = od;
-    var daftar = JABATAN_MAP[od];
-    if (daftar && daftar.length > 0) isiSelect(selJabatan, daftar, '-- Pilih Jabatan --');
-    if (!ojab) return;
-    selJabatan.value = ojab;
-    updatePreview(); tampilkanFlags(ojab);
-    if (DOKUMEN_WAJIB[ojab]) {
-        teksDokumen.textContent = DOKUMEN_WAJIB[ojab].keterangan;
-        inputJenisDok.value = DOKUMEN_WAJIB[ojab].jenis;
-        wrapDokumen.classList.remove('hidden');
-    }
-}());
-</script>
-@endpush

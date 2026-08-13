@@ -75,6 +75,18 @@
                 </div>
             @endif
 
+            {{-- Tombol Cetak Slip Lembur (jika disetujui) --}}
+            @if ($lembur->status_approval === 'disetujui')
+                <a href="{{ route('karyawan.lembur.print', $lembur->id) }}"
+                   target="_blank"
+                   class="w-full mt-2 bg-blue-50 hover:bg-blue-100 text-[#1E3A5F]
+                          font-black text-xs py-3 rounded-2xl
+                          transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                    Cetak Slip Lembur
+                </a>
+            @endif
+
             {{-- Tombol Batalkan --}}
             @if ($lembur->status_approval === 'menunggu')
                 <form method="POST"

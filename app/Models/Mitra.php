@@ -3,9 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasCustomId;
 
 class Mitra extends Model
 {
+    use HasCustomId;
+
+    const ID_PREFIX = 'MTR';
+    public $incrementing = false;
+    protected $keyType = 'string';
     protected $table = 'mitra';
 
     protected $fillable = [
@@ -44,7 +50,7 @@ class Mitra extends Model
 
     public function penempatan()
     {
-        return $this->hasMany(Penempatan::class);
+        return $this->hasMany(DetailRiwayatPenempatan::class);
     }
 
     public function absensi()

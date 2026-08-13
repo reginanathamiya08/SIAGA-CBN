@@ -20,14 +20,18 @@
         {{-- Status Banner --}}
         @php
             $bannerClass = match($perizinan->status_approval) {
-                'disetujui' => 'bg-green-500',
-                'ditolak'   => 'bg-red-500',
-                default     => 'bg-amber-500',
+                'disetujui'           => 'bg-green-500',
+                'ditolak'             => 'bg-red-500',
+                'menunggu_rekan'      => 'bg-indigo-500',
+                'menunggu_form_mitra' => 'bg-[#1E3A5F]',
+                default               => 'bg-amber-500',
             };
             $bannerLabel = match($perizinan->status_approval) {
-                'disetujui' => '✅ Pengajuan Disetujui',
-                'ditolak'   => '❌ Pengajuan Ditolak',
-                default     => '⏳ Menunggu Persetujuan Pimpinan',
+                'disetujui'           => '✅ Pengajuan Disetujui',
+                'ditolak'             => '❌ Pengajuan Ditolak',
+                'menunggu_rekan'      => '⏳ Menunggu Persetujuan Rekan Kerja',
+                'menunggu_form_mitra' => '⏳ Belum Mengunggah Form Cuti Mitra',
+                default               => '⏳ Menunggu Persetujuan Pimpinan',
             };
         @endphp
         <div class="{{ $bannerClass }} px-6 py-4 text-white">
@@ -40,6 +44,21 @@
         </div>
 
         <div class="p-6 space-y-4">
+
+            @if ($perizinan->status_approval === 'menunggu_form_mitra')
+                <div class="p-4 bg-blue-50 border border-blue-100 rounded-2xl mb-4 space-y-2.5">
+                    <h3 class="text-[10px] font-black text-blue-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="info" class="w-4 h-4"></i>
+                        Langkah Selanjutnya:
+                    </h3>
+                    <ol class="list-decimal list-inside text-xs font-bold text-blue-700 space-y-1.5 leading-relaxed">
+                        <li>Cetak berkas permohonan dengan menekan tombol <strong class="text-blue-900">"Cetak Surat Permohonan Cuti"</strong> di bawah.</li>
+                        <li>Tanda tangani berkas tersebut secara manual/fisik bersama Pimpinan Mitra Penempatan Anda.</li>
+                        <li>Scan atau foto lembaran berkas yang sudah ditandatangani dan dibubuhi cap/stempel Mitra.</li>
+                        <li>Unggah file scan/foto tersebut pada form unggahan di bawah ini, lalu klik <strong class="text-blue-900">"Kirim ke Pimpinan CBN"</strong>.</li>
+                    </ol>
+                </div>
+            @endif
 
             @foreach ([
                 ['Jenis Izin',       $perizinan->labelJenis()],
@@ -57,11 +76,30 @@
                 </div>
             @endforeach
 
+            {{-- Rekan Kerja Backup (jika ada) --}}
+            @if ($perizinan->rekan_kerja_id)
+                <div class="flex justify-between items-start border-b border-gray-50 pb-3">
+                    <span class="text-[10px] font-black text-gray-400 tracking-widest w-36 shrink-0">
+                        Rekan Backup
+                    </span>
+                    <div class="text-sm font-semibold text-gray-700 text-right">
+                        <p>{{ $perizinan->rekanKerja?->nama }}</p>
+                        @if ($perizinan->status_rekan === 'menunggu')
+                            <span class="px-2 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-700 mt-1 inline-block">⏳ Menunggu Konfirmasi Rekan</span>
+                        @elseif ($perizinan->status_rekan === 'disetujui')
+                            <span class="px-2 py-0.5 rounded text-[9px] font-black bg-green-100 text-green-700 mt-1 inline-block">✅ Disetujui Rekan</span>
+                        @elseif ($perizinan->status_rekan === 'ditolak')
+                            <span class="px-2 py-0.5 rounded text-[9px] font-black bg-red-100 text-red-700 mt-1 inline-block">❌ Ditolak Rekan</span>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
             {{-- File Bukti --}}
             @if ($perizinan->file_bukti)
                 <div class="flex justify-between items-center border-b border-gray-50 pb-3">
                     <span class="text-[10px] font-black text-gray-400  tracking-widest w-36 shrink-0">
-                        Surat Dokter
+                        {{ $perizinan->karyawan->isKaryawanKontrak() && $perizinan->jenisPerizinan?->slug === 'cuti' ? 'Form Cuti Kontrak' : 'Surat Dokter / Bukti' }}
                     </span>
                     <a href="{{ Storage::url($perizinan->file_bukti) }}" target="_blank"
                        class="flex items-center gap-2 text-blue-600 font-semibold text-sm hover:text-blue-800">
@@ -79,8 +117,42 @@
                 </div>
             @endif
 
-            {{-- Batalkan jika masih menunggu --}}
-            @if ($perizinan->status_approval === 'menunggu')
+            {{-- Cetak Surat Cuti jika jenisnya cuti --}}
+            @if ($perizinan->jenisPerizinan?->slug === 'cuti')
+                <div class="pt-2">
+                    <a href="{{ route('karyawan.perizinan.print', $perizinan->id) }}" target="_blank"
+                       class="w-full bg-[#1E3A5F] hover:bg-opacity-90 text-white font-black
+                              text-xs uppercase tracking-wider py-3.5 rounded-2xl transition-all
+                              flex items-center justify-center gap-2 shadow-md">
+                        <i data-lucide="printer" class="w-4 h-4"></i>
+                        Cetak Surat Permohonan Cuti
+                    </a>
+                </div>
+            @endif
+
+            {{-- Form Unggah untuk status menunggu_form_mitra --}}
+            @if ($perizinan->status_approval === 'menunggu_form_mitra')
+                <form method="POST" action="{{ route('karyawan.perizinan.upload-mitra', $perizinan->id) }}" enctype="multipart/form-data" class="pt-4 border-t border-gray-100 space-y-3">
+                    @csrf
+                    <div>
+                        <label class="block text-[10px] font-black text-[#1E3A5F] uppercase tracking-widest mb-2">
+                            Unggah Scan/Foto Form Cuti Mitra <span class="text-red-500">*</span>
+                        </label>
+                        <input type="file" name="file_bukti" required accept=".pdf,.jpg,.jpeg,.png"
+                               class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all border border-gray-100 rounded-2xl p-2 bg-gray-50">
+                    </div>
+                    <button type="submit"
+                            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black
+                                   text-xs uppercase tracking-wider py-3.5 rounded-2xl transition-all
+                                   flex items-center justify-center gap-2 shadow-md">
+                        <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                        Kirim ke Pimpinan CBN
+                    </button>
+                </form>
+            @endif
+
+            {{-- Batalkan jika masih menunggu rekan, pimpinan, atau form mitra --}}
+            @if (in_array($perizinan->status_approval, ['menunggu', 'menunggu_rekan', 'menunggu_form_mitra']))
                 <form method="POST"
                       action="{{ route('karyawan.perizinan.destroy', $perizinan->id) }}"
                       onsubmit="return confirm('Batalkan pengajuan ini?')">

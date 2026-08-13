@@ -22,8 +22,8 @@ class MitraController extends Controller
 
         // Jika ada kantor pusat, hitung karyawan tetap sebagai "penempatan" otomatis
         if ($kantorPusat) {
-            $jumlahTetap = \App\Models\Karyawan::where('jenis_karyawan', 'tetap')
-                                              ->where('is_active', true)
+            $jumlahTetap = \App\Models\User::where('is_active', true)
+                                              ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_tetap'))
                                               ->count();
             // Kita tambahkan jumlah tetap ke penempatan_count
             $kantorPusat->penempatan_count += $jumlahTetap;
@@ -31,6 +31,7 @@ class MitraController extends Controller
 
         // Ambil Mitra Induk lainnya (yang bukan pusat)
         $mitraInduk = Mitra::withCount(['cabang', 'penempatan' => fn($q) => $q->where('status','aktif')])
+                           ->with(['cabang' => fn($q) => $q->withCount(['penempatan' => fn($q2) => $q2->where('status','aktif')])])
                            ->whereNull('mitra_induk_id')
                            ->where('is_pusat', false)
                            ->orderBy('nama_mitra')
@@ -39,9 +40,9 @@ class MitraController extends Controller
         $totalMitra    = Mitra::whereNull('mitra_induk_id')->count();
         $totalCabang   = Mitra::whereNotNull('mitra_induk_id')->count();
         
-        $totalAktifKontrak = \App\Models\Penempatan::where('status','aktif')->count();
-        $totalAktifTetap   = \App\Models\Karyawan::where('jenis_karyawan', 'tetap')
-                                                 ->where('is_active', true)
+        $totalAktifKontrak = \App\Models\DetailRiwayatPenempatan::where('status','aktif')->count();
+        $totalAktifTetap   = \App\Models\User::where('is_active', true)
+                                                 ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_tetap'))
                                                  ->count();
         $totalAktif = $totalAktifKontrak + $totalAktifTetap;
 
@@ -109,13 +110,21 @@ class MitraController extends Controller
                                         ->with('karyawan'),
         ]);
 
+        // Jika ini kantor pusat, ambil juga karyawan tetap
+        $karyawanTetap = collect();
+        if ($mitra->is_pusat) {
+            $karyawanTetap = \App\Models\User::where('is_active', true)
+                                            ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_tetap'))
+                                            ->get();
+        }
+
         // Riwayat penempatan (semua status)
         $riwayat = $mitra->penempatan()
                          ->with('karyawan')
                          ->latest()
                          ->paginate(10);
 
-        return view('admin.mitra.show', compact('mitra', 'riwayat'));
+        return view('admin.mitra.show', compact('mitra', 'riwayat', 'karyawanTetap'));
     }
 
     // ─────────────────────────────────────────────────────────────────

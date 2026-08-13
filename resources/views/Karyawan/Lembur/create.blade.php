@@ -3,13 +3,13 @@
 
 @section('content')
 
-<header class="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
+<header class="flex items-center gap-4 mb-4">
     <a href="{{ route('karyawan.lembur.index') }}"
        class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-all text-gray-500">
         <i data-lucide="arrow-left" class="w-4 h-4"></i>
     </a>
     <div>
-        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight ">
+        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight">
             Ajukan Lembur
         </h1>
         <p class="text-gray-500 mt-1 text-sm">
@@ -142,7 +142,7 @@
         <button type="submit"
                 class="w-full bg-[#1E3A5F] hover:bg-green-600 text-white font-black text-sm
                         py-4 rounded-2xl transition-all shadow-sm
-                       active:scale-95 italic flex items-center justify-center gap-2">
+                       active:scale-95 flex items-center justify-center gap-2">
             <i data-lucide="send" class="w-5 h-5"></i>
             Kirim Pengajuan
         </button>

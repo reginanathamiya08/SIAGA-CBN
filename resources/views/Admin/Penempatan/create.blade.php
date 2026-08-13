@@ -55,9 +55,9 @@
                                   transition-all karyawan-item"
                            data-nama="{{ strtolower($kar->nama) }}"
                            data-jabatan="{{ strtolower($kar->jabatan) }}">
-                        <input type="radio" name="karyawan_id" value="{{ $kar->id }}"
+                        <input type="radio" name="user_id" value="{{ $kar->id }}"
                                class="accent-[#1E3A5F] w-4 h-4 shrink-0"
-                               {{ (old('karyawan_id') == $kar->id || optional($karyawanDipilih)->id == $kar->id) ? 'checked' : '' }}>
+                               {{ (old('user_id') == $kar->id || optional($karyawanDipilih)->id == $kar->id) ? 'checked' : '' }}>
                         <div class="w-10 h-10 rounded-xl flex items-center justify-center
                                     font-black text-xs shrink-0 bg-red-100 text-red-700">
                             {{ strtoupper(substr($kar->nama, 0, 2)) }}
@@ -68,7 +68,7 @@
                             </p>
                             <div class="flex items-center gap-2 mt-0.5 flex-wrap">
                                 <span class="text-[9px] font-mono text-gray-400">
-                                    {{ $kar->user->username }}
+                                    {{ $kar->nip }}
                                 </span>
                                 <span class="text-[9px] text-gray-300">•</span>
                                 <span class="text-[9px] text-gray-500 font-semibold">
@@ -98,7 +98,7 @@
                 @endforelse
             </div>
 
-            @error('karyawan_id')
+            @error('user_id')
                 <p class="mt-2 text-xs text-red-500 font-semibold">{{ $message }}</p>
             @enderror
         </div>
@@ -125,15 +125,15 @@
                 <option value="">-- Pilih Mitra --</option>
                 @foreach ($daftarMitra as $m)
                     @if (!$m->is_cabang)
-                        <optgroup label="{{ $m->nama_mitra }}">
+                        <optgroup label="{{ $m->nama_mitra }}{{ $m->is_pusat ? ' (Kantor Pusat / Utama)' : '' }}">
                             <option value="{{ $m->id }}"
                                     {{ old('mitra_id') == $m->id ? 'selected' : '' }}>
-                                {{ $m->nama_mitra }} (Induk)
+                                {{ $m->nama_mitra }} {{ $m->is_pusat ? '(Kantor Pusat / Utama)' : '(Induk)' }}
                             </option>
                             @foreach ($m->cabang as $cab)
                                 <option value="{{ $cab->id }}"
                                         {{ old('mitra_id') == $cab->id ? 'selected' : '' }}>
-                                    ↳ {{ $cab->nama_mitra }}
+                                    ↳ {{ $cab->nama_mitra }}{{ $cab->is_pusat ? ' (Kantor Pusat / Utama)' : '' }}
                                 </option>
                             @endforeach
                         </optgroup>

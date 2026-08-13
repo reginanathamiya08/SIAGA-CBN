@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Absensi;
-use App\Models\Karyawan;
+use App\Models\User;
 use App\Models\Mitra;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -20,25 +20,35 @@ class LaporanAbsensiController extends Controller
         $tahun         = $request->integer('tahun', now()->year);
         $mitraId       = $request->input('mitra_id');
         $divisi        = $request->input('divisi');
-        $jenisKaryawan = $request->input('jenis_karyawan');
-        $karyawanId    = $request->input('karyawan_id');
+        $jenisKaryawan = $request->input('jenis_karyawan_id', 'tetap');
+        $karyawanId    = $request->input('user_id');
 
         // Data untuk dropdown filter
-        $semuaMitra    = Mitra::orderBy('nama_mitra')->get();
-        $semuaKaryawan = Karyawan::where('is_active', true)->orderBy('nama')->get();
+        $semuaMitra    = Mitra::orderByRaw('COALESCE(mitra_induk_id, id), is_cabang ASC, nama_mitra ASC')->get();
+        $semuaKaryawan = User::with(['penempatanAktif.mitra'])
+                             ->where('is_active', true)
+                             ->whereHas('role', fn($q) => $q->whereIn('slug', ['karyawan_tetap', 'karyawan_kontrak']))
+                             ->when($jenisKaryawan, function($q) use ($jenisKaryawan) {
+                                 $roleSlug = in_array($jenisKaryawan, ['tetap', 'karyawan_tetap', 'JNS-00001']) ? 'karyawan_tetap' : 'karyawan_kontrak';
+                                 $q->whereHas('role', fn($r) => $r->where('slug', $roleSlug));
+                             })
+                             ->orderBy('nama')
+                             ->get();
+        $mitraPusat    = Mitra::where('is_pusat', true)->first();
 
         // Bangun query absensi
-        $query = Absensi::with(['karyawan.user', 'karyawan.penempatanAktif.mitra', 'mitra'])
+        $query = Absensi::with(['karyawan', 'karyawan.penempatanAktif.mitra', 'mitra'])
+            ->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->whereIn('slug', ['karyawan_tetap', 'karyawan_kontrak'])))
             ->whereMonth('tanggal', $bulan)
             ->whereYear('tanggal', $tahun)
             ->orderBy('tanggal')
-            ->orderBy('karyawan_id');
+            ->orderBy('user_id');
 
         if ($mitraId) {
             $query->where('mitra_id', $mitraId);
         }
         if ($karyawanId) {
-            $query->where('karyawan_id', $karyawanId);
+            $query->where('user_id', $karyawanId);
         }
         if ($divisi || $jenisKaryawan) {
             $query->whereHas('karyawan', function ($q) use ($divisi, $jenisKaryawan) {
@@ -46,7 +56,8 @@ class LaporanAbsensiController extends Controller
                     $q->where('divisi', $divisi);
                 }
                 if ($jenisKaryawan) {
-                    $q->where('jenis_karyawan', $jenisKaryawan);
+                    $roleSlug = in_array($jenisKaryawan, ['tetap', 'karyawan_tetap', 'JNS-00001']) ? 'karyawan_tetap' : 'karyawan_kontrak';
+                    $q->whereHas('role', fn($r) => $r->where('slug', $roleSlug));
                 }
             });
         }
@@ -64,13 +75,14 @@ class LaporanAbsensiController extends Controller
             'rekap',
             'semuaMitra',
             'semuaKaryawan',
+            'mitraPusat',
             'totalHariKerja',
             'bulan',
             'tahun',
             'mitraId',
             'divisi',
             'jenisKaryawan',
-            'karyawanId',
+            'karyawanId'
         ));
     }
 
@@ -88,21 +100,25 @@ class LaporanAbsensiController extends Controller
         $tahun         = (int) $request->input('tahun');
         $mitraId       = $request->input('mitra_id');
         $divisi        = $request->input('divisi');
-        $jenisKaryawan = $request->input('jenis_karyawan');
-        $karyawanId    = $request->input('karyawan_id');
+        $jenisKaryawan = $request->input('jenis_karyawan_id');
+        $karyawanId    = $request->input('user_id');
 
-        $query = Absensi::with(['karyawan.user', 'karyawan.penempatanAktif.mitra', 'mitra'])
+        $query = Absensi::with(['karyawan', 'karyawan.penempatanAktif.mitra', 'mitra'])
+            ->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->whereIn('slug', ['karyawan_tetap', 'karyawan_kontrak'])))
             ->whereMonth('tanggal', $bulan)
             ->whereYear('tanggal', $tahun)
             ->orderBy('tanggal')
-            ->orderBy('karyawan_id');
+            ->orderBy('user_id');
 
         if ($mitraId)    $query->where('mitra_id', $mitraId);
-        if ($karyawanId) $query->where('karyawan_id', $karyawanId);
+        if ($karyawanId) $query->where('user_id', $karyawanId);
         if ($divisi || $jenisKaryawan) {
             $query->whereHas('karyawan', function ($q) use ($divisi, $jenisKaryawan) {
                 if ($divisi)        $q->where('divisi', $divisi);
-                if ($jenisKaryawan) $q->where('jenis_karyawan', $jenisKaryawan);
+                if ($jenisKaryawan) {
+                    $roleSlug = in_array($jenisKaryawan, ['tetap', 'karyawan_tetap', 'JNS-00001']) ? 'karyawan_tetap' : 'karyawan_kontrak';
+                    $q->whereHas('role', fn($r) => $r->where('slug', $roleSlug));
+                }
             });
         }
 
@@ -164,7 +180,7 @@ class LaporanAbsensiController extends Controller
 
             $data = [
                 $i + 1,
-                $k?->user?->username ?? '-',
+                $k?->nip ?? '-',
                 $k?->nama ?? '-',
                 $k?->jabatan ?? '-',
                 $k?->labelDivisi() ?? '-',
@@ -289,7 +305,7 @@ class LaporanAbsensiController extends Controller
      */
     private function hitungRekap($absensiList, int $bulan, int $tahun): array
     {
-        $grouped = $absensiList->groupBy('karyawan_id');
+        $grouped = $absensiList->groupBy('user_id');
         $rekap   = [];
 
         foreach ($grouped as $karyawanId => $rows) {
@@ -297,8 +313,8 @@ class LaporanAbsensiController extends Controller
             $aktifPenempatan = $k?->penempatanAktif?->mitra?->nama_mitra ?? ($k?->isTetap() ? 'Kantor CBN' : '-');
 
             $rekap[] = [
-                'karyawan_id' => $karyawanId,
-                'nik'         => $k?->user?->username ?? '-',
+                'user_id' => $karyawanId,
+                'nik'         => $k?->nip ?? '-',
                 'nama'        => $k?->nama ?? '-',
                 'jabatan'     => $k?->jabatan ?? '-',
                 'divisi'      => $k?->labelDivisi() ?? '-',
@@ -323,16 +339,86 @@ class LaporanAbsensiController extends Controller
     {
         $start   = Carbon::create($tahun, $bulan, 1);
         $end     = $start->copy()->endOfMonth();
-        $count   = 0;
-        $current = $start->copy();
 
-        while ($current->lte($end)) {
-            if ($current->isWeekday()) {
-                $count++;
-            }
-            $current->addDay();
+        // Jika periode adalah bulan berjalan, batasi perhitungan hari kerja sampai hari ini
+        if ($bulan === now()->month && $tahun === now()->year) {
+            $end = now();
         }
 
-        return $count;
+        return \App\Helpers\AttendanceHelper::countWorkingDays($start, $end);
+    }
+
+    public function storeManual(Request $request)
+    {
+        $request->validate([
+            'user_id'      => 'required|exists:users,id',
+            'tanggal'      => 'required|date',
+            'status'       => 'required|in:hadir,telat,alfa',
+            'mitra_id'     => 'required|exists:mitra,id',
+            'waktu_masuk'  => 'nullable|string',
+            'waktu_pulang' => 'nullable|string',
+        ]);
+
+        $tanggal = Carbon::parse($request->tanggal);
+        
+        $exists = Absensi::where('user_id', $request->user_id)
+                         ->whereDate('tanggal', $tanggal->toDateString())
+                         ->first();
+
+        if ($exists) {
+            return back()->with('error', 'Data absensi karyawan pada tanggal tersebut sudah ada. Silakan edit data yang sudah ada.');
+        }
+
+        $waktuMasuk = null;
+        if ($request->filled('waktu_masuk')) {
+            $waktuMasuk = Carbon::parse($request->tanggal . ' ' . $request->waktu_masuk);
+        }
+
+        $waktuPulang = null;
+        if ($request->filled('waktu_pulang')) {
+            $waktuPulang = Carbon::parse($request->tanggal . ' ' . $request->waktu_pulang);
+        }
+
+        Absensi::create([
+            'user_id'      => $request->user_id,
+            'tanggal'      => $tanggal->toDateString(),
+            'status'       => $request->status,
+            'mitra_id'     => $request->mitra_id,
+            'waktu_masuk'  => $waktuMasuk,
+            'waktu_pulang' => $waktuPulang,
+            'is_telat'     => $request->status === 'telat',
+        ]);
+
+        return back()->with('success', 'Absensi manual berhasil ditambahkan.');
+    }
+
+    public function updateManual(Request $request, Absensi $absensi)
+    {
+        $request->validate([
+            'status'       => 'required|in:hadir,telat,alfa,izin,sakit,cuti,dinas_luar',
+            'mitra_id'     => 'required|exists:mitra,id',
+            'waktu_masuk'  => 'nullable|string',
+            'waktu_pulang' => 'nullable|string',
+        ]);
+
+        $waktuMasuk = null;
+        if ($request->filled('waktu_masuk')) {
+            $waktuMasuk = Carbon::parse($absensi->tanggal->toDateString() . ' ' . $request->waktu_masuk);
+        }
+
+        $waktuPulang = null;
+        if ($request->filled('waktu_pulang')) {
+            $waktuPulang = Carbon::parse($absensi->tanggal->toDateString() . ' ' . $request->waktu_pulang);
+        }
+
+        $absensi->update([
+            'status'       => $request->status,
+            'mitra_id'     => $request->mitra_id,
+            'waktu_masuk'  => $waktuMasuk,
+            'waktu_pulang' => $waktuPulang,
+            'is_telat'     => $request->status === 'telat',
+        ]);
+
+        return back()->with('success', 'Absensi berhasil diperbarui.');
     }
 }

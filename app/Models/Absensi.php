@@ -3,13 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasCustomId;
 
 class Absensi extends Model
 {
+    use HasCustomId;
+
+    const ID_PREFIX = 'ABS';
+    public $incrementing = false;
+    protected $keyType = 'string';
     protected $table = 'absensi';
 
     protected $fillable = [
-        'karyawan_id',
+        'user_id',
         'mitra_id',
         'shift_id',
         'tanggal',
@@ -40,7 +46,7 @@ class Absensi extends Model
 
     public function karyawan()
     {
-        return $this->belongsTo(Karyawan::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function mitra()
@@ -51,6 +57,14 @@ class Absensi extends Model
     public function shift()
     {
         return $this->belongsTo(Shift::class);
+    }
+
+    public function perizinanDisetujui()
+    {
+        return $this->hasOne(DetailPerizinan::class, 'user_id', 'user_id')
+                    ->where('status_approval', 'disetujui')
+                    ->whereDate('tanggal_mulai', '<=', $this->tanggal)
+                    ->whereDate('tanggal_selesai', '>=', $this->tanggal);
     }
 
     // ── Helper ──────────────────────────────────────────────────────────
@@ -70,5 +84,19 @@ class Absensi extends Model
         }
 
         return (int) $this->waktu_masuk->diffInMinutes($this->waktu_pulang);
+    }
+
+    public function getLabelStatusAttribute(): string
+    {
+        if ($this->status === 'hadir' || $this->status === 'telat') {
+            return $this->is_telat ? 'Telat' : 'Hadir';
+        }
+
+        $perizinan = $this->perizinanDisetujui;
+        if ($perizinan && $perizinan->jenisPerizinan) {
+            return $perizinan->jenisPerizinan->nama_jenis;
+        }
+
+        return $this->status === 'alfa' ? 'Alfa' : ucfirst($this->status);
     }
 }

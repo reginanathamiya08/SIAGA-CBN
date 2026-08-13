@@ -33,7 +33,7 @@
             <div class="grid grid-cols-2 gap-4 pb-5 border-b border-gray-100 mb-5">
                 @foreach ([
                     ['Nama',        $slipGaji->karyawan->nama],
-                    ['ID Karyawan', $slipGaji->karyawan->user->username],
+                    ['NIP', $slipGaji->karyawan->nip],
                     ['Jabatan',     $slipGaji->karyawan->jabatan],
                     ['Divisi',      $slipGaji->karyawan->labelDivisi()],
                 ] as [$label, $value])
@@ -46,54 +46,20 @@
                 @endforeach
             </div>
 
-            {{-- Rekap Kehadiran --}}
-            <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">
-                Rekap Kehadiran
-            </p>
-            <div class="grid grid-cols-3 gap-3 mb-6">
-                @foreach ([
-                    ['Hadir',    $slipGaji->total_hadir, 'text-green-600'],
-                    ['Telat',    $slipGaji->total_telat, $slipGaji->total_telat > 0 ? 'text-amber-600' : 'text-gray-300'],
-                    ['Alfa',     $slipGaji->total_alfa,  $slipGaji->total_alfa  > 0 ? 'text-red-500'   : 'text-gray-300'],
-                    ['Cuti',     $slipGaji->total_cuti,  $slipGaji->total_cuti  > 0 ? 'text-indigo-600': 'text-gray-300'],
-                    ['Izin/Sakit',$slipGaji->total_izin, $slipGaji->total_izin  > 0 ? 'text-blue-600'  : 'text-gray-300'],
-                ] as [$label, $val, $color])
-                    <div class="text-center p-3 bg-gray-50 rounded-2xl border border-gray-100">
-                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                            {{ $label }}
-                        </p>
-                        <p class="text-xl font-black {{ $color }}">{{ $val }}</p>
-                    </div>
-                @endforeach
-            </div>
 
             {{-- Pendapatan --}}
             <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">
                 Pendapatan
             </p>
             <div class="space-y-2.5 mb-5">
-                <div class="flex justify-between text-sm">
-                    <span class="text-gray-600">Gaji Pokok</span>
-                    <span class="font-semibold text-gray-800">
-                        Rp {{ number_format($slipGaji->gaji_pokok, 0, ',', '.') }}
-                    </span>
-                </div>
-                @if ($slipGaji->uang_makan > 0)
+                @foreach ($slipGaji->details->where('tipe', 'pendapatan') as $detail)
                     <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">Uang Makan</span>
+                        <span class="text-gray-600">{{ $detail->nama_komponen }}</span>
                         <span class="font-semibold text-gray-800">
-                            Rp {{ number_format($slipGaji->uang_makan, 0, ',', '.') }}
+                            Rp {{ number_format($detail->nominal, 0, ',', '.') }}
                         </span>
                     </div>
-                @endif
-                @if ($slipGaji->uang_transport > 0)
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">Uang Transport</span>
-                        <span class="font-semibold text-gray-800">
-                            Rp {{ number_format($slipGaji->uang_transport, 0, ',', '.') }}
-                        </span>
-                    </div>
-                @endif
+                @endforeach
                 @if ($slipGaji->karyawan->uang_makan_by_mitra)
                     <p class="text-[9px] text-amber-600 font-semibold italic">
                         * Uang makan & transport dibayar langsung oleh mitra
@@ -112,43 +78,41 @@
                 Potongan
             </p>
             <div class="space-y-2.5 mb-5">
-                @php $kg = $slipGaji->karyawan->komponenGaji @endphp
-                <div class="flex justify-between text-sm">
-                    <span class="text-gray-600">
-                        BPJS Kesehatan ({{ $kg->persen_bpjs_kes ?? 9.24 }}%)
-                    </span>
-                    <span class="font-semibold text-red-500">
-                        - Rp {{ number_format($slipGaji->potongan_bpjs_kes, 0, ',', '.') }}
-                    </span>
-                </div>
-                <div class="flex justify-between text-sm">
-                    <span class="text-gray-600">
-                        BPJS Ketenagakerjaan ({{ $kg->persen_bpjs_tk ?? 5 }}%)
-                    </span>
-                    <span class="font-semibold text-red-500">
-                        - Rp {{ number_format($slipGaji->potongan_bpjs_tk, 0, ',', '.') }}
-                    </span>
-                </div>
-                @if ($slipGaji->potongan_telat > 0)
+                @foreach ($slipGaji->details->where('tipe', 'potongan') as $detail)
                     <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">
-                            Potongan Telat ({{ $slipGaji->total_telat }} hari)
-                        </span>
+                        <span class="text-gray-600">{{ $detail->nama_komponen }}</span>
                         <span class="font-semibold text-red-500">
-                            - Rp {{ number_format($slipGaji->potongan_telat, 0, ',', '.') }}
+                            - Rp {{ number_format($detail->nominal, 0, ',', '.') }}
                         </span>
                     </div>
-                @endif
-                @if ($slipGaji->potongan_izin > 0)
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">
-                            Potongan Cuti/Alfa ({{ $slipGaji->total_cuti + $slipGaji->total_alfa }} hari)
-                        </span>
-                        <span class="font-semibold text-red-500">
-                            - Rp {{ number_format($slipGaji->potongan_izin, 0, ',', '.') }}
-                        </span>
+                @endforeach
+
+                {{-- Detail Kehadiran (Text Based) --}}
+                <div class="bg-gray-50/50 rounded-xl p-3 mt-4 border border-gray-100">
+                    <p class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-2 text-center">Rekap Kehadiran Bulan Ini</p>
+                    <div class="flex justify-around text-[11px] font-bold text-gray-500">
+                        <div class="text-center">
+                            <p class="text-gray-400 text-[8px] uppercase">Hadir</p>
+                            <p class="text-green-600">{{ $slipGaji->total_hadir }}</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-gray-400 text-[8px] uppercase">Telat</p>
+                            <p class="{{ $slipGaji->total_telat > 0 ? 'text-amber-600' : '' }}">{{ $slipGaji->total_telat }}</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-gray-400 text-[8px] uppercase">Alfa</p>
+                            <p class="{{ $slipGaji->total_alfa > 0 ? 'text-red-500' : '' }}">{{ $slipGaji->total_alfa }}</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-gray-400 text-[8px] uppercase">Cuti</p>
+                            <p class="{{ $slipGaji->total_cuti > 0 ? 'text-indigo-600' : '' }}">{{ $slipGaji->total_cuti }}</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-gray-400 text-[8px] uppercase">Izin</p>
+                            <p class="{{ $slipGaji->total_izin > 0 ? 'text-blue-600' : '' }}">{{ $slipGaji->total_izin }}</p>
+                        </div>
                     </div>
-                @endif
+                </div>
                 <div class="flex justify-between text-sm font-black border-t border-gray-100 pt-2">
                     <span class="text-gray-700">Total Potongan</span>
                     <span class="text-red-500">

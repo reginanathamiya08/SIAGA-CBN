@@ -4,7 +4,7 @@
 @section('content')
 
 <header class="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
-    <a href="{{ route('admin.komponen-gaji.index') }}"
+    <a href="{{ route('admin.komponen-gaji-karyawan.index') }}"
        class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-all text-gray-500">
         <i data-lucide="arrow-left" class="w-4 h-4"></i>
     </a>
@@ -14,14 +14,14 @@
         </h1>
         <p class="text-gray-500 mt-1 text-sm">
             {{ $karyawan->jabatan }} • {{ $karyawan->labelDivisi() }} •
-            <span class="font-mono text-[#1E3A5F] font-black text-xs">{{ $karyawan->user->username }}</span>
+            <span class="font-mono text-[#1E3A5F] font-black text-xs">{{ $karyawan->nip }}</span>
         </p>
     </div>
 </header>
 
 @php $kg = $karyawan->komponenGaji @endphp
 
-<form method="POST" action="{{ route('admin.komponen-gaji.update', $karyawan->id) }}"
+<form method="POST" action="{{ route('admin.komponen-gaji-karyawan.update', $karyawan->id) }}"
       id="form-gaji">
 @csrf @method('PUT')
 
@@ -45,6 +45,9 @@
                                      {{ $karyawan->isTetap() ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700' }}">
                             {{ $karyawan->isTetap() ? 'Karyawan Tetap' : 'Karyawan Kontrak' }}
                         </span>
+                        <span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-lg text-[9px] font-black uppercase">
+                            NIP: {{ $karyawan->nip }}
+                        </span>
                         @if ($karyawan->gaji_atas_umr)
                             <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded-lg text-[9px] font-black uppercase">
                                 Gaji di Atas UMR
@@ -59,7 +62,7 @@
                 </div>
                 @if (!$karyawan->gaji_atas_umr)
                     <div class="text-right shrink-0">
-                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">UMR {{ now()->year }}</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">UMR</p>
                         <p class="text-sm font-black text-gray-600">Rp {{ number_format($umrTahunIni, 0, ',', '.') }}</p>
                     </div>
                 @endif
@@ -155,56 +158,7 @@
             </div>
         </div>
 
-        {{-- BPJS --}}
-        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-            <h3 class="font-black text-[#1E3A5F] uppercase italic text-[11px] mb-5
-                       flex items-center gap-2">
-                <span class="w-1 h-4 bg-red-500 rounded-full"></span>
-                Potongan BPJS
-            </h3>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2">
-                        BPJS Kesehatan (%) <span class="text-red-500">*</span>
-                    </label>
-                    <div class="relative">
-                        <input type="number" name="persen_bpjs_kes" id="inp-bpjs-kes"
-                               value="{{ old('persen_bpjs_kes', $kg->persen_bpjs_kes ?? 9.24) }}"
-                               step="0.01" min="0" max="100"
-                               oninput="hitungPreview()"
-                               class="w-full px-4 pr-10 py-3 rounded-xl border text-sm font-semibold
-                                      text-gray-700 outline-none transition-all
-                                      @error('persen_bpjs_kes') border-red-400 bg-red-50
-                                      @else border-gray-200 bg-gray-50 focus:border-[#1E3A5F] focus:bg-white
-                                      @enderror">
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-gray-400">%</span>
-                    </div>
-                    @error('persen_bpjs_kes')
-                        <p class="mt-1 text-xs text-red-500 font-semibold">{{ $message }}</p>
-                    @enderror
-                </div>
-                <div>
-                    <label class="block text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2">
-                        BPJS Ketenagakerjaan (%) <span class="text-red-500">*</span>
-                    </label>
-                    <div class="relative">
-                        <input type="number" name="persen_bpjs_tk" id="inp-bpjs-tk"
-                               value="{{ old('persen_bpjs_tk', $kg->persen_bpjs_tk ?? 5.00) }}"
-                               step="0.01" min="0" max="100"
-                               oninput="hitungPreview()"
-                               class="w-full px-4 pr-10 py-3 rounded-xl border text-sm font-semibold
-                                      text-gray-700 outline-none transition-all
-                                      @error('persen_bpjs_tk') border-red-400 bg-red-50
-                                      @else border-gray-200 bg-gray-50 focus:border-[#1E3A5F] focus:bg-white
-                                      @enderror">
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-gray-400">%</span>
-                    </div>
-                    @error('persen_bpjs_tk')
-                        <p class="mt-1 text-xs text-red-500 font-semibold">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
-        </div>
+
 
     </div>
 
@@ -278,7 +232,7 @@
             Simpan Komponen Gaji
         </button>
 
-        <a href="{{ route('admin.komponen-gaji.index') }}"
+        <a href="{{ route('admin.komponen-gaji-karyawan.index') }}"
            class="block text-center text-xs font-bold text-gray-400 hover:text-red-500 transition-colors">
             Batal
         </a>
@@ -303,8 +257,8 @@ function hitungPreview() {
     var gajiPokok   = parseFloat(document.getElementById('inp-gaji-pokok')?.value) || 0;
     var uangMakan   = uangMakanByMitra ? 0 : (parseFloat(document.getElementById('inp-makan')?.value) || 0);
     var transport   = uangMakanByMitra ? 0 : (parseFloat(document.getElementById('inp-transport')?.value) || 0);
-    var persBpjsKes = parseFloat(document.getElementById('inp-bpjs-kes')?.value) || 0;
-    var persBpjsTk  = parseFloat(document.getElementById('inp-bpjs-tk')?.value) || 0;
+    var persBpjsKes = {{ \App\Models\Configuration::getValue('persen_bpjs_kes', 9.24) }};
+    var persBpjsTk  = {{ \App\Models\Configuration::getValue('persen_bpjs_tk', 5.00) }};
 
     // Asumsi 26 hari kerja per bulan
     var hariKerja     = 26;

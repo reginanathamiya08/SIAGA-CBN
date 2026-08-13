@@ -42,13 +42,13 @@
                 <p class="text-xs font-bold text-slate-400  tracking-wider">Jenis Karyawan</p>
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold mt-1
                     {{ $karyawan->isTetap() ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700' }}">
-                    {{ ucfirst($karyawan->jenis_karyawan) }}
+                    {{ $karyawan->jenisKaryawan?->nama_jenis ?? '-' }}
                 </span>
             </div>
             <div>
-                <p class="text-xs font-bold text-slate-400  tracking-wider">Sisa Kuota Cuti {{ now()->year }}</p>
+                <p class="text-xs font-bold text-slate-400  tracking-wider">Sisa Kuota Perizinan {{ now()->year }}</p>
                 <p class="font-bold text-slate-800 mt-1">
-                    {{ $kuotaCuti ? $kuotaCuti->sisa_cuti . ' hari' : '12 hari' }}
+                    {{ $kuotaCuti ? $kuotaCuti->sisa . ' hari' : \App\Models\Configuration::getValue('kuota_cuti_tahunan') . ' hari' }}
                 </p>
             </div>
         </div>

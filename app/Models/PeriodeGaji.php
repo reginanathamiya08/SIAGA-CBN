@@ -3,9 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasCustomId;
 
 class PeriodeGaji extends Model
 {
+    use HasCustomId;
+
+    const ID_PREFIX = 'PRD';
+    public $incrementing = false;
+    protected $keyType = 'string';
     protected $table = 'periode_gaji';
 
     protected $fillable = [
@@ -33,7 +39,7 @@ class PeriodeGaji extends Model
     public function slipGaji()
     {
         // FK di slip_gaji adalah periode_id (bukan periode_gaji_id)
-        return $this->hasMany(SlipGaji::class, 'periode_id');
+        return $this->hasMany(SlipGajiPeriode::class, 'periode_id');
     }
 
     // ── Helper ──────────────────────────────────────────────────────
@@ -57,7 +63,7 @@ class PeriodeGaji extends Model
     {
         return match ($this->status) {
             'draft'  => 'Draft',
-            'proses' => 'Diproses',
+            'proses' => 'Menunggu Persetujuan',
             'final'  => 'Final',
             default  => $this->status,
         };

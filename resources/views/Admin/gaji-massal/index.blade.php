@@ -1,8 +1,8 @@
 @extends('admin.sidebar')
-@section('title', 'Auto-Fill Gaji')
+@section('title', 'Auto-Fill Gaji (Hybrid)')
 
 @section('content')
-<div x-data="{ mode: `{{ session('mode', 'choice') }}` }" class="w-full">
+<div x-data="{ tab: 'tetap' }" class="w-full">
     
     {{-- Header --}}
     <header class="flex items-center justify-between mb-10">
@@ -10,212 +10,195 @@
             <div class="w-1.5 h-10 bg-blue-600 rounded-full"></div>
             <div>
                 <h1 class="text-2xl font-black text-[#1E3A5F] ">Auto-Fill Gaji</h1>
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1.5">Manajemen Konfigurasi Massal</p>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1.5">Manajemen Penggajian Massal (Tetap & Kontrak)</p>
             </div>
         </div>
-        <button @click="mode === `choice` ? window.location.href=`{{ route('admin.komponen-gaji.index') }}` : mode = `choice`"
-                class="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-black uppercase text-gray-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i>
-            Kembali
-        </button>
+        <div class="flex gap-2">
+            <button @click="tab = 'tetap'" :class="tab === 'tetap' ? 'bg-[#1E3A5F] text-white shadow-lg' : 'bg-white text-gray-400 border border-gray-100'"
+                    class="px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                Karyawan Tetap
+            </button>
+            <button @click="tab = 'kontrak'" :class="tab === 'kontrak' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white text-gray-400 border border-gray-100'"
+                    class="px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                Karyawan Kontrak
+            </button>
+        </div>
     </header>
 
-    {{-- 1. CHOICE SCREEN --}}
-    <div x-show="mode === `choice`" x-transition.fade.duration.300ms class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl">
-        <button @click="mode = `tetap`" class="group bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-2xl hover:border-blue-500/20 transition-all text-left relative overflow-hidden">
-            <div class="absolute -right-6 -top-6 w-40 h-40 bg-blue-50 rounded-full opacity-40 group-hover:scale-110 transition-transform"></div>
-            <div class="relative z-10">
-                <div class="w-16 h-16 bg-[#1E3A5F] rounded-2xl flex items-center justify-center text-white mb-8 shadow-xl">
-                    <i data-lucide="user-check" class="w-8 h-8"></i>
-                </div>
-                <h3 class="text-2xl font-black text-[#1E3A5F] uppercase italic mb-3">Karyawan Tetap</h3>
-                <p class="text-sm text-gray-400 font-medium mb-10 leading-relaxed">Kelola gaji personil tetap divisi Keuangan, Koordinator CS, dan Umum.</p>
-                <div class="inline-flex items-center gap-2 text-blue-600 font-black text-xs uppercase tracking-widest">
-                    Pilih Kategori <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
-                </div>
-            </div>
-        </button>
-
-        <button @click="mode = `kontrak`" class="group bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-2xl hover:border-emerald-500/20 transition-all text-left relative overflow-hidden">
-            <div class="absolute -right-6 -top-6 w-40 h-40 bg-emerald-50 rounded-full opacity-40 group-hover:scale-110 transition-transform"></div>
-            <div class="relative z-10">
-                <div class="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-white mb-8 shadow-xl">
-                    <i data-lucide="file-text" class="w-8 h-8"></i>
-                </div>
-                <h3 class="text-2xl font-black text-[#1E3A5F] uppercase italic mb-3">Karyawan Kontrak</h3>
-                <p class="text-sm text-gray-400 font-medium mb-10 leading-relaxed">Update massal gaji Divisi Umum (UMR) & Divisi HC (Above UMR).</p>
-                <div class="inline-flex items-center gap-2 text-emerald-600 font-black text-xs uppercase tracking-widest">
-                    Pilih Kategori <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
-                </div>
-            </div>
-        </button>
-    </div>
-
-    {{-- 2. FORM TETAP --}}
-    <div x-show="mode === `tetap`" x-transition.fade.duration.300ms class="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden max-w-6xl">
-        <div class="p-8 border-b border-gray-50 bg-gray-50/50">
-            <h2 class="text-base font-black text-[#1E3A5F] uppercase italic flex items-center gap-3">
-                <div class="w-1.5 h-6 bg-blue-600 rounded-full"></div>
-                Input Gaji Karyawan Tetap
-            </h2>
-        </div>
-
-        <form action="{{ route('admin.gaji-massal.update-spesialis') }}" method="POST" class="p-10">
-            @csrf
-            <div class="space-y-12">
-                @foreach($jabatanTetapByDivisi as $divisi => $jabatans)
+    {{-- TAB KARYAWAN TETAP (PENDIDIKAN) --}}
+    <div x-show="tab === 'tetap'" x-transition>
+        <div class="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden max-w-6xl">
+            <div class="p-8 border-b border-gray-50 bg-gray-50/50 flex justify-between items-center">
                 <div>
-                    <div class="flex items-center gap-4 mb-6">
-                        <h3 class="text-xs font-black text-blue-600 bg-blue-50 px-4 py-2 rounded-full uppercase tracking-widest">{{ str_replace(['_', '-'], ' ', strtoupper($divisi)) }}</h3>
-                        <div class="h-[1px] flex-1 bg-gray-100"></div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        @foreach($jabatans as $js)
-                        @php $val = $currentSalaries[$js] ?? 0; @endphp
-                        <div class="bg-gray-50/50 p-5 rounded-2xl border border-transparent hover:border-blue-100 hover:bg-white transition-all shadow-sm"
-                             x-data="{ editing: {{ $val > 0 ? 'false' : 'true' }} }">
-                            <div class="flex justify-between items-center mb-3">
-                                <label class="text-xs font-bold text-gray-500 uppercase tracking-tight">{{ $js }}</label>
-                                @if($val > 0)
-                                <button type="button" @click="editing = !editing" class="text-blue-500 hover:text-blue-700 transition-colors">
-                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
-                                </button>
-                                @endif
-                            </div>
-                            
-                            <div x-show="!editing" class="flex items-center justify-between">
-                                <span class="text-base font-black text-[#1E3A5F]">Rp {{ number_format($val, 0, ',', '.') }}</span>
-                                <span class="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-600 rounded-lg font-black uppercase tracking-tighter">TERSIMPAN</span>
-                            </div>
-
-                            <div x-show="editing" class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-blue-600 font-bold text-sm">Rp</span>
-                                <input type="number" name="gaji[{{ $js }}]" value="{{ $val > 0 ? $val : '' }}" placeholder="---"
-                                       class="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-black text-[#1E3A5F] outline-none focus:border-blue-500 transition-all shadow-inner">
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
+                    <h2 class="text-base font-black text-[#1E3A5F] uppercase italic flex items-center gap-3">
+                        <i data-lucide="graduation-cap" class="w-5 h-5 text-blue-600"></i>
+                        Gaji Karyawan Tetap Berdasarkan Tamatan
+                    </h2>
+                    <p class="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-tight">Update berdasarkan jenjang pendidikan (Ijazah).</p>
                 </div>
-                @endforeach
             </div>
-            <button type="submit" class="w-full mt-10 py-5 bg-[#1E3A5F] text-white rounded-2xl font-black text-sm uppercase italic tracking-widest shadow-xl hover:bg-blue-800 transition-all active:scale-95">Update Gaji Tetap Massal</button>
-        </form>
-    </div>
 
-    {{-- 3. FORM KONTRAK --}}
-    <div x-show="mode === `kontrak`" x-transition.fade.duration.300ms class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start max-w-7xl">
-        {{-- Divisi HC --}}
-        <div class="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full">
-            <div class="p-6 border-b border-gray-50 bg-blue-50/30">
-                <h2 class="text-base font-black text-[#1E3A5F] uppercase italic">Divisi HC (Mitra)</h2>
-            </div>
-            <div class="p-8 flex-1 flex flex-col justify-between">
-                <form action="{{ route('admin.gaji-massal.update-spesialis') }}" method="POST">
-                    @csrf
-                    <p class="text-xs font-black text-gray-400 uppercase tracking-widest mb-5">HC Spesialis (Above UMR)</p>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
-                        @foreach($jabatanHCSpesialisKontrak as $js)
-                        @php $val = $currentSalaries[$js] ?? 0; @endphp
-                        <div class="bg-gray-50 p-5 rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all" x-data="{ editing: {{ $val > 0 ? 'false' : 'true' }} }">
-                            <div class="flex justify-between items-center mb-3">
-                                <label class="text-xs font-bold text-gray-500 uppercase">{{ $js }}</label>
-                                @if($val > 0)
-                                <button type="button" @click="editing = !editing" class="text-blue-500 hover:scale-110 transition-transform">
-                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
-                                </button>
-                                @endif
-                            </div>
-                            <div x-show="!editing" class="flex items-center justify-between">
-                                <span class="text-base font-black text-[#1E3A5F]">Rp {{ number_format($val, 0, ',', '.') }}</span>
-                            </div>
-                            <div x-show="editing" class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-blue-600 font-bold text-sm">Rp</span>
-                                <input type="number" name="gaji[{{ $js }}]" value="{{ $val > 0 ? $val : '' }}" placeholder="---" class="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-black text-[#1E3A5F] outline-none shadow-inner">
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
-                    <button type="submit" class="w-full py-4 bg-[#1E3A5F] text-white rounded-xl font-black text-xs uppercase italic tracking-widest shadow-lg hover:bg-blue-800 transition-all">Simpan HC Spesialis</button>
-                </form>
-
-                <form action="{{ route('admin.gaji-massal.update-umr') }}" method="POST" class="pt-10 mt-10 border-t border-gray-100">
-                    @csrf
-                    <input type="hidden" name="target" value="hc_umr">
-                    <p class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">HC Standar (UMR)</p>
-                    @php $umrVal = $currentSalaries['Satpam'] ?? 0; @endphp
-                    <div class="bg-gray-50 p-8 rounded-[2.5rem] border border-emerald-100 space-y-6 text-center shadow-sm"
-                         x-data="{ editing: {{ $umrVal > 0 ? 'false' : 'true' }} }">
-                        
-                        <div x-show="!editing" class="flex flex-col items-center gap-3">
-                            <span class="text-3xl font-black text-emerald-600 italic tracking-tighter">Rp {{ number_format($umrVal, 0, ',', '.') }}</span>
-                            <button type="button" @click="editing = true" class="text-xs font-black text-blue-500 uppercase tracking-widest flex items-center gap-1.5 hover:scale-105 transition-transform">
-                                <i data-lucide="edit-3" class="w-4 h-4"></i> Ubah UMR HC
-                            </button>
-                        </div>
-
-                        <div x-show="editing" class="space-y-5">
-                            <div class="relative max-w-xs mx-auto">
-                                <span class="absolute inset-y-0 left-0 pl-5 flex items-center text-emerald-600 font-bold text-base">Rp</span>
-                                <input type="number" name="nominal_umr" value="{{ $umrVal > 0 ? $umrVal : '' }}" required placeholder="UMR HC" class="w-full pl-12 pr-5 py-4 bg-white border border-gray-200 rounded-2xl text-base font-black text-[#1E3A5F] outline-none text-center shadow-inner focus:border-emerald-500 transition-all">
-                            </div>
-                            <button type="submit" class="w-full py-4 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase italic tracking-widest shadow-lg hover:bg-emerald-600 transition-all">Update UMR HC</button>
-                            <button type="button" @click="editing = false" class="text-xs font-bold text-gray-400 uppercase">Batal</button>
-                        </div>
-
-                        <div class="flex flex-wrap gap-2 justify-center mt-6">
-                            @foreach($jabatanHCUmrKontrak as $j)
-                            <span class="px-3 py-1 bg-white border border-gray-100 text-[10px] font-black text-emerald-600 rounded-lg uppercase tracking-tight">{{ $j }}</span>
-                            @endforeach
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        {{-- Divisi Umum (CBN) --}}
-        <div class="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full">
-            <div class="p-6 border-b border-gray-50 bg-amber-50/20">
-                <h2 class="text-base font-black text-[#1E3A5F] uppercase italic">Divisi Umum (CBN)</h2>
-            </div>
-            <form action="{{ route('admin.gaji-massal.update-umr') }}" method="POST" class="p-8">
+            <form action="{{ route('admin.gaji-massal.update-tetap') }}" method="POST" class="p-10">
                 @csrf
-                <input type="hidden" name="target" value="umum_umr">
-                @php $umumVal = $currentSalaries['CS'] ?? 0; @endphp
-                <div class="bg-gray-50 p-8 rounded-[2.5rem] border border-amber-100 space-y-6 text-center shadow-sm"
-                     x-data="{ editing: {{ $umumVal > 0 ? 'false' : 'true' }} }">
-                    
-                    <div x-show="!editing" class="flex flex-col items-center gap-3">
-                        <span class="text-3xl font-black text-amber-600 italic tracking-tighter">Rp {{ number_format($umumVal, 0, ',', '.') }}</span>
-                        <button type="button" @click="editing = true" class="text-xs font-black text-blue-500 uppercase tracking-widest flex items-center gap-1.5 hover:scale-105 transition-transform">
-                            <i data-lucide="edit-3" class="w-4 h-4"></i> Ubah UMR Umum
-                        </button>
-                    </div>
-
-                    <div x-show="editing" class="space-y-5">
-                        <p class="text-xs font-black text-gray-400 uppercase tracking-widest">Nominal UMR Umum</p>
-                        <div class="relative max-w-xs mx-auto">
-                            <span class="absolute inset-y-0 left-0 pl-5 flex items-center text-amber-600 font-bold text-base">Rp</span>
-                            <input type="number" name="nominal_umr" value="{{ $umumVal > 0 ? $umumVal : '' }}" required placeholder="0" class="w-full pl-12 pr-5 py-4 bg-white border border-gray-200 rounded-2xl text-base font-black text-[#1E3A5F] outline-none text-center shadow-inner focus:border-amber-500 transition-all">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    @foreach($levels as $lv)
+                    @php $val = $currentSalaries[$lv] ?? 0; @endphp
+                    <div class="bg-white p-6 rounded-3xl border border-blue-100 transition-all shadow-sm group">
+                        <div class="flex justify-between items-start mb-6">
+                            <div>
+                                <h3 class="text-xl font-black text-[#1E3A5F] tracking-tighter">{{ $lv }}</h3>
+                                <p class="text-[9px] font-black text-gray-400 uppercase">{{ $statsTetap[$lv] }} Orang</p>
+                            </div>
                         </div>
-                        <button type="submit" class="w-full py-4 bg-amber-500 text-white rounded-2xl font-black text-xs uppercase italic tracking-widest shadow-lg hover:bg-amber-600 transition-all">Update UMR Umum</button>
-                        <button type="button" @click="editing = false" class="text-xs font-bold text-gray-400 uppercase">Batal</button>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-4 flex items-center font-bold text-xs text-blue-600">Rp</span>
+                            <input type="text" name="gaji[{{ $lv }}]" 
+                                   value="{{ $val > 0 ? number_format($val, 0, ',', '.') : '' }}" 
+                                   oninput="this.value = formatRupiah(this.value)"
+                                   class="w-full pl-10 pr-4 py-3 border border-blue-500 ring-4 ring-blue-500/5 rounded-xl text-sm font-black text-[#1E3A5F] outline-none transition-all shadow-inner">
+                        </div>
                     </div>
-
-                    <div class="flex flex-wrap gap-2 justify-center mt-6">
-                        @foreach($jabatanUmumKontrak as $j)
-                        <span class="px-3 py-1 bg-white border border-gray-100 text-[10px] font-black text-amber-600 rounded-lg uppercase tracking-tight">{{ $j }}</span>
-                        @endforeach
-                    </div>
+                    @endforeach
+                </div>
+                <div class="mt-10">
+                    <button type="submit" class="w-full py-5 bg-[#1E3A5F] text-white rounded-2xl font-black text-sm uppercase italic tracking-widest shadow-xl hover:bg-blue-800 transition-all active:scale-95 flex items-center justify-center gap-3">
+                        <i data-lucide="save" class="w-5 h-5"></i>
+                        Simpan Gaji Karyawan Tetap
+                    </button>
                 </div>
             </form>
         </div>
     </div>
-</div>
 
-<style>
-    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
-</style>
+    {{-- TAB KARYAWAN KONTRAK (DIVISI HC & DIVISI UMUM) --}}
+    <div x-show="tab === 'kontrak'" x-transition x-cloak>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 max-w-6xl">
+            {{-- Divisi HC --}}
+            <div class="space-y-6">
+                <div class="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-gray-50 bg-gray-50/50">
+                        <h2 class="text-sm font-black text-[#1E3A5F] uppercase flex items-center gap-3">
+                            <i data-lucide="award" class="w-5 h-5 text-indigo-600"></i>
+                            KONTRAK: DIVISI HC (DI ATAS UMR)
+                        </h2>
+                        <p class="text-[9px] text-gray-400 font-bold mt-1 uppercase">Gaji ditentukan berdasarkan Tamatan Pendidikan (Ijazah).</p>
+                    </div>
+                    
+                    <div class="p-8 space-y-6">
+                        <form action="{{ route('admin.gaji-massal.update-kontrak-hc') }}" method="POST">
+                            @csrf
+                            <div class="space-y-5">
+                                {{-- Gaji SMA / SMK --}}
+                                <div class="bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <label class="text-[10px] font-black text-indigo-700 uppercase tracking-wider">🎓 Tamatan SMA / SMK</label>
+                                        <span class="text-[9px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{{ $countKontrakHcSma ?? 0 }} Karyawan</span>
+                                    </div>
+                                    <div class="relative mt-2">
+                                        <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-xs text-indigo-500">Rp</span>
+                                        <input type="text" name="gaji_sma" 
+                                               value="{{ isset($currentSalaries['kontrak_hc_sma']) && $currentSalaries['kontrak_hc_sma'] > 0 ? number_format($currentSalaries['kontrak_hc_sma'], 0, ',', '.') : '3.200.000' }}" 
+                                               oninput="this.value = formatRupiah(this.value)"
+                                               class="w-full pl-10 pr-4 py-3 border border-indigo-200 rounded-xl text-sm font-black text-[#1E3A5F] outline-none bg-white focus:border-indigo-500 shadow-sm">
+                                    </div>
+                                </div>
+
+                                {{-- Gaji D3 / S1 --}}
+                                <div class="bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <label class="text-[10px] font-black text-blue-700 uppercase tracking-wider">🎓 Tamatan D3 / S1 / S2</label>
+                                        <span class="text-[9px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{{ $countKontrakHcD3S1 ?? 0 }} Karyawan</span>
+                                    </div>
+                                    <div class="relative mt-2">
+                                        <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-xs text-blue-500">Rp</span>
+                                        <input type="text" name="gaji_d3_s1" 
+                                               value="{{ isset($currentSalaries['kontrak_hc_d3_s1']) && $currentSalaries['kontrak_hc_d3_s1'] > 0 ? number_format($currentSalaries['kontrak_hc_d3_s1'], 0, ',', '.') : '3.800.000' }}" 
+                                               oninput="this.value = formatRupiah(this.value)"
+                                               class="w-full pl-10 pr-4 py-3 border border-blue-200 rounded-xl text-sm font-black text-[#1E3A5F] outline-none bg-white focus:border-blue-500 shadow-sm">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 pt-3 border-t border-gray-100">
+                                <p class="text-[8px] font-black text-gray-400 uppercase mb-2">Jabatan Divisi HC:</p>
+                                <div class="flex flex-wrap gap-1.5 mb-6">
+                                    @foreach($jabatanHCList as $j)
+                                        <span class="px-2 py-0.5 bg-gray-100 text-[8px] font-bold text-gray-600 rounded-md uppercase">{{ $j }}</span>
+                                    @endforeach
+                                </div>
+                                <button type="submit" class="w-full py-4 bg-[#1E3A5F] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-blue-800 transition-all flex items-center justify-center gap-2">
+                                    <i data-lucide="save" class="w-4 h-4"></i>
+                                    Simpan Gaji Divisi HC
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Divisi Umum --}}
+            <div class="space-y-6">
+                <div class="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-gray-50 bg-gray-50/50">
+                        <h2 class="text-sm font-black text-[#1E3A5F] uppercase flex items-center gap-3">
+                            <i data-lucide="building-2" class="w-5 h-5 text-emerald-600"></i>
+                            KONTRAK: DIVISI UMUM (UMR BERJALAN)
+                        </h2>
+                        <p class="text-[9px] text-gray-400 font-bold mt-1 uppercase">Gaji Pokok mengikuti standar UMR berlaku.</p>
+                    </div>
+                    <div class="p-8">
+                        <form action="{{ route('admin.gaji-massal.update-umr') }}" method="POST">
+                            @csrf
+                            <div class="bg-emerald-50/50 p-6 rounded-[2rem] border border-emerald-200 shadow-sm text-center">
+                                <div class="flex justify-between items-center mb-4">
+                                    <span class="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Nominal UMR Berjalan</span>
+                                    <span class="text-[9px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{{ $countKontrakUmum ?? 0 }} Karyawan</span>
+                                </div>
+                                <div class="relative max-w-[240px] mx-auto mb-6">
+                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 font-black text-base text-emerald-600">Rp</span>
+                                    <input type="text" name="nominal_umr" 
+                                           value="{{ isset($currentSalaries['umr_tahun_ini']) && $currentSalaries['umr_tahun_ini'] > 0 ? number_format($currentSalaries['umr_tahun_ini'], 0, ',', '.') : '2.994.031' }}" 
+                                           oninput="this.value = formatRupiah(this.value)"
+                                           class="w-full pl-11 pr-4 py-4 border-2 border-emerald-400 rounded-2xl text-center text-xl font-black text-emerald-700 outline-none bg-white focus:border-emerald-600 shadow-inner">
+                                </div>
+                                <div class="pt-3 border-t border-emerald-100 text-left">
+                                    <p class="text-[8px] font-black text-emerald-600 uppercase mb-2">Jabatan Divisi Umum (UMR):</p>
+                                    <div class="flex flex-wrap gap-1.5 mb-6">
+                                        @foreach($jabatanUmumList as $j)
+                                            <span class="px-2 py-0.5 bg-white text-[8px] font-bold text-emerald-700 border border-emerald-200 rounded-md uppercase">{{ $j }}</span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full py-4 bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2">
+                                    <i data-lucide="save" class="w-4 h-4"></i>
+                                    Simpan Gaji UMR Umum
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+function formatRupiah(angka, prefix) {
+    var number_string = angka.replace(/[^,\d]/g, '').toString(),
+        split = number_string.split(','),
+        sisa = split[0].length % 3,
+        rupiah = split[0].substr(0, sisa),
+        ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+    if (ribuan) {
+        separator = sisa ? '.' : '';
+        rupiah += separator + ribuan.join('.');
+    }
+
+    rupiah = split[1] != undefined ? rupiah + ',' + split[1] : rupiah;
+    return prefix == undefined ? rupiah : (rupiah ? 'Rp. ' + rupiah : '');
+}
+</script>
+@endpush

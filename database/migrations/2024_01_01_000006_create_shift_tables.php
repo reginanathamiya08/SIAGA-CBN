@@ -9,28 +9,30 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('shift', function (Blueprint $table) {
-            $table->id();
+            $table->string('id', 20)->primary();
             $table->string('nama_shift', 50);
-            $table->time('jam_masuk');
-            $table->time('jam_keluar');
+            $table->time('jam_mulai');
+            $table->time('jam_selesai');
             $table->time('batas_telat');
             $table->timestamps();
         });
 
-        Schema::create('jadwal_shift', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('karyawan_id')->constrained('karyawan')->cascadeOnDelete();
-            $table->foreignId('shift_id')->constrained('shift')->cascadeOnDelete();
+        Schema::create('detail_jadwal_shift', function (Blueprint $table) {
+            $table->string('id', 20)->primary();
+            $table->string('user_id', 20);
+            $table->string('shift_id', 20);
             $table->date('tanggal');
             $table->timestamps();
 
-            $table->unique(['karyawan_id', 'tanggal']);
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('shift_id')->references('id')->on('shift')->cascadeOnDelete();
+            $table->unique(['user_id', 'tanggal']);
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('jadwal_shift');
+        Schema::dropIfExists('detail_jadwal_shift');
         Schema::dropIfExists('shift');
     }
 };
