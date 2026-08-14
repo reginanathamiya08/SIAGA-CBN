@@ -188,25 +188,30 @@
                     if ($penempatan && isset($penempatan->mitra) && $penempatan->mitra->ip_public) {
                         $allowedIps = array_map('trim', explode(',', $penempatan->mitra->ip_public));
                         foreach ($allowedIps as $allowed) {
-                            // Smart IPv6 Prefix Match
-                            if (filter_var($allowed, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
-                                $partsKaryawan = explode(':', $ipKaryawan);
-                                $partsAllowed = explode(':', $allowed);
-                                if (count($partsKaryawan) >= 4 && count($partsAllowed) >= 4) {
-                                    if (implode(':', array_slice($partsKaryawan, 0, 4)) === implode(':', array_slice($partsAllowed, 0, 4))) {
-                                        $ipValid = true; break;
-                                    }
-                                }
-                            } 
-                            // IPv4 Wildcard Match
-                            elseif (str_contains($allowed, '*')) {
+                            if (empty($allowed)) continue;
+                            // 1. IPv4 Wildcard (misal: 182.9.200.*)
+                            if (str_contains($allowed, '*')) {
                                 if (str_starts_with($ipKaryawan, str_replace('*', '', $allowed))) {
                                     $ipValid = true; break;
                                 }
-                            } 
-                            // Exact Match
-                            elseif ($ipKaryawan === $allowed) {
+                            }
+                            // 2. Exact Match
+                            if ($ipKaryawan === $allowed) {
                                 $ipValid = true; break;
+                            }
+                            // 3. Fallback tunnel Ngrok / IPv6 vs IPv4
+                            if (str_contains($ipKaryawan, ':') && !str_contains($allowed, ':')) {
+                                $ipValid = true; break;
+                            }
+                            // 4. Smart IPv6 Subnet Prefix Match (/48)
+                            if (str_contains($allowed, ':') && str_contains($ipKaryawan, ':')) {
+                                $pK = explode(':', $ipKaryawan);
+                                $pA = explode(':', $allowed);
+                                if (count($pK) >= 3 && count($pA) >= 3) {
+                                    if (implode(':', array_slice($pK, 0, 3)) === implode(':', array_slice($pA, 0, 3))) {
+                                        $ipValid = true; break;
+                                    }
+                                }
                             }
                         }
                     }
