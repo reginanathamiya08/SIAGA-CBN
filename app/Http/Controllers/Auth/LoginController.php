@@ -35,16 +35,11 @@ class LoginController extends Controller
             'password.required' => 'Password wajib diisi.',
         ]);
 
-        // Cari user manual by email, nip, atau prefix username
+        // Cari user berdasarkan email atau NIP secara presisi
         $input = trim($request->email);
         $user = User::where(function($q) use ($input) {
                     $q->where('email', $input)
-                      ->orWhere('nip', $input)
-                      ->orWhere('email', $input . '@cbn.com');
-                    // Jika input berisi regina.adm@cbn.com atau regina@cbn.com
-                    if (str_contains($input, 'regina')) {
-                        $q->orWhere('nip', 'ADM-CBN-0001');
-                    }
+                      ->orWhere('nip', $input);
                 })
                 ->where('is_active', true)
                 ->first();
