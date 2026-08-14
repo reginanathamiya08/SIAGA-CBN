@@ -376,7 +376,6 @@ class AbsensiController extends Controller
 
         return false;
     }
-}
 
     public function riwayat(Request $request)
     {
