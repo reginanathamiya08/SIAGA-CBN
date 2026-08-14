@@ -146,49 +146,12 @@ class AbsensiController extends Controller
             return back()->with('error', "Lokasi tidak valid. Kamu berada " . number_format($jarak, 0) . "m dari " . $mitra->nama_mitra . ". Pastikan kamu berada di dalam area kantor.");
         }
 
-        // ✅ VALIDASI IP PUBLIC (Smart Validation: IPv4 & Smart IPv6 Prefix)
+        // ✅ VALIDASI IP PUBLIC (Smart Validation: IPv4 & Smart IPv6 Prefix /48)
         $ipKaryawan = $request->ip();
         $ipMitra    = $mitra->ip_public;
 
-        if ($ipMitra) {
-            $allowedIps = array_map('trim', explode(',', $ipMitra));
-            $isMatched = false;
-
-            foreach ($allowedIps as $allowed) {
-                // Jika input di database adalah IPv6 (biasanya mengandung banyak titik dua)
-                if (filter_var($allowed, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
-                    // Ambil 4 kelompok pertama (Prefix /64) dari IP Karyawan dan IP Database
-                    $partsKaryawan = explode(':', $ipKaryawan);
-                    $partsAllowed  = explode(':', $allowed);
-                    
-                    if (count($partsKaryawan) >= 4 && count($partsAllowed) >= 4) {
-                        $prefixKaryawan = implode(':', array_slice($partsKaryawan, 0, 4));
-                        $prefixAllowed  = implode(':', array_slice($partsAllowed, 0, 4));
-                        
-                        if ($prefixKaryawan === $prefixAllowed) {
-                            $isMatched = true;
-                            break;
-                        }
-                    }
-                } 
-                // Cek IPv4 dengan Wildcard (misal: 182.9.200.*)
-                else if (str_contains($allowed, '*')) {
-                    $prefixAllowed = str_replace('*', '', $allowed);
-                    if (str_starts_with($ipKaryawan, $prefixAllowed)) {
-                        $isMatched = true;
-                        break;
-                    }
-                }
-                // Cek IPv4 standar (Exact Match)
-                else if ($ipKaryawan === $allowed) {
-                    $isMatched = true;
-                    break;
-                }
-            }
-            
-            if (!$isMatched) {
-                return back()->with('error', "Absensi ditolak. Gunakan jaringan WiFi kantor " . $mitra->nama_mitra . " untuk melakukan absensi. (IP terdeteksi: {$ipKaryawan})");
-            }
+        if ($ipMitra && !$this->isIpAllowed($ipKaryawan, $ipMitra)) {
+            return back()->with('error', "Absensi ditolak. Gunakan jaringan WiFi kantor " . $mitra->nama_mitra . " untuk melakukan absensi. (IP terdeteksi: {$ipKaryawan})");
         }
 
         $shiftTerdeteksi = null;
@@ -345,38 +308,12 @@ class AbsensiController extends Controller
             return back()->with('error', "Lokasi tidak valid untuk absen pulang. Pastikan kamu berada di dalam area kantor.");
         }
 
-        // ✅ VALIDASI IP PUBLIC (Smart Validation: IPv4 & Smart IPv6 Prefix)
+        // ✅ VALIDASI IP PUBLIC (Smart Validation: IPv4 & Smart IPv6 Prefix /48)
         $ipKaryawan = $request->ip();
         $ipMitra    = $mitra->ip_public;
 
-        if ($ipMitra) {
-            $allowedIps = array_map('trim', explode(',', $ipMitra));
-            $isMatched = false;
-
-            foreach ($allowedIps as $allowed) {
-                if (filter_var($allowed, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
-                    $partsKaryawan = explode(':', $ipKaryawan);
-                    $partsAllowed  = explode(':', $allowed);
-                    
-                    if (count($partsKaryawan) >= 4 && count($partsAllowed) >= 4) {
-                        $prefixKaryawan = implode(':', array_slice($partsKaryawan, 0, 4));
-                        $prefixAllowed  = implode(':', array_slice($partsAllowed, 0, 4));
-                        
-                        if ($prefixKaryawan === $prefixAllowed) {
-                            $isMatched = true;
-                            break;
-                        }
-                    }
-                } 
-                else if ($ipKaryawan === $allowed) {
-                    $isMatched = true;
-                    break;
-                }
-            }
-            
-            if (!$isMatched) {
-                return back()->with('error', "Absensi pulang ditolak. Gunakan jaringan WiFi kantor " . $mitra->nama_mitra . " untuk melakukan absensi. (IP terdeteksi: {$ipKaryawan})");
-            }
+        if ($ipMitra && !$this->isIpAllowed($ipKaryawan, $ipMitra)) {
+            return back()->with('error', "Absensi pulang ditolak. Gunakan jaringan WiFi kantor " . $mitra->nama_mitra . " untuk melakukan absensi. (IP terdeteksi: {$ipKaryawan})");
         }
 
         $absensi->update([
@@ -388,6 +325,53 @@ class AbsensiController extends Controller
 
         return back()->with('success', 'Absen pulang berhasil. Selamat istirahat!');
     }
+
+    /**
+     * Helper pintar untuk validasi pencocokan IP (IPv4 wildcard, IPv6 /48 prefix, exact match)
+     */
+    private function isIpAllowed(string $ipKaryawan, string $ipMitraConfig): bool
+    {
+        if (empty(trim($ipMitraConfig))) {
+            return true;
+        }
+
+        $allowedIps = array_map('trim', explode(',', $ipMitraConfig));
+
+        foreach ($allowedIps as $allowed) {
+            if (empty($allowed)) continue;
+
+            // 1. Wildcard matching (contoh: 182.9.200.* atau 2404:c0:d001:*)
+            if (str_contains($allowed, '*')) {
+                $prefix = str_replace('*', '', $allowed);
+                if (str_starts_with($ipKaryawan, $prefix)) {
+                    return true;
+                }
+            }
+
+            // 2. Exact match (IPv4 atau IPv6 persis)
+            if ($ipKaryawan === $allowed) {
+                return true;
+            }
+
+            // 3. Smart IPv6 Subnet Prefix Matching (Mencocokkan 3 kelompok pertama /48 subnet ISP)
+            if (str_contains($allowed, ':') && str_contains($ipKaryawan, ':')) {
+                $partsKaryawan = explode(':', $ipKaryawan);
+                $partsAllowed  = explode(':', $allowed);
+
+                if (count($partsKaryawan) >= 3 && count($partsAllowed) >= 3) {
+                    $prefixKaryawan = implode(':', array_slice($partsKaryawan, 0, 3));
+                    $prefixAllowed  = implode(':', array_slice($partsAllowed, 0, 3));
+
+                    if ($prefixKaryawan === $prefixAllowed) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+}
 
     public function riwayat(Request $request)
     {
