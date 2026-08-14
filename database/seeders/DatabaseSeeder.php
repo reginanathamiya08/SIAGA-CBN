@@ -28,7 +28,7 @@ class DatabaseSeeder extends Seeder
         User::create([
             'role_id'        => $roleAdmin->id,
             'nip'            => 'ADM-CBN-0001',
-            'email'          => 'regina.adm@cbn.com',
+            'email'          => 'regina@cbn.com',
             'password'       => Hash::make('admin123'),
             'nama'           => 'Regina Nathamiya',
             'divisi'         => 'adm_umum',
