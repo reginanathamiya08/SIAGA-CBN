@@ -234,6 +234,8 @@ class AbsensiController extends Controller
                 'is_telat'    => $isTelat,
                 'ip_masuk'    => $ipKaryawan,
             ]);
+        }
+
         return back()->with('absen_popup', [
             'type'     => 'masuk',
             'title'    => 'Absen Masuk Berhasil!',
