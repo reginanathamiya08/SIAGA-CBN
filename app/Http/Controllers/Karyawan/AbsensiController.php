@@ -234,9 +234,13 @@ class AbsensiController extends Controller
                 'is_telat'    => $isTelat,
                 'ip_masuk'    => $ipKaryawan,
             ]);
-        }
-
-        return back()->with($isTelat ? 'warning' : 'success', 'Absen masuk berhasil.' . ($isTelat ? ' (Terlambat)' : ''));
+        return back()->with('absen_popup', [
+            'type'     => 'masuk',
+            'title'    => 'Absen Masuk Berhasil!',
+            'waktu'    => 'Pukul ' . $now->format('H:i') . ' WIB',
+            'is_telat' => $isTelat,
+            'status'   => $isTelat ? 'Terlambat (Telat)' : 'Tepat Waktu (Hadir)',
+        ]);
     }
 
     public function absenPulang(Request $request)
@@ -323,7 +327,13 @@ class AbsensiController extends Controller
             'ip_pulang'    => $ipKaryawan,
         ]);
 
-        return back()->with('success', 'Absen pulang berhasil. Selamat istirahat!');
+        return back()->with('absen_popup', [
+            'type'     => 'pulang',
+            'title'    => 'Absen Pulang Berhasil!',
+            'waktu'    => 'Pukul ' . $now->format('H:i') . ' WIB',
+            'is_telat' => false,
+            'status'   => 'Selesai Bekerja',
+        ]);
     }
 
     /**

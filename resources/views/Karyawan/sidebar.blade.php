@@ -45,7 +45,34 @@
 
         // Konfigurasi Global SweetAlert
         window.addEventListener('load', () => {
-            @if(session('success'))
+            @if(session('absen_popup'))
+                @php $p = session('absen_popup'); @endphp
+                Swal.fire({
+                    icon: '{{ $p['is_telat'] ? 'warning' : 'success' }}',
+                    title: '{{ $p['title'] }}',
+                    html: `
+                        <div class="py-2 text-center">
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Waktu Absen Dicatat</p>
+                            <p class="text-3xl font-black text-[#1E3A5F] tracking-tight mb-3">{{ $p['waktu'] }}</p>
+                            @if($p['type'] === 'masuk')
+                                <div class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider {{ $p['is_telat'] ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300' }}">
+                                    {{ $p['is_telat'] ? '⚠️ Status: Terlambat (Telat)' : '✓ Status: Tepat Waktu (Hadir)' }}
+                                </div>
+                            @else
+                                <div class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-blue-100 text-blue-800 border border-blue-300">
+                                    🏠 Status: Selesai Bekerja
+                                </div>
+                            @endif
+                        </div>
+                    `,
+                    confirmButtonColor: '#1E3A5F',
+                    confirmButtonText: 'Siap, Mengerti',
+                    customClass: {
+                        popup: 'rounded-3xl',
+                        confirmButton: 'rounded-xl font-bold px-6 py-2.5'
+                    }
+                });
+            @elseif(session('success'))
                 Swal.fire({
                     icon: 'success',
                     title: 'Berhasil!',
