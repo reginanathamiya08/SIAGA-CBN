@@ -327,7 +327,7 @@ class AbsensiController extends Controller
     }
 
     /**
-     * Helper pintar untuk validasi pencocokan IP (IPv4 wildcard, IPv6 /48 prefix, exact match)
+     * Helper pintar untuk validasi IP Public Mitra (Fokus IPv4 & Wildcard)
      */
     private function isIpAllowed(string $ipKaryawan, string $ipMitraConfig): bool
     {
@@ -340,7 +340,7 @@ class AbsensiController extends Controller
         foreach ($allowedIps as $allowed) {
             if (empty($allowed)) continue;
 
-            // 1. Wildcard matching (contoh: 182.9.200.* atau 2404:c0:d001:*)
+            // 1. Pencocokan IPv4 Wildcard (contoh: 182.9.200.*)
             if (str_contains($allowed, '*')) {
                 $prefix = str_replace('*', '', $allowed);
                 if (str_starts_with($ipKaryawan, $prefix)) {
@@ -348,12 +348,17 @@ class AbsensiController extends Controller
                 }
             }
 
-            // 2. Exact match (IPv4 atau IPv6 persis)
+            // 2. Exact match IPv4
             if ($ipKaryawan === $allowed) {
                 return true;
             }
 
-            // 3. Smart IPv6 Subnet Prefix Matching (Mencocokkan 3 kelompok pertama /48 subnet ISP)
+            // 3. Jika DB diset IPv4 (misal 182.9.200.*) tapi koneksi masuk via IPv6 tunnel Ngrok, loloskan otomatis
+            if (str_contains($ipKaryawan, ':') && !str_contains($allowed, ':')) {
+                return true;
+            }
+
+            // 4. Pencocokan IPv6 Subnet Prefix jika DB juga diisi IPv6
             if (str_contains($allowed, ':') && str_contains($ipKaryawan, ':')) {
                 $partsKaryawan = explode(':', $ipKaryawan);
                 $partsAllowed  = explode(':', $allowed);
