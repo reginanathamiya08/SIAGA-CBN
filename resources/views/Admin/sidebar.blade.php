@@ -227,13 +227,19 @@
     </nav>
 
     <div class="border-t border-gray-100 p-3 bg-gray-50/50">
+        @php
+            $words = explode(' ', trim(Auth::user()->nama ?? 'Admin'));
+            $initials = count($words) >= 2 
+                ? strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1))
+                : strtoupper(substr($words[0], 0, 2));
+        @endphp
         <div class="flex items-center gap-3 px-3 py-2">
-            <div class="w-8 h-8 bg-[#1E3A5F] rounded-xl flex items-center justify-center shrink-0 font-black text-xs text-white">
-                {{ strtoupper(substr(Auth::user()->nip,0,2)) }}
+            <div class="w-8 h-8 bg-[#1E3A5F] rounded-xl flex items-center justify-center shrink-0 font-black text-xs text-white shadow-sm">
+                {{ $initials }}
             </div>
             <div x-show="sidebarOpen" x-transition.opacity class="flex-1 min-w-0">
-                <p class="text-[11px] font-black text-[#1E3A5F] truncate">{{ Auth::user()->nip }}</p>
-                <p class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">Administrator</p>
+                <p class="text-[11px] font-black text-[#1E3A5F] truncate" title="{{ Auth::user()->nama }}">{{ Auth::user()->nama }}</p>
+                <p class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">Admin</p>
             </div>
             <form method="POST" action="{{ route('logout') }}" x-show="sidebarOpen" onsubmit="return confirmLogout(event, this)">
                 @csrf
