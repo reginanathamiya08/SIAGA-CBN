@@ -23,22 +23,46 @@ class LaporanAbsensiController extends Controller
         $jenisKaryawan = $request->input('jenis_karyawan_id', 'tetap');
         $karyawanId    = $request->input('user_id');
 
+        // Hitung default minggu berdasarkan hari ini (misal tgl 17 = Minggu 3)
+        $defaultWeek = 1;
+        if ($bulan == now()->month && $tahun == now()->year) {
+            $currentDay = now()->day;
+            if ($currentDay <= 7) $defaultWeek = 1;
+            elseif ($currentDay <= 14) $defaultWeek = 2;
+            elseif ($currentDay <= 21) $defaultWeek = 3;
+            else $defaultWeek = 4;
+        }
+
+        $roleSlug = in_array($jenisKaryawan, ['tetap', 'karyawan_tetap', 'JNS-00001']) ? 'karyawan_tetap' : 'karyawan_kontrak';
+
         // Data untuk dropdown filter
         $semuaMitra    = Mitra::orderByRaw('COALESCE(mitra_induk_id, id), is_cabang ASC, nama_mitra ASC')->get();
         $semuaKaryawan = User::with(['penempatanAktif.mitra'])
                              ->where('is_active', true)
-                             ->whereHas('role', fn($q) => $q->whereIn('slug', ['karyawan_tetap', 'karyawan_kontrak']))
-                             ->when($jenisKaryawan, function($q) use ($jenisKaryawan) {
-                                 $roleSlug = in_array($jenisKaryawan, ['tetap', 'karyawan_tetap', 'JNS-00001']) ? 'karyawan_tetap' : 'karyawan_kontrak';
-                                 $q->whereHas('role', fn($r) => $r->where('slug', $roleSlug));
-                             })
+                             ->whereHas('role', fn($r) => $r->where('slug', $roleSlug))
                              ->orderBy('nama')
                              ->get();
         $mitraPusat    = Mitra::where('is_pusat', true)->first();
 
-        // Bangun query absensi
+        $isTetap = ($roleSlug === 'karyawan_tetap');
+
+        // Divisi khusus Karyawan Tetap vs Karyawan Kontrak
+        if ($isTetap) {
+            $semuaDivisi = [
+                'adm_umum'       => 'Adm & Umum',
+                'keuangan'       => 'Keuangan',
+                'koordinator_cs' => 'Koordinator CS',
+            ];
+        } else {
+            $semuaDivisi = [
+                'hc'   => 'HC',
+                'umum' => 'Umum',
+            ];
+        }
+
+        // Query absensi utama bulanan
         $query = Absensi::with(['karyawan', 'karyawan.penempatanAktif.mitra', 'mitra'])
-            ->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->whereIn('slug', ['karyawan_tetap', 'karyawan_kontrak'])))
+            ->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->where('slug', $roleSlug)))
             ->whereMonth('tanggal', $bulan)
             ->whereYear('tanggal', $tahun)
             ->orderBy('tanggal')
@@ -50,21 +74,19 @@ class LaporanAbsensiController extends Controller
         if ($karyawanId) {
             $query->where('user_id', $karyawanId);
         }
-        if ($divisi || $jenisKaryawan) {
-            $query->whereHas('karyawan', function ($q) use ($divisi, $jenisKaryawan) {
-                if ($divisi) {
-                    $q->where('divisi', $divisi);
-                }
-                if ($jenisKaryawan) {
-                    $roleSlug = in_array($jenisKaryawan, ['tetap', 'karyawan_tetap', 'JNS-00001']) ? 'karyawan_tetap' : 'karyawan_kontrak';
-                    $q->whereHas('role', fn($r) => $r->where('slug', $roleSlug));
-                }
+        if ($divisi) {
+            $query->whereHas('karyawan', function ($q) use ($divisi) {
+                $q->where(function($sub) use ($divisi) {
+                    $sub->where('divisi', $divisi)
+                        ->orWhere('divisi', str_replace('_', ' ', $divisi))
+                        ->orWhere('divisi', strtolower(str_replace(' ', '_', $divisi)));
+                });
             });
         }
 
         $absensiList = $query->get();
 
-        // Hitung rekap per karyawan
+        // Hitung rekap bulanan utuh
         $rekap = $this->hitungRekap($absensiList, $bulan, $tahun);
 
         // Total hari kerja dalam bulan tsb (Senin–Jumat)
@@ -75,10 +97,12 @@ class LaporanAbsensiController extends Controller
             'rekap',
             'semuaMitra',
             'semuaKaryawan',
+            'semuaDivisi',
             'mitraPusat',
             'totalHariKerja',
             'bulan',
             'tahun',
+            'defaultWeek',
             'mitraId',
             'divisi',
             'jenisKaryawan',
@@ -87,7 +111,7 @@ class LaporanAbsensiController extends Controller
     }
 
     /**
-     * Export laporan absensi ke Excel (menggunakan PhpSpreadsheet).
+     * Export laporan absensi ke Excel dengan 2 Sheet (Sheet 1: Karyawan Tetap, Sheet 2: Karyawan Kontrak).
      */
     public function export(Request $request)
     {
@@ -96,206 +120,228 @@ class LaporanAbsensiController extends Controller
             'tahun' => 'required|integer|min:2020|max:2099',
         ]);
 
-        $bulan         = (int) $request->input('bulan');
-        $tahun         = (int) $request->input('tahun');
-        $mitraId       = $request->input('mitra_id');
-        $divisi        = $request->input('divisi');
-        $jenisKaryawan = $request->input('jenis_karyawan_id');
-        $karyawanId    = $request->input('user_id');
+        $bulan      = (int) $request->input('bulan');
+        $tahun      = (int) $request->input('tahun');
+        $mitraId    = $request->input('mitra_id');
+        $divisi     = $request->input('divisi');
+        $karyawanId = $request->input('user_id');
 
-        $query = Absensi::with(['karyawan', 'karyawan.penempatanAktif.mitra', 'mitra'])
-            ->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->whereIn('slug', ['karyawan_tetap', 'karyawan_kontrak'])))
+        $totalHariKerja = $this->hitungHariKerja($bulan, $tahun);
+
+        Carbon::setLocale('id');
+        $namaBulan = Carbon::create($tahun, $bulan)->translatedFormat('F');
+        $namaFile  = "Laporan_Absensi_CBN_{$namaBulan}_{$tahun}.xlsx";
+
+        // Query Karyawan Tetap
+        $queryTetap = Absensi::with(['karyawan', 'mitra'])
+            ->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->where('slug', 'karyawan_tetap')))
             ->whereMonth('tanggal', $bulan)
             ->whereYear('tanggal', $tahun)
             ->orderBy('tanggal')
             ->orderBy('user_id');
+        if ($karyawanId) $queryTetap->where('user_id', $karyawanId);
+        if ($divisi)     $queryTetap->whereHas('karyawan', fn($q) => $q->where('divisi', $divisi));
+        $absensiTetap = $queryTetap->get();
+        $rekapTetap   = $this->hitungRekap($absensiTetap, $bulan, $tahun);
 
-        if ($mitraId)    $query->where('mitra_id', $mitraId);
-        if ($karyawanId) $query->where('user_id', $karyawanId);
-        if ($divisi || $jenisKaryawan) {
-            $query->whereHas('karyawan', function ($q) use ($divisi, $jenisKaryawan) {
-                if ($divisi)        $q->where('divisi', $divisi);
-                if ($jenisKaryawan) {
-                    $roleSlug = in_array($jenisKaryawan, ['tetap', 'karyawan_tetap', 'JNS-00001']) ? 'karyawan_tetap' : 'karyawan_kontrak';
-                    $q->whereHas('role', fn($r) => $r->where('slug', $roleSlug));
-                }
-            });
-        }
+        // Query Karyawan Kontrak
+        $queryKontrak = Absensi::with(['karyawan', 'karyawan.penempatanAktif.mitra', 'mitra'])
+            ->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->where('slug', 'karyawan_kontrak')))
+            ->whereMonth('tanggal', $bulan)
+            ->whereYear('tanggal', $tahun)
+            ->orderBy('tanggal')
+            ->orderBy('user_id');
+        if ($mitraId)    $queryKontrak->where('mitra_id', $mitraId);
+        if ($karyawanId) $queryKontrak->where('user_id', $karyawanId);
+        if ($divisi)     $queryKontrak->whereHas('karyawan', fn($q) => $q->where('divisi', $divisi));
+        $absensiKontrak = $queryKontrak->get();
+        $rekapKontrak   = $this->hitungRekap($absensiKontrak, $bulan, $tahun);
 
-        $absensiList    = $query->get();
-        $rekap          = $this->hitungRekap($absensiList, $bulan, $tahun);
-        $totalHariKerja = $this->hitungHariKerja($bulan, $tahun);
-
-        // Nama file
-        Carbon::setLocale('id');
-        $namaBulan = Carbon::create($tahun, $bulan)->translatedFormat('F');
-        $namaMitra = $mitraId ? (Mitra::find($mitraId)?->nama_mitra ?? 'Mitra') : 'Semua';
-        $namaFile  = "Laporan_Absensi_{$namaBulan}{$tahun}_{$namaMitra}.xlsx";
-
-        // ── Buat Spreadsheet ──────────────────────────────────────────────
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
 
-        // ── Sheet 1: Detail Harian ────────────────────────────────────────
+        // ── Sheet 1: Karyawan Tetap ───────────────────────────────────────
         $sheet1 = $spreadsheet->getActiveSheet();
-        $sheet1->setTitle('Detail Harian');
+        $sheet1->setTitle('Karyawan Tetap');
+        $this->isiSheetAbsensi($sheet1, 'KARYAWAN TETAP', $namaBulan, $tahun, $rekapTetap, $absensiTetap, $totalHariKerja, false);
 
-        $headers = [
-            'No.', 'ID Karyawan', 'Nama Karyawan', 'Jabatan', 'Divisi',
-            'Mitra / Cabang', 'Tanggal', 'Jam Masuk', 'Jam Pulang',
-            'Status Kehadiran', 'Keterangan',
-        ];
-
-        // Tulis header sheet 1
-        foreach ($headers as $col => $header) {
-            $cell = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col + 1) . '1';
-            $sheet1->setCellValue($cell, $header);
-            $sheet1->getStyle($cell)->getFont()->setBold(true);
-            $sheet1->getStyle($cell)->getFill()
-                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                ->getStartColor()->setARGB('FF2E75B6');
-            $sheet1->getStyle($cell)->getFont()->getColor()->setARGB('FFFFFFFF');
-            $sheet1->getStyle($cell)->getAlignment()
-                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        }
-
-        // Data rows sheet 1
-        $row = 2;
-        foreach ($absensiList as $i => $abs) {
-            $k          = $abs->karyawan;
-            $namaLokasi = $abs->mitra?->nama_mitra ?? ($k?->isTetap() ? 'Kantor CBN' : '-');
-
-            $statusLabel = match ($abs->status) {
-                'hadir'      => $abs->is_telat ? 'Telat' : 'Tepat Waktu',
-                'telat'      => 'Telat',
-                'alfa'       => 'Alfa',
-                'izin'       => 'Izin Pribadi',
-                'sakit'      => 'Sakit',
-                'cuti'       => 'Cuti',
-                'dinas_luar' => 'Dinas Luar Kota',
-                default      => ucfirst($abs->status),
-            };
-
-            // PERBAIKAN: Cek apakah statusnya membutuhkan jam atau tidak
-            $isHadir = in_array($abs->status, ['hadir', 'telat']);
-
-            $data = [
-                $i + 1,
-                $k?->nip ?? '-',
-                $k?->nama ?? '-',
-                $k?->jabatan ?? '-',
-                $k?->labelDivisi() ?? '-',
-                $namaLokasi,
-                $abs->tanggal?->format('d/m/Y') ?? '-',
-                // Jika tidak hadir (izin/sakit/dll), tampilkan '-'
-                $isHadir ? ($abs->waktu_masuk?->format('H:i') ?? '-') : '-',
-                // Jika tidak hadir, tampilkan '-'. Jika hadir tapi belum absen pulang, baru muncul teksnya.
-                $isHadir ? ($abs->waktu_pulang?->format('H:i') ?? 'Belum Absen Pulang') : '-',
-                $statusLabel,
-                $abs->keterangan ?? '', // Mengambil keterangan dari database
-            ];
-
-            foreach ($data as $col => $value) {
-                $cellAddr = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col + 1) . $row;
-                $sheet1->setCellValue($cellAddr, $value);
-                if ($row % 2 === 0) {
-                    $sheet1->getStyle($cellAddr)->getFill()
-                        ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                        ->getStartColor()->setARGB('FFF2F2F2');
-                }
-            }
-            $row++;
-        }
-
-        // Auto width sheet 1
-        foreach (range(1, count($headers)) as $col) {
-            $sheet1->getColumnDimensionByColumn($col)->setAutoSize(true);
-        }
-
-        // ── Sheet 2: Rekap Per Karyawan ───────────────────────────────────
+        // ── Sheet 2: Karyawan Kontrak ─────────────────────────────────────
         $sheet2 = $spreadsheet->createSheet();
-        $sheet2->setTitle('Rekap Per Karyawan');
+        $sheet2->setTitle('Karyawan Kontrak');
+        $this->isiSheetAbsensi($sheet2, 'KARYAWAN KONTRAK', $namaBulan, $tahun, $rekapKontrak, $absensiKontrak, $totalHariKerja, true);
 
-        $headers2 = [
-            'No.', 'NIK', 'Nama', 'Jabatan', 'Divisi', 'Mitra / Cabang',
-            'Total Hadir', 'Total Telat', 'Total Alfa',
-            'Total Izin', 'Total Sakit', 'Total Cuti', 'Total Dinas',
-            '% Kehadiran',
-        ];
-
-        // Tulis header sheet 2
-        foreach ($headers2 as $col => $header) {
-            $cell = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col + 1) . '1';
-            $sheet2->setCellValue($cell, $header);
-            $sheet2->getStyle($cell)->getFont()->setBold(true);
-            $sheet2->getStyle($cell)->getFill()
-                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                ->getStartColor()->setARGB('FF2E75B6');
-            $sheet2->getStyle($cell)->getFont()->getColor()->setARGB('FFFFFFFF');
-            $sheet2->getStyle($cell)->getAlignment()
-                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        }
-
-        // Data rows sheet 2
-        $row2 = 2;
-        foreach ($rekap as $i => $r) {
-            $persen = $totalHariKerja > 0 ? round(($r['hadir'] / $totalHariKerja) * 100, 1) : 0;
-            $data2  = [
-                $i + 1,
-                $r['nik'],
-                $r['nama'],
-                $r['jabatan'],
-                $r['divisi'],
-                $r['mitra'],
-                $r['hadir'],
-                $r['telat'],
-                $r['alfa'],
-                $r['izin'],
-                $r['sakit'],
-                $r['cuti'],
-                $r['dinas'],
-                $persen . '%',
-            ];
-
-            foreach ($data2 as $col => $value) {
-                $cellAddr = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col + 1) . $row2;
-                $sheet2->setCellValue($cellAddr, $value);
-
-                if ($row2 % 2 === 0) {
-                    $sheet2->getStyle($cellAddr)->getFill()
-                        ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                        ->getStartColor()->setARGB('FFF2F2F2');
-                }
-
-                // Merahkan baris jika kehadiran < 80%
-                if ($persen < 80) {
-                    $sheet2->getStyle($cellAddr)->getFont()->getColor()->setARGB('FFCC0000');
-                }
-            }
-            $row2++;
-        }
-
-        // Auto width sheet 2
-        foreach (range(1, count($headers2)) as $col) {
-            $sheet2->getColumnDimensionByColumn($col)->setAutoSize(true);
-        }
-
-        // Kembali ke sheet pertama
+        // Kembali ke Sheet 1
         $spreadsheet->setActiveSheetIndex(0);
 
-        // ── PERBAIKAN DOWNLOAD: Bersihkan output buffer ───────────────────
+        // Clean output buffer & download
         if (ob_get_length()) ob_end_clean();
 
-        // ── Stream langsung ke browser ────────────────────────────────────
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
 
         return response()->streamDownload(function () use ($writer) {
             $writer->save('php://output');
         }, $namaFile, [
-            'Content-Type'              => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition'       => 'attachment; filename="' . $namaFile . '"',
-            'Cache-Control'             => 'max-age=0, no-store, no-cache, must-revalidate',
-            'Pragma'                    => 'public',
+            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $namaFile . '"',
+            'Cache-Control'       => 'max-age=0, no-store, no-cache, must-revalidate',
+            'Pragma'              => 'public',
         ]);
+    }
+
+    /**
+     * Helper privat untuk mengisi struktur sheet Excel absensi per kategori karyawan.
+     */
+    private function isiSheetAbsensi($sheet, string $titleType, string $namaBulan, int $tahun, array $rekap, $absensiList, int $totalHariKerja, bool $isKontrak)
+    {
+        // Banner Header Sheet
+        $sheet->setCellValue('A1', "LAPORAN ABSENSI {$titleType} — PT CBN");
+        $sheet->mergeCells('A1:L1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FF1E3A5F'));
+
+        $sheet->setCellValue('A2', "PERIODE: " . strtoupper($namaBulan) . " {$tahun} | TOTAL HARI KERJA: {$totalHariKerja} HARI");
+        $sheet->mergeCells('A2:L2');
+        $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(10)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FF64748B'));
+
+        // Bagian I: Rekapitulasi
+        $sheet->setCellValue('A4', 'I. REKAPITULASI KEHADIRAN BULANAN');
+        $sheet->getStyle('A4')->getFont()->setBold(true)->setSize(11);
+
+        $headersRekap = [
+            'No.', 'NIK', 'Nama Karyawan', 'Jabatan', 'Divisi',
+            $isKontrak ? 'Mitra / Cabang' : 'Lokasi',
+            'Hadir', 'Telat', 'Alfa', 'Izin', 'Sakit', 'Cuti', 'Dinas', '% Kehadiran'
+        ];
+
+        $startRowRekap = 5;
+        foreach ($headersRekap as $col => $header) {
+            $cellAddr = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col + 1) . $startRowRekap;
+            $sheet->setCellValue($cellAddr, $header);
+            $sheet->getStyle($cellAddr)->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+            $sheet->getStyle($cellAddr)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FF1E3A5F');
+            $sheet->getStyle($cellAddr)->getAlignment()
+                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        }
+
+        $rowR = $startRowRekap + 1;
+        if (count($rekap) > 0) {
+            foreach ($rekap as $i => $r) {
+                $persen = $totalHariKerja > 0 ? round(($r['hadir'] / $totalHariKerja) * 100, 1) : 0;
+                $rowData = [
+                    $i + 1,
+                    $r['nik'],
+                    $r['nama'],
+                    $r['jabatan'],
+                    $r['divisi'],
+                    $r['mitra'],
+                    $r['hadir'],
+                    $r['telat'],
+                    $r['alfa'],
+                    $r['izin'],
+                    $r['sakit'],
+                    $r['cuti'],
+                    $r['dinas'],
+                    $persen . '%',
+                ];
+
+                foreach ($rowData as $col => $value) {
+                    $cellAddr = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col + 1) . $rowR;
+                    $sheet->setCellValue($cellAddr, $value);
+
+                    if ($rowR % 2 === 0) {
+                        $sheet->getStyle($cellAddr)->getFill()
+                            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                            ->getStartColor()->setARGB('FFF8FAFC');
+                    }
+
+                    if ($persen < 80) {
+                        $sheet->getStyle($cellAddr)->getFont()->getColor()->setARGB('FFDC2626');
+                    }
+                }
+                $rowR++;
+            }
+        } else {
+            $sheet->setCellValue("A{$rowR}", 'Tidak ada data rekap');
+            $rowR++;
+        }
+
+        // Bagian II: Detail Absensi Harian
+        $rowR += 2;
+        $sheet->setCellValue("A{$rowR}", 'II. DETAIL ABSENSI HARIAN');
+        $sheet->getStyle("A{$rowR}")->getFont()->setBold(true)->setSize(11);
+        $rowR++;
+
+        $headersDetail = [
+            'No.', 'NIK', 'Nama Karyawan', 'Jabatan', 'Divisi',
+            $isKontrak ? 'Mitra / Cabang' : 'Lokasi',
+            'Tanggal', 'Jam Masuk', 'Jam Pulang', 'Status Kehadiran', 'Keterangan'
+        ];
+
+        $startRowDetail = $rowR;
+        foreach ($headersDetail as $col => $header) {
+            $cellAddr = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col + 1) . $startRowDetail;
+            $sheet->setCellValue($cellAddr, $header);
+            $sheet->getStyle($cellAddr)->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+            $sheet->getStyle($cellAddr)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FF2563EB');
+            $sheet->getStyle($cellAddr)->getAlignment()
+                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        }
+
+        $rowD = $startRowDetail + 1;
+        if (count($absensiList) > 0) {
+            foreach ($absensiList as $i => $abs) {
+                $k          = $abs->karyawan;
+                $namaLokasi = $abs->mitra?->nama_mitra ?? ($k?->isTetap() ? 'Kantor CBN' : '-');
+
+                $statusLabel = match ($abs->status) {
+                    'hadir'      => $abs->is_telat ? 'Telat' : 'Tepat Waktu',
+                    'telat'      => 'Telat',
+                    'alfa'       => 'Alfa',
+                    'izin'       => 'Izin Pribadi',
+                    'sakit'      => 'Sakit',
+                    'cuti'       => 'Cuti',
+                    'dinas_luar' => 'Dinas Luar Kota',
+                    default      => ucfirst($abs->status),
+                };
+
+                $isHadir = in_array($abs->status, ['hadir', 'telat']);
+
+                $rowData = [
+                    $i + 1,
+                    $k?->nip ?? '-',
+                    $k?->nama ?? '-',
+                    $k?->jabatan ?? '-',
+                    $k?->labelDivisi() ?? '-',
+                    $namaLokasi,
+                    $abs->tanggal?->format('d/m/Y') ?? '-',
+                    $isHadir ? ($abs->waktu_masuk?->format('H:i') ?? '-') : '-',
+                    $isHadir ? ($abs->waktu_pulang?->format('H:i') ?? 'Belum Pulang') : '-',
+                    $statusLabel,
+                    $abs->keterangan ?? '',
+                ];
+
+                foreach ($rowData as $col => $value) {
+                    $cellAddr = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col + 1) . $rowD;
+                    $sheet->setCellValue($cellAddr, $value);
+
+                    if ($rowD % 2 === 0) {
+                        $sheet->getStyle($cellAddr)->getFill()
+                            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                            ->getStartColor()->setARGB('FFF8FAFC');
+                    }
+                }
+                $rowD++;
+            }
+        } else {
+            $sheet->setCellValue("A{$rowD}", 'Tidak ada data detail absensi');
+        }
+
+        // Auto width untuk seluruh kolom
+        foreach (range(1, max(count($headersRekap), count($headersDetail))) as $col) {
+            $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+        }
     }
 
     // ── Helper ──────────────────────────────────────────────────────────

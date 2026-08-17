@@ -94,6 +94,11 @@
     </script>
     @stack('styles')
     <style>
+        /* Force SweetAlert2 container above fixed sidebar */
+        .swal2-container {
+            z-index: 999999 !important;
+        }
+
         /* Page Transition Effect */
         @keyframes pageIn {
             from { opacity: 0; transform: translateY(10px); }

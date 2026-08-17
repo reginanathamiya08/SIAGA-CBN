@@ -182,7 +182,7 @@
                                             </button>
                                             {{-- Modal Akhiri --}}
                                             <template x-teleport="body">
-                                                <div x-show="buka" x-transition class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+                                                <div x-show="buka" x-transition class="fixed inset-0 z-[3000] flex items-center justify-center bg-black/40 p-4">
                                                     <div class="bg-white rounded-3xl shadow-xl p-6 w-80" @click.away="buka = false">
                                                         <h3 class="font-black text-[#1E3A5F] text-sm mb-1">Akhiri Penempatan</h3>
                                                         <p class="text-xs text-gray-500 mb-4">{{ $p->karyawan->nama }} di {{ $p->mitra->nama_mitra }}</p>

@@ -79,6 +79,11 @@
     </script>
     @stack('styles')
     <style>
+        /* Force SweetAlert2 container above fixed sidebar */
+        .swal2-container {
+            z-index: 999999 !important;
+        }
+
         /* Custom Scrollbar for Sidebar */
         .sidebar-scroll::-webkit-scrollbar {
             width: 4px;

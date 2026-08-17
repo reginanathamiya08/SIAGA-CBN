@@ -30,7 +30,7 @@
     <template x-teleport="body">
         <div x-show="showModal && currentStep === 'choice'" 
              x-cloak
-             class="fixed inset-0 z-[60] flex items-center justify-center bg-[#1E3A5F]/50 p-4">
+             class="fixed inset-0 z-[3000] flex items-center justify-center bg-[#1E3A5F]/50 p-4">
             <div class="bg-white rounded-[3rem] shadow-2xl p-10 w-full max-w-2xl border border-white/20 relative" @click.away="closeModal()">
                 <button @click="closeModal()" class="absolute top-6 right-6 text-gray-400 hover:text-red-500 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -77,7 +77,7 @@
     <template x-teleport="body">
         <div x-show="showModal && (currentStep === 'tetap' || currentStep === 'kontrak')" 
              x-cloak
-             class="fixed inset-0 z-[70] flex items-center justify-center bg-[#1E3A5F]/50 p-4">
+             class="fixed inset-0 z-[3000] flex items-center justify-center bg-[#1E3A5F]/50 p-4">
             <div class="bg-[#F8FAFC] rounded-[2.5rem] shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col relative border border-white/50" @click.away="closeModal()">
                 
                 {{-- Header --}}

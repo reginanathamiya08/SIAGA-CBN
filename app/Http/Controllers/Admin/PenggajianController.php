@@ -318,9 +318,9 @@ class PenggajianController extends Controller
         $uangMakan     = $isTetap ? (float) ($kg->uang_makan     ?? $defMakan) * $totalHadir : 0.0;
         $uangTransport = $isTetap ? (float) ($kg->uang_transport ?? $defTransport) * $totalHadir : 0.0;
 
-        // BPJS dengan Fallback Standar (Kesehatan 1%, TK 2%)
-        $persenKes = $kg->persen_bpjs_kes ?? Configuration::getValue('persen_bpjs_kes_default', 1);
-        $persenTk  = $kg->persen_bpjs_tk  ?? Configuration::getValue('persen_bpjs_tk_default', 2);
+        // BPJS dengan Fallback Standar dari Konfigurasi Sistem
+        $persenKes = $kg->persen_bpjs_kes ?? Configuration::getValue('persen_bpjs_kes', 9.24);
+        $persenTk  = $kg->persen_bpjs_tk  ?? Configuration::getValue('persen_bpjs_tk', 5.00);
 
         $potonganBpjsKes = $gajiPokok * ((float) $persenKes / 100);
         $potonganBpjsTk  = $gajiPokok * ((float) $persenTk  / 100);
@@ -444,8 +444,8 @@ class PenggajianController extends Controller
             $uangMakan     = $isTetap ? (float) ($request->uang_makan     ?? $defMakan) * $totalHadir : 0.0;
             $uangTransport = $isTetap ? (float) ($request->uang_transport ?? $defTransport) * $totalHadir : 0.0;
 
-            $persenKes = $kg->persen_bpjs_kes ?? Configuration::getValue('persen_bpjs_kes_default', 1);
-            $persenTk  = $kg->persen_bpjs_tk  ?? Configuration::getValue('persen_bpjs_tk_default', 2);
+            $persenKes = $kg->persen_bpjs_kes ?? Configuration::getValue('persen_bpjs_kes', 9.24);
+            $persenTk  = $kg->persen_bpjs_tk  ?? Configuration::getValue('persen_bpjs_tk', 5.00);
 
             $potonganBpjsKes = $gajiPokok * ((float) $persenKes / 100);
             $potonganBpjsTk  = $gajiPokok * ((float) $persenTk  / 100);

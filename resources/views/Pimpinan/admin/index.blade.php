@@ -173,7 +173,7 @@
     <!-- Modal Tambah -->
     <template x-teleport="body">
         <div x-show="openAddModal" 
-             class="fixed inset-0 z-[2100] overflow-y-auto"
+             class="fixed inset-0 z-[3000] overflow-y-auto"
              style="display: none;"
              x-cloak>
             

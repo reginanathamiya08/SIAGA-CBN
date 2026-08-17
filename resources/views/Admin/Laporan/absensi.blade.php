@@ -15,7 +15,7 @@
     </div>
 
     {{-- Tabs Navigasi Jenis Karyawan --}}
-    <div class="flex border-b border-slate-200 gap-2 pt-2">
+    <div class="flex border-b border-slate-200 gap-2 pt-1">
         <a href="{{ route('admin.laporan.absensi.index', array_merge(request()->except(['jenis_karyawan_id', 'user_id']), ['jenis_karyawan_id' => 'tetap'])) }}"
            class="flex items-center gap-2 px-6 py-3 font-bold text-sm border-b-2 transition {{ ($jenisKaryawan === 'tetap' || $jenisKaryawan === 'JNS-00001') ? 'border-blue-600 text-blue-600 bg-white shadow-sm rounded-t-2xl border-t border-x border-slate-200' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300' }}">
             <i data-lucide="user-check" class="w-4 h-4"></i>
@@ -31,7 +31,7 @@
     {{-- Filter Card --}}
     <div class="bg-white rounded-b-2xl rounded-tr-2xl shadow-sm border border-slate-100 p-5">
         <form method="GET" action="{{ route('admin.laporan.absensi.index') }}"
-              class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 items-end">
+              class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-end">
             
             <input type="hidden" name="jenis_karyawan_id" value="{{ $jenisKaryawan }}">
 
@@ -59,20 +59,6 @@
                 </select>
             </div>
 
-            {{-- Karyawan --}}
-            <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">Karyawan {{ $jenisKaryawan === 'JNS-00001' ? 'Tetap' : 'Kontrak' }}</label>
-                <select name="user_id"
-                        class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    <option value="">Semua Karyawan</option>
-                    @foreach($semuaKaryawan as $k)
-                        <option value="{{ $k->id }}" @selected($k->id == $karyawanId)>
-                            {{ $k->nama }} ({{ $k->nip ?? '-' }})
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
             {{-- Mitra (Khusus Karyawan Kontrak) --}}
             @if($jenisKaryawan === 'JNS-00002')
             <div>
@@ -93,11 +79,9 @@
                 <select name="divisi"
                         class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                     <option value="">Semua Divisi</option>
-                    <option value="hc"             @selected($divisi == 'hc')>HC</option>
-                    <option value="umum"           @selected($divisi == 'umum')>Umum</option>
-                    <option value="keuangan"       @selected($divisi == 'keuangan')>Keuangan</option>
-                    <option value="koordinator_cs" @selected($divisi == 'koordinator_cs')>Koordinator CS</option>
-                    <option value="adm_umum"       @selected($divisi == 'adm_umum')>Adm &amp; Umum</option>
+                    @foreach($semuaDivisi as $key => $label)
+                        <option value="{{ $key }}" @selected($divisi == $key || $divisi == $label)>{{ $label }}</option>
+                    @endforeach
                 </select>
             </div>
 
@@ -125,14 +109,14 @@
             Total hari kerja bulan ini: <span class="font-bold text-blue-600">{{ $totalHariKerja }} hari</span>
         </p>
 
-        {{-- Tombol Export Excel — gunakan <a> dengan target="_blank" agar download otomatis --}}
+        {{-- Tombol Export Excel --}}
         <a href="{{ route('admin.laporan.absensi.export', [
                 'bulan'          => $bulan,
                 'tahun'          => $tahun,
                 'mitra_id'       => $mitraId,
                 'divisi'         => $divisi,
                 'jenis_karyawan' => $jenisKaryawan,
-                'user_id'    => $karyawanId,
+                'user_id'        => $karyawanId,
             ]) }}"
            target="_blank"
            class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-xl transition">
@@ -198,11 +182,21 @@
     </div>
 
     {{-- Detail Harian --}}
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 class="font-black text-slate-700 text-sm uppercase tracking-wider">Detail Absensi Harian</h2>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" x-data="{ searchDetail: '' }">
+        <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+                <h2 class="font-black text-slate-700 text-sm uppercase tracking-wider">Detail Absensi Harian</h2>
+                <p class="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Menampilkan {{ $absensiList->count() }} data absensi harian</p>
+            </div>
+
+            {{-- Quick Search Input --}}
+            <div class="relative w-full sm:w-64">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                <input type="text" x-model="searchDetail" placeholder="Cari nama, status, atau tanggal..."
+                       class="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all">
+            </div>
         </div>
-        <div class="max-h-[450px] overflow-y-auto overflow-x-auto">
+        <div class="max-h-[400px] overflow-y-auto overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="bg-slate-700 text-white text-xs font-bold uppercase tracking-wider sticky top-0 z-10 shadow-sm">
@@ -239,8 +233,9 @@
                                 'dinas_luar' => 'Dinas Luar Kota',
                                 default      => ucfirst($abs->status),
                             };
+                            $searchKey = strtolower(($abs->karyawan?->nama ?? '') . ' ' . ($abs->mitra?->nama_mitra ?? '') . ' ' . $statusLabel . ' ' . ($abs->tanggal?->translatedFormat('d M Y') ?? ''));
                         @endphp
-                        <tr class="{{ $i % 2 === 0 ? 'bg-white' : 'bg-slate-50' }} hover:bg-blue-50 transition">
+                        <tr x-show="!searchDetail || '{{ $searchKey }}'.includes(searchDetail.toLowerCase())" class="{{ $i % 2 === 0 ? 'bg-white' : 'bg-slate-50' }} hover:bg-blue-50 transition">
                             <td class="px-4 py-3 text-slate-400">{{ $i + 1 }}</td>
                             <td class="px-4 py-3 font-semibold text-slate-800">
                                 {{ $abs->karyawan?->nama ?? '-' }}
@@ -327,40 +322,27 @@
                 </select>
             </div>
 
-            {{-- Jam Masuk & Pulang (Hanya jika Hadir/Telat) --}}
+            {{-- Jam Masuk & Pulang --}}
             <div id="edit-times" class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-0.5">Jam Masuk</label>
+                    <label class="block text-xs font-bold text-slate-600 mb-0.5">Waktu Masuk</label>
                     <input type="time" name="waktu_masuk" id="edit-waktu-masuk"
                            class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-0.5">Jam Pulang</label>
+                    <label class="block text-xs font-bold text-slate-600 mb-0.5">Waktu Pulang</label>
                     <input type="time" name="waktu_pulang" id="edit-waktu-pulang"
                            class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                 </div>
             </div>
 
-            {{-- Mitra --}}
-            <div>
-                <label class="block text-xs font-bold text-slate-600 mb-0.5">Mitra / Lokasi Penempatan</label>
-                <input type="hidden" name="mitra_id" id="edit-mitra-id">
-                <select id="edit-mitra-id-display" disabled
-                        class="w-full rounded-xl border border-slate-200 bg-slate-100 text-slate-600 px-3 py-1.5 text-sm font-semibold cursor-not-allowed">
-                    <option value="">Pilih Mitra / Penempatan</option>
-                    @foreach($semuaMitra as $m)
-                        <option value="{{ $m->id }}">{{ $m->nama_mitra }}{{ $m->is_pusat ? ' (Kantor Pusat / Utama)' : '' }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="flex gap-3 pt-2">
+            <div class="pt-3 flex justify-end gap-2">
                 <button type="button" onclick="closeModal('modal-edit-absen')"
-                        class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-4 py-2.5 rounded-xl transition text-sm">
+                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs transition">
                     Batal
                 </button>
                 <button type="submit"
-                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl transition text-sm">
+                        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition">
                     Simpan Perubahan
                 </button>
             </div>
@@ -368,73 +350,32 @@
     </div>
 </div>
 
-@push('scripts')
 <script>
-    function autoSelectMitra(selectEl) {
-        if (!selectEl) return;
-        const selectedOpt = selectEl.options[selectEl.selectedIndex];
-        const mitraId = selectedOpt ? selectedOpt.dataset.mitraId : '';
-        const mitraDisplay = document.getElementById('tambah-mitra-id-display');
-        const mitraHidden = document.getElementById('tambah-mitra-id');
-        if (mitraDisplay && mitraHidden) {
-            mitraDisplay.value = mitraId || '';
-            mitraHidden.value = mitraId || '';
-        }
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
     }
-
-    function openTambahAbsenModal() {
-        const modal = document.getElementById('modal-tambah-absen');
-        if (modal && modal.parentElement !== document.body) {
-            document.body.appendChild(modal);
-        }
-        modal.classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
-        toggleTimeFields('tambah-status', 'tambah-times');
-        autoSelectMitra(document.getElementById('tambah-user-id'));
-    }
-
-    function openEditAbsenModal(id, tanggalYmd, tanggalFormatted, status, waktuMasuk, waktuPulang, mitraId, namaKaryawan) {
-        document.getElementById('edit-nama-karyawan').textContent = '— ' + namaKaryawan;
-        
-        const form = document.getElementById('form-edit-absen');
-        form.action = `/admin/laporan/absensi/${id}/update-manual`;
-        
-        document.getElementById('edit-tanggal').value = tanggalFormatted;
-        document.getElementById('edit-status').value = status;
-        document.getElementById('edit-waktu-masuk').value = waktuMasuk;
-        document.getElementById('edit-waktu-pulang').value = waktuPulang;
-        document.getElementById('edit-mitra-id-display').value = mitraId || '';
-        document.getElementById('edit-mitra-id').value = mitraId || '';
-        
-        const modal = document.getElementById('modal-edit-absen');
-        if (modal && modal.parentElement !== document.body) {
-            document.body.appendChild(modal);
-        }
-        modal.classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
-        toggleTimeFields('edit-status', 'edit-times');
-    }
-
     function closeModal(id) {
         document.getElementById(id).classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
     }
-
-    function toggleTimeFields(statusId, timesId) {
-        const status = document.getElementById(statusId).value;
-        const timesDiv = document.getElementById(timesId);
-        
-        if (status === 'hadir' || status === 'telat') {
-            timesDiv.classList.remove('hidden');
-            // Make fields required if visible
-            timesDiv.querySelectorAll('input').forEach(el => el.setAttribute('required', 'required'));
+    function toggleTimeFields(statusId, containerId) {
+        const statusVal = document.getElementById(statusId).value;
+        const container = document.getElementById(containerId);
+        if (statusVal === 'alfa') {
+            container.classList.add('hidden');
         } else {
-            timesDiv.classList.add('hidden');
-            // Remove required if hidden
-            timesDiv.querySelectorAll('input').forEach(el => el.removeAttribute('required'));
+            container.classList.remove('hidden');
         }
     }
+    function openEditAbsenModal(id, tanggalRaw, tanggalFormat, status, waktuMasuk, waktuPulang, mitraId, namaKaryawan) {
+        const form = document.getElementById('form-edit-absen');
+        form.action = `/admin/laporan/absensi/${id}`;
+        document.getElementById('edit-nama-karyawan').innerText = `(${namaKaryawan})`;
+        document.getElementById('edit-tanggal').value = tanggalFormat;
+        document.getElementById('edit-status').value = status;
+        document.getElementById('edit-waktu-masuk').value = waktuMasuk || '';
+        document.getElementById('edit-waktu-pulang').value = waktuPulang || '';
+        toggleTimeFields('edit-status', 'edit-times');
+        openModal('modal-edit-absen');
+    }
 </script>
-@endpush
-
 @endsection

@@ -77,12 +77,11 @@ class AbsensiController extends Controller
             }
 
             if ($jamSelesaiStr) {
-                $batasPulang = $jamSelesai->copy()->subMinutes(15);
-                $bolehPulang = Carbon::now()->gte($batasPulang);
+                $bolehPulang = Carbon::now()->gte($jamSelesai);
                 
                 if (!$bolehPulang) {
                     $jamTampil = substr($jamSelesaiStr, 0, 5);
-                    $pesanBelumPulang = "Jam kerja selesai jam {$jamTampil}. Kamu baru bisa absen pulang 15 menit sebelum jam tersebut.";
+                    $pesanBelumPulang = "Jam kerja selesai jam {$jamTampil} WIB. Kamu baru bisa absen pulang tepat pada jam tersebut.";
                 }
             }
         }
@@ -169,19 +168,31 @@ class AbsensiController extends Controller
         $toleransi = 0;
 
         if ($shiftTerdeteksi) {
-            $jamMulai  = Carbon::today()->setTimeFromTimeString($shiftTerdeteksi->jam_mulai);
-            $toleransi = $shiftTerdeteksi->toleransi_menit;
+            $jamMulai   = Carbon::today()->setTimeFromTimeString($shiftTerdeteksi->jam_mulai);
+            $jamSelesai = Carbon::today()->setTimeFromTimeString($shiftTerdeteksi->jam_selesai);
+            if ($jamSelesai->lt($jamMulai)) {
+                $jamSelesai->addDay();
+            }
+            $toleransi  = $shiftTerdeteksi->toleransi_menit;
         } else {
             if ($karyawan->is_shift) {
                 return back()->with('error', 'Waktu absensi tidak sesuai jadwal shift Satpam yang tersedia. Silakan hubungi Admin.');
             }
 
-            if (!$mitra->jam_masuk) {
+            if (!$mitra->jam_masuk || !$mitra->jam_pulang) {
                 return back()->with('error', 'Jadwal kerja mitra belum diatur. Silakan hubungi Admin.');
             }
             
-            $jamMulai  = Carbon::today()->setTimeFromTimeString($mitra->jam_masuk);
-            $toleransi = 15; 
+            $jamMulai   = Carbon::today()->setTimeFromTimeString($mitra->jam_masuk);
+            $jamSelesai = Carbon::today()->setTimeFromTimeString($mitra->jam_pulang);
+            $toleransi  = 15; 
+        }
+
+        if (!$shiftTerdeteksi) {
+            $cutoff14 = Carbon::today()->setTime(14, 0, 0);
+            if ($now->gte($cutoff14)) {
+                return back()->with('error', 'Absen masuk ditolak. Batas maksimal waktu absen masuk adalah jam 14:00 WIB (Jam 2 Siang).');
+            }
         }
 
         $existing = Absensi::where('user_id', $karyawan->id)
@@ -292,9 +303,9 @@ class AbsensiController extends Controller
             }
         }
 
-        if ($jamSelesai && $now->lt($jamSelesai->copy()->subMinutes(15))) {
+        if ($jamSelesai && $now->lt($jamSelesai)) {
             $jamStr = $shift ? $shift->jam_selesai : substr($mitra->jam_pulang, 0, 5);
-            return back()->with('error', "Belum waktunya pulang. Jam kerja berakhir jam {$jamStr}.");
+            return back()->with('error', "Belum waktunya pulang. Jam kerja berakhir jam {$jamStr} WIB.");
         }
 
         if ($karyawan->role?->slug == 'karyawan_tetap') {

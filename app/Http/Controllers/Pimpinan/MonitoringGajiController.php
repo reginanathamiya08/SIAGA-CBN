@@ -18,6 +18,8 @@ class MonitoringGajiController extends Controller
 {
     public function index(Request $request)
     {
+        $bulan     = $request->input('bulan');
+        $tahun     = $request->input('tahun');
         $periodeId = $request->input('periode_id');
         $mitraId   = $request->input('mitra_id');
 
@@ -26,30 +28,61 @@ class MonitoringGajiController extends Controller
             ->orderByRaw('COALESCE(mitra_induk_id, id), is_cabang ASC, nama_mitra ASC')
             ->get();
 
-        // Jika belum ada filter periode, cari apakah ada periode berstatus 'proses' (Menunggu Persetujuan),
-        // atau fallback ke periode terbaru yang ada
-        if (!$periodeId) {
-            $periodeProses = $semuaPeriode->firstWhere('status', 'proses');
-            if ($periodeProses) {
-                $periodeId = $periodeProses->id;
+        // Jika bulan & tahun dipilih dari dropdown, cari periode yang cocok
+        if ($bulan && $tahun) {
+            $periodeMatched = $this->findPeriodeByBulanTahun($semuaPeriode, $bulan, $tahun);
+            if ($periodeMatched) {
+                $periodeId = $periodeMatched->id;
             } else {
-                $periodeTerbaru = $semuaPeriode->first();
-                if ($periodeTerbaru) {
-                    $periodeId = $periodeTerbaru->id;
+                if ($request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                    \Carbon\Carbon::setLocale('id');
+                    $namaBulanLabel = \Carbon\Carbon::create($tahun, (int)$bulan)->translatedFormat('F') . ' ' . $tahun;
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Periode penggajian untuk bulan {$namaBulanLabel} belum diterbitkan atau belum dibuat oleh Admin."
+                    ]);
+                }
+
+                // Fallback ke periode aktif/terbaru agar tidak membuka halaman kosong
+                $periodeProses = $semuaPeriode->firstWhere('status', 'proses');
+                $selectedP     = $periodeProses ?: $semuaPeriode->first();
+                if ($selectedP) {
+                    $periodeId = $selectedP->id;
+                    $bulan     = $selectedP->tanggal_selesai ? $selectedP->tanggal_selesai->month : ($selectedP->tanggal_mulai ? $selectedP->tanggal_mulai->month : null);
+                    $tahun     = $selectedP->tanggal_selesai ? $selectedP->tanggal_selesai->year : ($selectedP->tanggal_mulai ? $selectedP->tanggal_mulai->year : null);
                 }
             }
+        } elseif ($periodeId) {
+            $p = $semuaPeriode->find($periodeId);
+            if ($p) {
+                $bulan = $p->tanggal_selesai ? $p->tanggal_selesai->month : ($p->tanggal_mulai ? $p->tanggal_mulai->month : null);
+                $tahun = $p->tanggal_selesai ? $p->tanggal_selesai->year : ($p->tanggal_mulai ? $p->tanggal_mulai->year : null);
+            }
+        } else {
+            // Default ke bulan & tahun periode aktif (proses) atau terbaru
+            $periodeProses = $semuaPeriode->firstWhere('status', 'proses');
+            $selectedP     = $periodeProses ?: $semuaPeriode->first();
+            if ($selectedP) {
+                $periodeId = $selectedP->id;
+                $bulan     = $selectedP->tanggal_selesai ? $selectedP->tanggal_selesai->month : ($selectedP->tanggal_mulai ? $selectedP->tanggal_mulai->month : null);
+                $tahun     = $selectedP->tanggal_selesai ? $selectedP->tanggal_selesai->year : ($selectedP->tanggal_mulai ? $selectedP->tanggal_mulai->year : null);
+            }
         }
+
+        $selectedPeriode = $periodeId ? $semuaPeriode->find($periodeId) : null;
 
         $query = SlipGajiPeriode::with(['karyawan', 'karyawan.penempatanAktif.mitra', 'periodeGaji']);
 
         if ($periodeId) {
             $query->where('periode_id', $periodeId);
+        } else {
+            $query->whereRaw('1 = 0');
         }
 
         $allSlips = $query->get();
 
         // Memisahkan Karyawan Tetap dan Kontrak
-        $slipTetap = $allSlips->filter(fn($s) => $s->karyawan?->isTetap() ?? false);
+        $slipTetap   = $allSlips->filter(fn($s) => $s->karyawan?->isTetap() ?? false);
         $slipKontrak = $allSlips->filter(fn($s) => $s->karyawan?->isKontrak() ?? false);
 
         // Filter Mitra hanya memengaruhi Karyawan Kontrak
@@ -59,128 +92,99 @@ class MonitoringGajiController extends Controller
             });
         }
 
-        // Statistik Ringkasan (Gabungan hasil filter)
-        $totalPengeluaran = $slipTetap->sum('gaji_bersih') + $slipKontrak->sum('gaji_bersih');
-        $totalKaryawan    = $slipTetap->count() + $slipKontrak->count();
-        $rataRataGaji     = $totalKaryawan > 0 ? $totalPengeluaran / $totalKaryawan : 0;
+        $periodeAvailable = $semuaPeriode->map(function($p) {
+            return [
+                'id'     => $p->id,
+                'name'   => $p->nama_periode,
+                'month'  => $p->tanggal_selesai ? $p->tanggal_selesai->month : ($p->tanggal_mulai ? $p->tanggal_mulai->month : null),
+                'year'   => $p->tanggal_selesai ? $p->tanggal_selesai->year : ($p->tanggal_mulai ? $p->tanggal_mulai->year : null),
+            ];
+        })->values();
+
+        if ($request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            $htmlBanner = view('Pimpinan.MonitoringGaji._status_banner', compact('selectedPeriode'))->render();
+            $htmlTable  = view('Pimpinan.MonitoringGaji._table_content', compact('slipTetap', 'slipKontrak', 'selectedPeriode', 'periodeId'))->render();
+
+            return response()->json([
+                'success'          => true,
+                'htmlBanner'       => $htmlBanner,
+                'htmlTable'        => $htmlTable,
+                'countTetap'       => $slipTetap->count(),
+                'countKontrak'     => $slipKontrak->count(),
+                'periodeId'        => $periodeId,
+                'submitUrl'        => route('pimpinan.monitoring-gaji.submit', $periodeId ?: 'none'),
+                'exportUrl'        => route('pimpinan.monitoring-gaji.export', array_filter(['bulan' => $bulan, 'tahun' => $tahun, 'mitra_id' => $mitraId, 'periode_id' => $periodeId])),
+            ]);
+        }
 
         return view('Pimpinan.MonitoringGaji.index', compact(
             'slipTetap',
             'slipKontrak',
             'semuaPeriode',
             'semuaMitra',
+            'selectedPeriode',
             'periodeId',
+            'bulan',
+            'tahun',
             'mitraId',
-            'totalPengeluaran',
-            'totalKaryawan',
-            'rataRataGaji'
+            'periodeAvailable'
         ));
     }
 
     public function export(Request $request)
     {
+        $bulan     = $request->input('bulan');
+        $tahun     = $request->input('tahun');
         $periodeId = $request->input('periode_id');
         $mitraId   = $request->input('mitra_id');
 
-        $periode = PeriodeGaji::find($periodeId);
-        $mitra   = Mitra::find($mitraId);
-
-        $query = SlipGajiPeriode::with(['karyawan', 'karyawan.penempatanAktif.mitra', 'periodeGaji']);
-
-        if ($periodeId) {
-            $query->where('periode_id', $periodeId);
+        $semuaPeriode = PeriodeGaji::all();
+        if ($bulan && $tahun && !$periodeId) {
+            $periodeMatched = $this->findPeriodeByBulanTahun($semuaPeriode, $bulan, $tahun);
+            $periodeId = $periodeMatched ? $periodeMatched->id : null;
         }
+
+        if (!$periodeId) {
+            \Carbon\Carbon::setLocale('id');
+            $namaBulanLabel = ($bulan && $tahun) ? \Carbon\Carbon::create($tahun, (int)$bulan)->translatedFormat('F') . ' ' . $tahun : 'periode yang dipilih';
+            return back()->with('error', "Belum ada periode / data penggajian untuk {$namaBulanLabel}.");
+        }
+
+        $query = SlipGajiPeriode::with(['karyawan', 'karyawan.penempatanAktif.mitra', 'periodeGaji'])
+            ->where('periode_id', $periodeId);
 
         $allSlips = $query->get();
 
-        // Memisahkan Karyawan Tetap dan Kontrak
-        $slipTetap = $allSlips->filter(fn($s) => $s->karyawan?->isTetap() ?? false);
+        $slipTetap   = $allSlips->filter(fn($s) => $s->karyawan?->isTetap() ?? false);
         $slipKontrak = $allSlips->filter(fn($s) => $s->karyawan?->isKontrak() ?? false);
 
-        // Filter Mitra hanya memengaruhi Karyawan Kontrak
         if ($mitraId) {
             $slipKontrak = $slipKontrak->filter(function ($s) use ($mitraId) {
                 return ($s->karyawan?->penempatanAktif?->mitra_id ?? '') == $mitraId;
             });
         }
 
-        // Gabungkan kembali untuk diekspor
-        $slipGaji = $slipTetap->concat($slipKontrak);
-
-        if ($slipGaji->isEmpty()) {
+        if ($slipTetap->isEmpty() && $slipKontrak->isEmpty()) {
             return back()->with('error', 'Tidak ada data gaji untuk diekspor.');
         }
 
+        \Carbon\Carbon::setLocale('id');
+        $labelPeriode = ($bulan && $tahun) ? \Carbon\Carbon::create($tahun, $bulan)->translatedFormat('F_Y') : 'Semua_Periode';
+        $namaFile     = "Monitoring_Gaji_CBN_{$labelPeriode}.xlsx";
+
         $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Monitoring Gaji');
 
-        $headers = [
-            'No.', 'NIK', 'Nama Karyawan', 'Jabatan', 'Mitra', 
-            'Gaji Pokok', 'Tunjangan', 'Uang Makan', 'Uang Transport', 
-            'Lembur', 'Potongan', 'Gaji Bersih'
-        ];
+        // ── Sheet 1: Karyawan Tetap ───────────────────────────────────────
+        $sheet1 = $spreadsheet->getActiveSheet();
+        $sheet1->setTitle('Karyawan Tetap');
+        $this->isiSheetGaji($sheet1, 'KARYAWAN TETAP', $slipTetap, false);
 
-        // Styling Header
-        foreach ($headers as $col => $header) {
-            $cell = Coordinate::stringFromColumnIndex($col + 1) . '1';
-            $sheet->setCellValue($cell, $header);
-            $sheet->getStyle($cell)->applyFromArray([
-                'font' => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']],
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['argb' => 'FF1E3A5F']
-                ],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
-            ]);
-        }
+        // ── Sheet 2: Karyawan Kontrak ─────────────────────────────────────
+        $sheet2 = $spreadsheet->createSheet();
+        $sheet2->setTitle('Karyawan Kontrak');
+        $this->isiSheetGaji($sheet2, 'KARYAWAN KONTRAK', $slipKontrak, true);
 
-        $row = 2;
-        foreach ($slipGaji as $i => $slip) {
-            $k = $slip->karyawan;
-            $m = $k?->penempatanAktif?->mitra?->nama_mitra ?? ($k?->isTetap() ? 'Kantor CBN' : '-');
-
-            $data = [
-                $i + 1,
-                $k?->nip ?? '-',
-                $k?->nama ?? '-',
-                $k?->jabatan ?? '-',
-                $m,
-                $slip->getNominal('Gaji Pokok'),
-                $slip->getNominal('Tunjangan Askes') + $slip->getNominal('Tunjangan Jamsostek') + $slip->getNominal('Tunjangan Pangan'),
-                $slip->getNominal('Uang Makan'),
-                $slip->getNominal('Uang Transport'),
-                0,
-                $slip->total_potongan,
-                $slip->gaji_bersih,
-            ];
-
-            foreach ($data as $col => $value) {
-                $cellAddr = Coordinate::stringFromColumnIndex($col + 1) . $row;
-                $sheet->setCellValue($cellAddr, $value);
-                
-                if ($col >= 5) {
-                    $sheet->getStyle($cellAddr)->getNumberFormat()->setFormatCode('#,##0');
-                }
-
-                if ($row % 2 === 0) {
-                    $sheet->getStyle($cellAddr)->getFill()
-                        ->setFillType(Fill::FILL_SOLID)
-                        ->getStartColor()->setARGB('FFF2F2F2');
-                }
-                
-                $sheet->getStyle($cellAddr)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-            }
-            $row++;
-        }
-
-        foreach (range(1, count($headers)) as $col) {
-            $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
-        }
-
-        $namaPeriode = $periode ? str_replace(' ', '_', $periode->nama_periode) : 'Semua_Periode';
-        $namaMitra   = $mitra ? str_replace(' ', '_', $mitra->nama_mitra) : 'Semua_Mitra';
-        $namaFile    = "Monitoring_Gaji_{$namaPeriode}_{$namaMitra}.xlsx";
+        $spreadsheet->setActiveSheetIndex(0);
 
         if (ob_get_length()) ob_end_clean();
 
@@ -189,11 +193,136 @@ class MonitoringGajiController extends Controller
         return response()->streamDownload(function () use ($writer) {
             $writer->save('php://output');
         }, $namaFile, [
-            'Content-Type'              => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition'       => 'attachment; filename="' . $namaFile . '"',
-            'Cache-Control'             => 'max-age=0, no-store, no-cache, must-revalidate',
-            'Pragma'                    => 'public',
+            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $namaFile . '"',
+            'Cache-Control'       => 'max-age=0, no-store, no-cache, must-revalidate',
+            'Pragma'              => 'public',
         ]);
+    }
+
+    /**
+     * Helper privat untuk membuat struktur Sheet Gaji di Excel.
+     */
+    private function isiSheetGaji($sheet, string $titleType, $slips, bool $isKontrak)
+    {
+        // Banner Header
+        $sheet->setCellValue('A1', "DAFTAR REKAPITULASI GAJI {$titleType} — PT CBN");
+        $sheet->mergeCells('A1:M1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FF1E3A5F'));
+
+        $totalPengeluaran = $slips->sum('gaji_bersih');
+        $sheet->setCellValue('A2', "TOTAL PENGELUARAN GAJI: Rp " . number_format($totalPengeluaran, 0, ',', '.') . " | TOTAL KARYAWAN: " . $slips->count() . " ORANG");
+        $sheet->mergeCells('A2:M2');
+        $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(10)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FF64748B'));
+
+        $headers = [
+            'No.', 'NIK', 'Nama Karyawan', 'Jabatan', 'Divisi',
+            $isKontrak ? 'Mitra / Cabang' : 'Lokasi',
+            'Gaji Pokok', 'Tunjangan', 'Uang Makan', 'Uang Transport',
+            'Lembur', 'Potongan', 'Gaji Bersih'
+        ];
+
+        $startRow = 4;
+        foreach ($headers as $col => $header) {
+            $cellAddr = Coordinate::stringFromColumnIndex($col + 1) . $startRow;
+            $sheet->setCellValue($cellAddr, $header);
+            $sheet->getStyle($cellAddr)->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+            $sheet->getStyle($cellAddr)->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FF1E3A5F');
+            $sheet->getStyle($cellAddr)->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        }
+
+        $row = $startRow + 1;
+        if ($slips->count() > 0) {
+            foreach ($slips->values() as $i => $slip) {
+                $k = $slip->karyawan;
+                $m = $k?->penempatanAktif?->mitra?->nama_mitra ?? ($k?->isTetap() ? 'Kantor CBN' : '-');
+
+                $data = [
+                    $i + 1,
+                    $k?->nip ?? '-',
+                    $k?->nama ?? '-',
+                    $k?->jabatan ?? '-',
+                    $k?->labelDivisi() ?? '-',
+                    $m,
+                    $slip->getNominal('Gaji Pokok'),
+                    $slip->getNominal('Tunjangan Askes') + $slip->getNominal('Tunjangan Jamsostek') + $slip->getNominal('Tunjangan Pangan'),
+                    $slip->getNominal('Uang Makan'),
+                    $slip->getNominal('Uang Transport'),
+                    0,
+                    $slip->total_potongan,
+                    $slip->gaji_bersih,
+                ];
+
+                foreach ($data as $col => $value) {
+                    $cellAddr = Coordinate::stringFromColumnIndex($col + 1) . $row;
+                    $sheet->setCellValue($cellAddr, $value);
+
+                    if ($col >= 6) {
+                        $sheet->getStyle($cellAddr)->getNumberFormat()->setFormatCode('#,##0');
+                    }
+
+                    if ($row % 2 === 0) {
+                        $sheet->getStyle($cellAddr)->getFill()
+                            ->setFillType(Fill::FILL_SOLID)
+                            ->getStartColor()->setARGB('FFF8FAFC');
+                    }
+
+                    $sheet->getStyle($cellAddr)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                }
+                $row++;
+            }
+
+            // Row Total Pengeluaran
+            $sheet->setCellValue("A{$row}", "TOTAL PENGELUARAN");
+            $sheet->mergeCells("A{$row}:F{$row}");
+            $sheet->getStyle("A{$row}:F{$row}")->getFont()->setBold(true);
+            $sheet->getStyle("A{$row}:F{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+            $sheet->setCellValue("M{$row}", $totalPengeluaran);
+            $sheet->getStyle("M{$row}")->getNumberFormat()->setFormatCode('#,##0');
+            $sheet->getStyle("M{$row}")->getFont()->setBold(true);
+
+            $sheet->getStyle("A{$row}:M{$row}")->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFE2E8F0');
+        } else {
+            $sheet->setCellValue("A{$row}", "Tidak ada data slip gaji untuk kategori ini.");
+        }
+
+        foreach (range(1, count($headers)) as $col) {
+            $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+        }
+    }
+
+    /**
+     * Helper privat untuk mencocokkan periode penggajian berdasarkan bulan & tahun.
+     */
+    private function findPeriodeByBulanTahun($semuaPeriode, $bulan, $tahun)
+    {
+        if (!$bulan || !$tahun) return null;
+        \Carbon\Carbon::setLocale('id');
+        $namaBulanIndo = strtolower(\Carbon\Carbon::create(null, (int)$bulan)->translatedFormat('F'));
+
+        // Priority 1: Match nama_periode (misal "Juni 2026")
+        $matchName = $semuaPeriode->first(function($p) use ($tahun, $namaBulanIndo) {
+            $namaLow = strtolower($p->nama_periode);
+            return str_contains($namaLow, $namaBulanIndo) && str_contains($namaLow, (string)$tahun);
+        });
+        if ($matchName) return $matchName;
+
+        // Priority 2: Match tanggal_selesai (misal 25 Juni 2026 -> Periode Juni)
+        $matchSelesai = $semuaPeriode->first(function($p) use ($bulan, $tahun) {
+            return $p->tanggal_selesai && $p->tanggal_selesai->month == $bulan && $p->tanggal_selesai->year == $tahun;
+        });
+        if ($matchSelesai) return $matchSelesai;
+
+        // Priority 3: Fallback tanggal_mulai
+        return $semuaPeriode->first(function($p) use ($bulan, $tahun) {
+            return $p->tanggal_mulai && $p->tanggal_mulai->month == $bulan && $p->tanggal_mulai->year == $tahun;
+        });
     }
 
     public function approve(PeriodeGaji $periode)

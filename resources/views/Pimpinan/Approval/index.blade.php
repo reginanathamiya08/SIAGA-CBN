@@ -190,7 +190,7 @@
              x-transition:enter="transition ease-out duration-300"
              x-transition:enter-start="opacity-0 scale-95"
              x-transition:enter-end="opacity-100 scale-100"
-             class="fixed inset-0 z-[60] flex items-center justify-center p-4" x-cloak>
+             class="fixed inset-0 z-[3000] flex items-center justify-center p-4" x-cloak>
         
         <div class="absolute inset-0 bg-[#1E3A5F]/60 backdrop-blur-md" @click="detailModal = false"></div>
 

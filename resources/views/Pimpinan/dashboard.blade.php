@@ -39,7 +39,6 @@
         @endforeach
     @endif
 
-    <!-- Stat Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-50 flex items-center gap-4 group hover:shadow-md hover:-translate-y-1 transition-all duration-300">
             <div class="p-3 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-100 group-hover:scale-110 transition-transform">

@@ -95,8 +95,8 @@ class AbsensiControllerTest extends TestCase
         $mitra    = $this->buatMitraPusat();
         $karyawan = $this->buatKaryawanTetap($mitra);
 
-        // Waktu kerja: 08:00 - 17:00, absen di jam 08:00
-        Carbon::setTestNow(Carbon::today()->setTime(8, 0));
+        // Waktu kerja: 08:00 - 17:00, absen di jam 08:00 pada hari kerja (Selasa 18 Aug 2026)
+        Carbon::setTestNow(Carbon::parse('2026-08-18 08:00:00'));
 
         $response = $this->actingAs($karyawan)->post(
             route('karyawan.absensi.masuk'),
@@ -212,17 +212,18 @@ class AbsensiControllerTest extends TestCase
         $karyawan = $this->buatKaryawanTetap($mitra);
 
         // Buat absensi masuk jam 08:00
+        $workday = Carbon::parse('2026-08-18');
         $absensi = Absensi::create([
             'user_id'     => $karyawan->id,
             'mitra_id'    => $mitra->id,
-            'tanggal'     => Carbon::today(),
-            'waktu_masuk' => Carbon::today()->setTime(8, 0),
+            'tanggal'     => $workday,
+            'waktu_masuk' => $workday->copy()->setTime(8, 0),
             'status'      => 'hadir',
             'is_telat'    => false,
         ]);
 
         // Set waktu = 17:00 (jam pulang)
-        Carbon::setTestNow(Carbon::today()->setTime(17, 0));
+        Carbon::setTestNow($workday->copy()->setTime(17, 0));
 
         $response = $this->actingAs($karyawan)->post(
             route('karyawan.absensi.pulang'),
@@ -294,8 +295,8 @@ class AbsensiControllerTest extends TestCase
         $mitra    = $this->buatMitraPusat();
         $karyawan = $this->buatKaryawanTetap($mitra);
 
-        // Simulasi absen di siang hari jam 14:00 (lewat jam 12:00)
-        Carbon::setTestNow(Carbon::today()->setTime(14, 0));
+        // Simulasi absen di siang hari jam 14:00 (lewat jam 12:00) pada hari kerja
+        Carbon::setTestNow(Carbon::parse('2026-08-18 14:00:00'));
 
         $response = $this->actingAs($karyawan)->post(
             route('karyawan.absensi.masuk'),

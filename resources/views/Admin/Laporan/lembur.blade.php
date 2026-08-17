@@ -23,7 +23,7 @@
     </div>
 
     {{-- Kartu Ringkasan / Summary Stats --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
             <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
                 <i data-lucide="file-text" class="w-6 h-6"></i>
@@ -41,26 +41,6 @@
             <div>
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Disetujui</p>
                 <h3 class="text-xl font-black text-emerald-600 mt-0.5">{{ $ringkasan['total_disetujui'] }} <span class="text-xs font-normal text-slate-400">pengajuan</span></h3>
-            </div>
-        </div>
-
-        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold shrink-0">
-                <i data-lucide="clock" class="w-6 h-6"></i>
-            </div>
-            <div>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Jam Lembur</p>
-                <h3 class="text-xl font-black text-purple-600 mt-0.5">{{ number_format($ringkasan['total_jam_disetujui'], 1, ',', '.') }} <span class="text-xs font-normal text-slate-400">jam</span></h3>
-            </div>
-        </div>
-
-        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shrink-0">
-                <i data-lucide="coins" class="w-6 h-6"></i>
-            </div>
-            <div>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Est. Upah & Makan</p>
-                <h3 class="text-xl font-black text-amber-600 mt-0.5">Rp {{ number_format($ringkasan['total_nominal_lembur'], 0, ',', '.') }}</h3>
             </div>
         </div>
     </div>
@@ -142,7 +122,6 @@
                         <th class="px-4 py-3.5 text-center">Durasi</th>
                         <th class="px-4 py-3.5">Keperluan</th>
                         <th class="px-4 py-3.5 text-center">Status</th>
-                        <th class="px-4 py-3.5 text-right">Est. Upah & Makan</th>
                         <th class="px-4 py-3.5 text-center">Aksi</th>
                     </tr>
                 </thead>
@@ -184,13 +163,6 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3.5 text-right font-bold {{ $item->isDisetujui() ? 'text-emerald-700' : 'text-slate-400' }}">
-                                @if($item->isDisetujui())
-                                    Rp {{ number_format($item->hitungNominal(), 0, ',', '.') }}
-                                @else
-                                    -
-                                @endif
-                            </td>
                             <td class="px-4 py-3.5 text-center">
                                 <a href="{{ route('lembur.print', $item->id) }}" target="_blank"
                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 hover:bg-[#1E3A5F] hover:text-white text-slate-600 transition-colors"
@@ -201,7 +173,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="px-4 py-12 text-center">
+                            <td colspan="9" class="px-4 py-12 text-center">
                                 <div class="flex flex-col items-center justify-center text-slate-400 space-y-2">
                                     <i data-lucide="inbox" class="w-10 h-10 stroke-1"></i>
                                     <p class="font-bold text-sm text-slate-600">Tidak Ada Data Lembur</p>

@@ -112,12 +112,6 @@
                         <span class="absolute inset-y-0 right-3 flex items-center text-[9px] font-black text-gray-400 uppercase">Tanggal</span>
                     </div>
                 </div>
-
-                {{-- INFO SISTEM --}}
-                <div class="p-2 bg-blue-50/50 rounded-xl border border-blue-100 flex items-center gap-2">
-                    <i data-lucide="info" class="w-4 h-4 text-blue-600 shrink-0"></i>
-                    <p class="text-[9px] font-semibold text-blue-800 leading-tight">Klik ikon pensil ✏️ di baris mana saja untuk mengedit dan menyimpan nominalnya.</p>
-                </div>
             </div>
         </div>
 
@@ -294,7 +288,7 @@
         <div x-show="masterView === 'create'" 
              x-cloak 
              x-transition.fade
-             class="fixed inset-0 z-[2000] flex items-center justify-center bg-[#1E3A5F]/40 backdrop-blur-md p-4">
+             class="fixed inset-0 z-[3000] flex items-center justify-center bg-[#1E3A5F]/40 backdrop-blur-md p-4">
             <div class="bg-white rounded-[2.5rem] shadow-2xl p-8 w-full max-w-lg border border-gray-100 relative" @click.away="masterView = 'list'">
                 
                 {{-- Header Modal --}}
@@ -359,7 +353,7 @@
         <div x-show="masterView === 'edit'" 
              x-cloak 
              x-transition.fade
-             class="fixed inset-0 z-[2000] flex items-center justify-center bg-[#1E3A5F]/40 backdrop-blur-md p-4">
+             class="fixed inset-0 z-[3000] flex items-center justify-center bg-[#1E3A5F]/40 backdrop-blur-md p-4">
             <div class="bg-white rounded-[2.5rem] shadow-2xl p-8 w-full max-w-lg border border-gray-100 relative" @click.away="masterView = 'list'">
                 
                 <div class="flex items-center justify-between pb-4 border-b border-gray-100 mb-6">

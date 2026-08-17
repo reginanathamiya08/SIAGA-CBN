@@ -64,4 +64,33 @@ class KuotaPerizinan extends Model
     {
         return $this->sisa >= $hari;
     }
+
+    /**
+     * Hitung ulang dan sinkronkan terpakai & sisa berdasarkan pengajuan cuti resmi yang disetujui + hari Alfa.
+     */
+    public function syncWithApprovedLeaves(): self
+    {
+        $globalKuota = (int) Configuration::getValue('kuota_cuti_tahunan', 12);
+
+        $totalCuti = (int) DetailPerizinan::where('user_id', $this->user_id)
+            ->where('status_approval', 'disetujui')
+            ->whereHas('jenisPerizinan', fn($q) => $q->where('memotong_kuota', true))
+            ->whereYear('tanggal_mulai', $this->tahun)
+            ->sum('jumlah_hari');
+
+        $totalAlfa = (int) Absensi::where('user_id', $this->user_id)
+            ->where('status', 'alfa')
+            ->whereYear('tanggal', $this->tahun)
+            ->count();
+
+        $totalTerpakai = $totalCuti + $totalAlfa;
+
+        $this->update([
+            'kuota_total' => $globalKuota,
+            'terpakai'    => $totalTerpakai,
+            'sisa'        => max(0, $globalKuota - $totalTerpakai),
+        ]);
+
+        return $this;
+    }
 }

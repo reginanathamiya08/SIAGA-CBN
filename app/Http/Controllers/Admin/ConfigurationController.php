@@ -31,6 +31,14 @@ class ConfigurationController extends Controller
             }
         }
 
-        return back()->with('success', 'Konfigurasi sistem berhasil diperbarui.');
+        // Sinkronisasi otomatis seluruh data karyawan jika kuota cuti tahunan diubah oleh admin
+        if (isset($data['kuota_cuti_tahunan'])) {
+            $kuotaList = \App\Models\KuotaPerizinan::where('tahun', now()->year)->get();
+            foreach ($kuotaList as $k) {
+                $k->syncWithApprovedLeaves();
+            }
+        }
+
+        return back()->with('success', 'Konfigurasi sistem berhasil diperbarui dan disinkronkan ke seluruh data.');
     }
 }

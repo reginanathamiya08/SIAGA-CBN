@@ -44,6 +44,9 @@ class PerizinanController extends Controller
                 'sisa'        => $globalKuota,
             ]);
         } 
+        
+        // Auto-sync kuota perizinan berdasarkan pengajuan cuti resmi yang disetujui
+        $kuotaPerizinan->syncWithApprovedLeaves();
         // Ambil rincian pengajuan cuti resmi yang disetujui & memotong kuota
         $approvedLeaves = DetailPerizinan::where('user_id', $karyawan->id)
             ->where('status_approval', 'disetujui')
@@ -73,12 +76,23 @@ class PerizinanController extends Controller
                               ->where('tahun', now()->year)
                               ->first();
 
-        if ($kuotaPerizinan && $kuotaPerizinan->kuota_total != $globalKuota) {
-            $kuotaPerizinan->update([
+        if (!$kuotaPerizinan) {
+            $kuotaPerizinan = KuotaPerizinan::create([
+                'user_id'     => $karyawan->id,
+                'tahun'       => now()->year,
                 'kuota_total' => $globalKuota,
-                'sisa'        => $globalKuota - $kuotaPerizinan->terpakai
+                'terpakai'    => 0,
+                'sisa'        => $globalKuota,
             ]);
         }
+
+        if ($kuotaPerizinan->kuota_total != $globalKuota) {
+            $kuotaPerizinan->update([
+                'kuota_total' => $globalKuota,
+            ]);
+        }
+
+        $kuotaPerizinan->syncWithApprovedLeaves();
 
         $jenisPerizinan = JenisPerizinan::where('slug', '!=', 'dinas_luar')->get();
 
