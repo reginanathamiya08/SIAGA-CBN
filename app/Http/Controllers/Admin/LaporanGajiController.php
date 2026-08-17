@@ -41,7 +41,7 @@ class LaporanGajiController extends Controller
 
         $slipGaji = $query->get();
 
-        return view('Admin.Laporan.gaji', compact(
+        return view('admin.laporan.gaji', compact(
             'slipGaji',
             'semuaPeriode',
             'semuaMitra',

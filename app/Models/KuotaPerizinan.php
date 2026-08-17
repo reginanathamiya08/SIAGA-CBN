@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\HasCustomId;
+use App\Models\Configuration;
+use App\Models\DetailPerizinan;
+use App\Models\Absensi;
 
 class KuotaPerizinan extends Model
 {

@@ -1,5 +1,5 @@
 {{-- resources/views/Pimpinan/Monitoring/index.blade.php --}}
-@extends('Pimpinan.sidebar')
+@extends('pimpinan.sidebar')
 @section('title', 'Monitoring Kehadiran')
 
 @section('content')

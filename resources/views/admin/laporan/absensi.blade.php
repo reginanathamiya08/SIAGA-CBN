@@ -1,5 +1,5 @@
 {{-- resources/views/Admin/Laporan/absensi.blade.php --}}
-@extends('Admin.sidebar')
+@extends('admin.sidebar')
 
 @section('title', 'Laporan Absensi')
 

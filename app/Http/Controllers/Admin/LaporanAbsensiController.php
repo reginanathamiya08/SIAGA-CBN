@@ -92,7 +92,7 @@ class LaporanAbsensiController extends Controller
         // Total hari kerja dalam bulan tsb (Senin–Jumat)
         $totalHariKerja = $this->hitungHariKerja($bulan, $tahun);
 
-        return view('Admin.Laporan.absensi', compact(
+        return view('admin.laporan.absensi', compact(
             'absensiList',
             'rekap',
             'semuaMitra',

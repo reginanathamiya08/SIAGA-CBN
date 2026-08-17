@@ -84,7 +84,7 @@ class LaporanLemburController extends Controller
             'total_nominal_lembur' => $lemburList->where('status_approval', 'disetujui')->sum(fn($item) => $item->hitungNominal()),
         ];
 
-        return view('Admin.Laporan.lembur', compact(
+        return view('admin.laporan.lembur', compact(
             'lemburList',
             'ringkasan',
             'semuaKaryawan',

@@ -102,8 +102,8 @@ class MonitoringGajiController extends Controller
         })->values();
 
         if ($request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
-            $htmlBanner = view('Pimpinan.MonitoringGaji._status_banner', compact('selectedPeriode'))->render();
-            $htmlTable  = view('Pimpinan.MonitoringGaji._table_content', compact('slipTetap', 'slipKontrak', 'selectedPeriode', 'periodeId'))->render();
+            $htmlBanner = view('pimpinan.monitoring-gaji._status_banner', compact('selectedPeriode'))->render();
+            $htmlTable  = view('pimpinan.monitoring-gaji._table_content', compact('slipTetap', 'slipKontrak', 'selectedPeriode', 'periodeId'))->render();
 
             return response()->json([
                 'success'          => true,
@@ -117,7 +117,7 @@ class MonitoringGajiController extends Controller
             ]);
         }
 
-        return view('Pimpinan.MonitoringGaji.index', compact(
+        return view('pimpinan.monitoring-gaji.index', compact(
             'slipTetap',
             'slipKontrak',
             'semuaPeriode',

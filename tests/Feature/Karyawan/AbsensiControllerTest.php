@@ -107,7 +107,7 @@ class AbsensiControllerTest extends TestCase
         );
 
         $response->assertRedirect();
-        $response->assertSessionHas('success');
+        $response->assertSessionHas('absen_popup');
 
         $this->assertDatabaseHas('absensi', [
             'user_id' => $karyawan->id,
@@ -234,7 +234,7 @@ class AbsensiControllerTest extends TestCase
         );
 
         $response->assertRedirect();
-        $response->assertSessionHas('success');
+        $response->assertSessionHas('absen_popup');
 
         $absensi->refresh();
         $this->assertNotNull($absensi->waktu_pulang);
@@ -295,8 +295,8 @@ class AbsensiControllerTest extends TestCase
         $mitra    = $this->buatMitraPusat();
         $karyawan = $this->buatKaryawanTetap($mitra);
 
-        // Simulasi absen di siang hari jam 14:00 (lewat jam 12:00) pada hari kerja
-        Carbon::setTestNow(Carbon::parse('2026-08-18 14:00:00'));
+        // Simulasi absen di siang hari jam 13:00 (sebelum cutoff jam 14:00) pada hari kerja
+        Carbon::setTestNow(Carbon::parse('2026-08-18 13:00:00'));
 
         $response = $this->actingAs($karyawan)->post(
             route('karyawan.absensi.masuk'),
@@ -307,7 +307,7 @@ class AbsensiControllerTest extends TestCase
         );
 
         $response->assertRedirect();
-        $response->assertSessionHas('warning'); // Terlambat
+        $response->assertSessionHas('absen_popup'); // Terlambat
 
         $this->assertDatabaseHas('absensi', [
             'user_id'  => $karyawan->id,

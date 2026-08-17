@@ -1,5 +1,5 @@
 {{-- resources/views/Pimpinan/Monitoring/per-mitra.blade.php --}}
-@extends('Pimpinan.sidebar')
+@extends('pimpinan.sidebar')
 
 @section('title', 'Monitoring Per Mitra')
 

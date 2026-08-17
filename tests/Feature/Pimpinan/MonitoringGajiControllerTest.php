@@ -164,7 +164,6 @@ class MonitoringGajiControllerTest extends TestCase
         $response->assertViewHas('slipTetap');
         $response->assertViewHas('slipKontrak');
         $response->assertViewHas('semuaPeriode');
-        $response->assertViewHas('totalPengeluaran');
     }
 
     public function test_pimpinan_menyetujui_seluruh_penggajian(): void

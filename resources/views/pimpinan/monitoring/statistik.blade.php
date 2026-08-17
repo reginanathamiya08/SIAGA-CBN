@@ -1,4 +1,4 @@
-@extends('Pimpinan.sidebar')
+@extends('pimpinan.sidebar')
 @section('title', 'Statistik Ketidakhadiran')
 
 @section('content')

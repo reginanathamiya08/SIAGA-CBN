@@ -1,5 +1,5 @@
 {{-- resources/views/Pimpinan/Monitoring/detail.blade.php --}}
-@extends('Pimpinan.sidebar')
+@extends('pimpinan.sidebar')
 @section('title', 'Detail Absensi — ' . $karyawan->nama)
 
 @section('content')

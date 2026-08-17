@@ -1,5 +1,5 @@
 {{-- resources/views/Admin/Laporan/gaji.blade.php --}}
-@extends('Admin.sidebar')
+@extends('admin.sidebar')
 
 @section('title', 'Laporan Gaji')
 

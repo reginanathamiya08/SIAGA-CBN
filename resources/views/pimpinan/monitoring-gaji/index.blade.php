@@ -25,7 +25,7 @@
 
     <!-- Status Banner Area -->
     <div id="status-banner-container">
-        @include('Pimpinan.MonitoringGaji._status_banner')
+        @include('pimpinan.monitoring-gaji._status_banner')
     </div>
 
     <!-- Tab Card Gaji (dengan Filter Terintegrasi) -->
@@ -124,7 +124,7 @@
 
         <!-- Table Content Container (Updated via AJAX) -->
         <div id="table-content-container" class="relative">
-            @include('Pimpinan.MonitoringGaji._table_content')
+            @include('pimpinan.monitoring-gaji._table_content')
         </div>
 
     </div>{{-- /Tab Card Gaji --}}

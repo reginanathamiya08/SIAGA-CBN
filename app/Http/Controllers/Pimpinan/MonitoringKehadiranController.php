@@ -183,7 +183,7 @@ class MonitoringKehadiranController extends Controller
             ->orderByRaw('COALESCE(mitra_induk_id, id), is_cabang ASC, nama_mitra ASC')
             ->get();
 
-        return view('Pimpinan.Monitoring.index', compact(
+        return view('pimpinan.monitoring.index', compact(
             'today', 'totalKaryawan', 'hadirCount', 'telatCount',
             'izinCount', 'alfaCount', 'belumHadir', 'persenHadir',
             'pieData', 'absensiTetap', 'absensiKontrak', 'semuaMitra',
@@ -267,7 +267,7 @@ class MonitoringKehadiranController extends Controller
             ->count();
         $countSemua = $countTetap + $countKontrak;
 
-        return view('Pimpinan.Monitoring.statistik', compact(
+        return view('pimpinan.monitoring.statistik', compact(
             'dari', 'sampai', 'trenPerHari', 'top10', 'rekapTabel',
             'totalHariKerja', 'semuaMitra', 'semuaKaryawan',
             'mitraId', 'divisi', 'jenisKaryawan', 'karyawanId',
@@ -314,7 +314,7 @@ class MonitoringKehadiranController extends Controller
         $kalender = $riwayat->keyBy(fn($a) => $a->tanggal->format('Y-m-d'))
             ->map(fn($a) => $this->warnaBadgeStatus($a));
 
-        return view('Pimpinan.Monitoring.detail', compact(
+        return view('pimpinan.monitoring.detail', compact(
             'karyawan', 'riwayat', 'rekap', 'kuotaCuti',
             'kalender', 'dari', 'sampai', 'statusFilter',
         ));
@@ -395,7 +395,7 @@ class MonitoringKehadiranController extends Controller
         }
 
         $semuaMitra = Mitra::orderByRaw('COALESCE(mitra_induk_id, id), is_cabang ASC, nama_mitra ASC')->get();
-        return view('Pimpinan.Monitoring.per-mitra', compact(
+        return view('pimpinan.monitoring.per-mitra', compact(
             'semuaMitraInduk', 'dataMitra', 'karyawanMitra',
             'mitraId', 'bulan', 'tahun', 'totalHariKerja',
             'semuaMitra',

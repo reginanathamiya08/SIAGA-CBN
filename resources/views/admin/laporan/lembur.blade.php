@@ -1,5 +1,5 @@
 {{-- resources/views/Admin/Laporan/lembur.blade.php --}}
-@extends('Admin.sidebar')
+@extends('admin.sidebar')
 
 @section('title', 'Rekap Lembur Karyawan')
 
