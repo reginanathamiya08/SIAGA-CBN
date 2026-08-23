@@ -198,7 +198,7 @@ class PerizinanController extends Controller
                 'Permintaan Persetujuan Cuti 📋',
                 "Rekan kerja Anda, {$karyawan->nama}, meminta persetujuan (diketahui oleh) Anda untuk cuti tanggal {$mulai->format('d M Y')} s/d {$selesai->format('d M Y')}. Silakan buka menu Persetujuan Rekan.",
                 'info',
-                route('karyawan.perizinan.backup.index')
+                route('karyawan.perizinan.backup.index', [], false)
             );
 
             return redirect()
@@ -214,7 +214,7 @@ class PerizinanController extends Controller
                     'Persetujuan Izin/Cuti Baru 📋',
                     "Karyawan {$karyawan->nama} mengajukan {$jenis->nama_jenis} mulai tanggal {$mulai->format('d/m/Y')} s/d {$selesai->format('d/m/Y')}.",
                     'warning',
-                    route('pimpinan.approval.index')
+                    route('pimpinan.approval.index', [], false)
                 );
             }
         }
@@ -316,7 +316,7 @@ class PerizinanController extends Controller
             'Persetujuan Rekan Disetujui 🤝',
             "Rekan kerja Anda, {$karyawan->nama}, telah menyetujui pengajuan cuti Anda. Pengajuan cuti kini diteruskan ke Pimpinan.",
             'success',
-            route('karyawan.perizinan.show', $perizinan->id)
+            route('karyawan.perizinan.show', $perizinan->id, false)
         );
 
         // Notifikasi ke Pimpinan
@@ -327,7 +327,7 @@ class PerizinanController extends Controller
                 'Persetujuan Cuti Baru 📋',
                 "Pengajuan cuti Karyawan Tetap {$perizinan->karyawan->nama} telah disetujui oleh rekan kerja ({$karyawan->nama}) dan memerlukan persetujuan Anda.",
                 'warning',
-                route('pimpinan.approval.index')
+                route('pimpinan.approval.index', [], false)
             );
         }
 
@@ -363,7 +363,7 @@ class PerizinanController extends Controller
             'Persetujuan Rekan Ditolak ❌',
             "Rekan kerja Anda, {$karyawan->nama}, menolak menyetujui pengajuan cuti Anda. Pengajuan Anda otomatis ditolak.",
             'danger',
-            route('karyawan.perizinan.show', $perizinan->id)
+            route('karyawan.perizinan.show', $perizinan->id, false)
         );
 
         return redirect()
@@ -432,7 +432,7 @@ class PerizinanController extends Controller
                     'Upload Form Mitra Cuti Kontrak 📋',
                     "Karyawan Kontrak {$karyawan->nama} telah mengunggah Form Mitra untuk pengajuan cutinya. Silakan periksa dan setujui.",
                     'warning',
-                    route('pimpinan.approval.index')
+                    route('pimpinan.approval.index', [], false)
                 );
             }
         }
@@ -510,7 +510,7 @@ class PerizinanController extends Controller
                 'Pengajuan Dinas Luar Kota Baru 📍',
                 "Karyawan {$karyawan->nama} mengajukan Dinas Luar Kota mulai {$mulai->format('d/m/Y')} s/d {$selesai->format('d/m/Y')}.",
                 'warning',
-                route('pimpinan.approval.index')
+                route('pimpinan.approval.index', [], false)
             );
         }
 

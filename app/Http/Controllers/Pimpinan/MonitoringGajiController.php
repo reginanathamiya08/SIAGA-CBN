@@ -352,7 +352,7 @@ class MonitoringGajiController extends Controller
                     'Slip Gaji Terbit! 💰',
                     "Slip gaji Anda untuk periode {$periode->nama_periode} telah diterbitkan. Silakan periksa di menu Slip Gaji.",
                     'success',
-                    route('karyawan.slip-gaji.index')
+                    route('karyawan.slip-gaji.index', [], false)
                 );
             }
 
@@ -366,7 +366,7 @@ class MonitoringGajiController extends Controller
                     'Penggajian Disetujui Pimpinan ✅',
                     "Penggajian periode {$periode->nama_periode} telah disetujui oleh Pimpinan dan slip gaji telah diterbitkan.",
                     'success',
-                    route('admin.penggajian.show', $periode->id)
+                    route('admin.penggajian.show', $periode->id, false)
                 );
             }
 
@@ -411,7 +411,7 @@ class MonitoringGajiController extends Controller
                     'Penggajian Ditolak Pimpinan ❌',
                     "Penggajian periode {$periode->nama_periode} ditolak oleh Pimpinan dan dikembalikan ke Draft.",
                     'danger',
-                    route('admin.penggajian.show', $periode->id)
+                    route('admin.penggajian.show', $periode->id, false)
                 );
             }
 
@@ -470,7 +470,7 @@ class MonitoringGajiController extends Controller
                         'Penggajian Perlu Revisi ⚠️',
                         "Penggajian periode {$periode->nama_periode} dikembalikan ke Draft karena beberapa slip ditolak oleh Pimpinan.",
                         'danger',
-                        route('admin.penggajian.show', $periode->id)
+                        route('admin.penggajian.show', $periode->id, false)
                     );
                 }
 
@@ -496,7 +496,7 @@ class MonitoringGajiController extends Controller
                         'Slip Gaji Terbit! 💰',
                         "Slip gaji Anda untuk periode {$periode->nama_periode} telah diterbitkan. Silakan periksa di menu Slip Gaji.",
                         'success',
-                        route('karyawan.slip-gaji.index')
+                        route('karyawan.slip-gaji.index', [], false)
                     );
                 }
 
@@ -510,7 +510,7 @@ class MonitoringGajiController extends Controller
                         'Penggajian Disetujui Pimpinan ✅',
                         "Penggajian periode {$periode->nama_periode} telah disetujui oleh Pimpinan dan slip gaji telah diterbitkan.",
                         'success',
-                        route('admin.penggajian.show', $periode->id)
+                        route('admin.penggajian.show', $periode->id, false)
                     );
                 }
 

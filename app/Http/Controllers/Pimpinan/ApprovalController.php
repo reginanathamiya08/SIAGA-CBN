@@ -122,7 +122,7 @@ class ApprovalController extends Controller
             'Izin Disetujui ✅',
             "Pengajuan {$perizinan->labelJenis()} Anda pada tanggal {$perizinan->tanggal_mulai->format('d M Y')} telah disetujui.",
             'success',
-            route('karyawan.perizinan.show', $perizinan->id)
+            route('karyawan.perizinan.show', $perizinan->id, false)
         );
 
         return back()->with('success', "Pengajuan {$perizinan->labelJenis()} {$perizinan->karyawan->nama} berhasil disetujui.");
@@ -150,7 +150,7 @@ class ApprovalController extends Controller
             'Izin Ditolak ❌',
             "Pengajuan {$perizinan->labelJenis()} Anda ditolak. Alasan: {$request->alasan_tolak}",
             'danger',
-            route('karyawan.perizinan.show', $perizinan->id)
+            route('karyawan.perizinan.show', $perizinan->id, false)
         );
 
         return back()->with('success', "Pengajuan {$perizinan->labelJenis()} {$perizinan->karyawan->nama} telah ditolak.");
@@ -178,7 +178,7 @@ class ApprovalController extends Controller
             'Lembur Disetujui ✅',
             "Pengajuan lembur Anda pada tanggal {$lembur->tanggal->format('d M Y')} telah disetujui.",
             'success',
-            route('karyawan.lembur.index')
+            route('karyawan.lembur.index', [], false)
         );
 
         return back()->with('success', "Pengajuan lembur {$lembur->karyawan->nama} berhasil disetujui.");
@@ -206,7 +206,7 @@ class ApprovalController extends Controller
             'Lembur Ditolak ❌',
             "Pengajuan lembur Anda ditolak. Alasan: {$request->alasan_tolak}",
             'danger',
-            route('karyawan.lembur.index')
+            route('karyawan.lembur.index', [], false)
         );
 
         return back()->with('success', "Pengajuan lembur {$lembur->karyawan->nama} telah ditolak.");

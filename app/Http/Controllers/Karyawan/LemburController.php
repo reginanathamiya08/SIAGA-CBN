@@ -94,7 +94,7 @@ class LemburController extends Controller
                 'Persetujuan Lembur Baru ⏱️',
                 "Karyawan {$karyawan->nama} mengajukan lembur pada tanggal " . date('d/m/Y', strtotime($data['tanggal'])) . " ({$totalJam} jam).",
                 'warning',
-                route('pimpinan.approval.index')
+                route('pimpinan.approval.index', [], false)
             );
         }
 

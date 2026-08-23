@@ -17,8 +17,8 @@ Artisan::command('payroll:reminder', function () {
     $periode = \App\Models\PeriodeGaji::where('tanggal_mulai', $currentMonthStart)->first();
     
     $link = $periode 
-        ? route('admin.penggajian.show', $periode->id)
-        : route('admin.penggajian.index');
+        ? route('admin.penggajian.show', $periode->id, false)
+        : route('admin.penggajian.index', [], false);
 
     $admins = \App\Models\User::whereHas('role', function ($q) {
         $q->where('slug', 'admin');

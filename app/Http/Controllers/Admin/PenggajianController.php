@@ -165,7 +165,7 @@ class PenggajianController extends Controller
                     'Persetujuan Gaji Diperlukan 💰',
                     "Penggajian periode {$namaPeriode} telah diajukan kembali untuk persetujuan Anda.",
                     'warning',
-                    route('pimpinan.monitoring-gaji.index', ['periode_id' => $periodeGaji->id])
+                    route('pimpinan.monitoring-gaji.index', ['periode_id' => $periodeGaji->id], false)
                 );
             }
 

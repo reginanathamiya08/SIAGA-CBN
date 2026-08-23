@@ -206,7 +206,7 @@
                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group
                           {{ request()->routeIs('pimpinan.admin.*') ? 'bg-[#1E3A5F] text-white shadow-md shadow-blue-900/10' : 'text-gray-500 hover:bg-gray-50 hover:text-[#1E3A5F]' }}">
                     <i data-lucide="users" class="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform"></i>
-                    <span x-show="sidebarOpen" x-transition.opacity class="text-xs font-bold">Kelola Akun Admin</span>
+                    <span x-show="sidebarOpen" x-transition.opacity class="text-xs font-bold">Kelola Akun</span>
                 </a>
             </div>
 

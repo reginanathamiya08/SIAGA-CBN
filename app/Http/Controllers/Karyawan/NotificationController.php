@@ -14,15 +14,22 @@ class NotificationController extends Controller
      */
     public function read($id)
     {
-        $karyawan = Auth::user()->karyawan;
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
         $notif = Notification::where('id', $id)
-                             ->where('user_id', $karyawan->id)
+                             ->where('user_id', $user->id)
                              ->firstOrFail();
 
         $notif->update(['is_read' => true]);
 
         if ($notif->link) {
-            return redirect($notif->link);
+            $link = Notification::normalizeInternalLink($notif->link);
+            if (Notification::isSafeRedirectLink($link)) {
+                return redirect($link);
+            }
         }
 
         return back();
@@ -33,10 +40,12 @@ class NotificationController extends Controller
      */
     public function markAllRead()
     {
-        $karyawan = Auth::user()->karyawan;
-        Notification::where('user_id', $karyawan->id)
-                    ->where('is_read', false)
-                    ->update(['is_read' => true]);
+        $user = Auth::user();
+        if ($user) {
+            Notification::where('user_id', $user->id)
+                        ->where('is_read', false)
+                        ->update(['is_read' => true]);
+        }
 
         return back()->with('success', 'Semua notifikasi ditandai telah dibaca.');
     }
