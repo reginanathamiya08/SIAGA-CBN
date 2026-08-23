@@ -1,12 +1,12 @@
 @extends('karyawan.sidebar')
-@section('title', 'Delegasi Cuti')
+@section('title', 'Persetujuan Rekan')
 
 @section('content')
 
 <header class="flex justify-between items-center mb-6">
     <div>
-        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight">Delegasi & Backup Cuti</h1>
-        <p class="text-gray-500 mt-1 text-sm">Konfirmasi kesediaan Anda untuk mem-backup tugas rekan kerja yang sedang cuti</p>
+        <h1 class="text-2xl font-black text-[#1E3A5F] tracking-tight">Persetujuan Rekan Kerja</h1>
+        <p class="text-gray-500 mt-1 text-sm">Konfirmasi persetujuan Anda atas pengajuan cuti rekan kerja</p>
     </div>
 </header>
 
@@ -131,7 +131,7 @@
             e.preventDefault();
             Swal.fire({
                 title: 'Apakah Anda yakin?',
-                text: "Anda akan menolak menjadi backup cuti untuk rekan kerja Anda.",
+                text: "Anda akan menolak menyetujui pengajuan cuti rekan kerja Anda.",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',

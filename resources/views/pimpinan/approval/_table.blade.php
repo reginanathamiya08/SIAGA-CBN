@@ -13,7 +13,7 @@
         <tbody class="divide-y divide-gray-50">
             @forelse ($items as $item)
                 <tr class="hover:bg-gray-50/50 transition-all group cursor-pointer"
-                    @click="openDetail({{ json_encode($type === 'perizinan' ? $item->load(['karyawan', 'jenisPerizinan', 'rekanKerja']) : $item->load('karyawan')) }}, '{{ $type }}')">
+                    @click="openDetail({{ json_encode($type === 'perizinan' ? $item->load(['karyawan.role', 'jenisPerizinan', 'rekanKerja']) : $item->load('karyawan.role')) }}, '{{ $type }}')">
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400 font-black text-xs shadow-inner group-hover:bg-blue-100 group-hover:text-blue-600 transition-all">
@@ -63,12 +63,12 @@
                                         <i data-lucide="check" class="w-4 h-4"></i>
                                     </button>
                                 </form>
-                                <button @click="openDetail({{ json_encode($type === 'perizinan' ? $item->load(['karyawan', 'jenisPerizinan', 'rekanKerja']) : $item->load('karyawan')) }}, '{{ $type }}')" 
+                                <button @click="openDetail({{ json_encode($type === 'perizinan' ? $item->load(['karyawan.role', 'jenisPerizinan', 'rekanKerja']) : $item->load('karyawan.role')) }}, '{{ $type }}')" 
                                         class="p-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm">
                                     <i data-lucide="x" class="w-4 h-4"></i>
                                 </button>
                             @else
-                                <button @click="openDetail({{ json_encode($type === 'perizinan' ? $item->load(['karyawan', 'jenisPerizinan', 'rekanKerja']) : $item->load('karyawan')) }}, '{{ $type }}')"
+                                <button @click="openDetail({{ json_encode($type === 'perizinan' ? $item->load(['karyawan.role', 'jenisPerizinan', 'rekanKerja']) : $item->load('karyawan.role')) }}, '{{ $type }}')"
                                         class="p-2 rounded-xl bg-gray-50 text-gray-400 hover:bg-[#1E3A5F] hover:text-white transition-all shadow-sm">
                                     <i data-lucide="eye" class="w-4 h-4"></i>
                                 </button>

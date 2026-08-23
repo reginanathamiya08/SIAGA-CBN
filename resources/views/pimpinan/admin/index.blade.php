@@ -3,7 +3,15 @@
 @section('title', 'Manajemen Pengguna')
 
 @section('content')
-<div class="space-y-6" x-data="{ openAddModal: {{ $errors->any() ? 'true' : 'false' }} }">
+<div class="space-y-6" x-data="{ 
+    openAddModal: {{ $errors->any() ? 'true' : 'false' }},
+    openEditModal: false,
+    editUser: { id: '', nama: '', jabatan: '', divisi: '', no_hp: '', nip: '', email: '' },
+    initEdit(user) {
+        this.editUser = JSON.parse(JSON.stringify(user));
+        this.openEditModal = true;
+    }
+}">
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -142,6 +150,12 @@
                         </td>
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end gap-2">
+                                <button type="button" 
+                                        @click="initEdit({{ json_encode($user) }})"
+                                        class="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                        title="Edit Profil / Nama">
+                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                </button>
                                 @if($user->id !== auth()->id())
                                     <form action="{{ route('pimpinan.admin.toggle', $user->id) }}" method="POST" 
                                           onsubmit="return confirm('Apakah Anda yakin ingin mengubah status akun ini?')">
@@ -152,8 +166,6 @@
                                             <i data-lucide="{{ $user->is_active ? 'user-minus' : 'user-check' }}" class="w-4 h-4"></i>
                                         </button>
                                     </form>
-                                @else
-                                    <span class="text-[9px] font-black text-blue-400">Akun Anda</span>
                                 @endif
                             </div>
                         </td>
@@ -304,6 +316,97 @@
                             </p>
                         </form>
                     </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Modal Edit -->
+    <template x-teleport="body">
+        <div x-show="openEditModal" 
+             class="fixed inset-0 z-[3000] overflow-y-auto"
+             style="display: none;"
+             x-cloak>
+            
+            <div class="fixed inset-0 bg-[#1E3A5F]/60 backdrop-blur-md transition-opacity" @click="openEditModal = false"></div>
+
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div class="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl p-8 border border-white/20 z-10 transition-all">
+                    
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-[10px] font-black uppercase tracking-wider block w-max mb-2">Edit Pengguna</span>
+                            <h3 class="text-xl font-black text-[#1E3A5F]">Ubah Data Pengguna</h3>
+                            <p class="text-xs font-semibold text-gray-400 mt-0.5" x-text="'NIP: ' + editUser.nip"></p>
+                        </div>
+                        <button @click="openEditModal = false" class="text-gray-400 hover:text-gray-600 p-2 rounded-xl bg-gray-50">
+                            <i data-lucide="x" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <form :action="'{{ url('pimpinan/admin') }}/' + editUser.id" method="POST" class="space-y-4">
+                        @csrf
+                        @method('PUT')
+
+                        <!-- Username / NIP & Email Login (Readonly/Terkunci) -->
+                        <div class="grid grid-cols-2 gap-4 p-3.5 bg-gray-50 border border-gray-100 rounded-2xl">
+                            <div>
+                                <label class="block text-[9px] font-black text-gray-400 uppercase tracking-wider mb-1">Username / NIP 🔒</label>
+                                <p class="text-xs font-black text-[#1E3A5F]" x-text="editUser.nip || '-'"></p>
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-black text-gray-400 uppercase tracking-wider mb-1">Email Login 🔒</label>
+                                <p class="text-xs font-black text-emerald-700 truncate" x-text="editUser.email || '-'"></p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-400 mb-1.5 ml-1 uppercase tracking-wider">Nama Lengkap <span class="text-rose-500">*</span></label>
+                            <input type="text" name="nama" x-model="editUser.nama" required
+                                   class="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-[#1E3A5F] transition-all text-sm font-bold text-gray-800"
+                                   placeholder="Contoh: H. IRMED, SE.,MM">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] font-black text-gray-400 mb-1.5 ml-1 uppercase tracking-wider">Jabatan <span class="text-rose-500">*</span></label>
+                                <input type="text" name="jabatan" x-model="editUser.jabatan" required
+                                       class="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-[#1E3A5F] transition-all text-sm font-bold text-gray-800"
+                                       placeholder="Contoh: Direktur Utama">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-gray-400 mb-1.5 ml-1 uppercase tracking-wider">Divisi</label>
+                                <input type="text" name="divisi" x-model="editUser.divisi"
+                                       class="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-[#1E3A5F] transition-all text-sm font-bold text-gray-800"
+                                       placeholder="Contoh: Manajemen">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-400 mb-1.5 ml-1 uppercase tracking-wider">No. HP / WhatsApp</label>
+                            <input type="text" name="no_hp" x-model="editUser.no_hp"
+                                   class="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-[#1E3A5F] transition-all text-sm font-bold text-gray-800"
+                                   placeholder="08xxxxxxxxxx">
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-400 mb-1.5 ml-1 uppercase tracking-wider">Ganti Password (Opsional)</label>
+                            <input type="password" name="password" autocomplete="new-password"
+                                   class="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-[#1E3A5F] transition-all text-sm font-bold text-gray-800"
+                                   placeholder="Biarkan kosong jika tidak diubah">
+                        </div>
+
+                        <div class="pt-4 flex gap-3">
+                            <button type="button" @click="openEditModal = false"
+                                    class="flex-1 px-5 py-3.5 bg-gray-100 text-gray-500 rounded-2xl font-black text-xs hover:bg-gray-200 transition-all">
+                                Batal
+                            </button>
+                            <button type="submit"
+                                    class="flex-1 px-5 py-3.5 bg-[#1E3A5F] text-white rounded-2xl font-black text-xs hover:bg-blue-900 transition-all shadow-xl shadow-blue-900/20">
+                                Simpan Perubahan
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

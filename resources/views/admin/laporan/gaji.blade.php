@@ -31,22 +31,31 @@
     {{-- Filter Card --}}
     <div class="bg-white rounded-b-2xl rounded-tr-2xl shadow-sm border border-slate-100 p-5">
         <form method="GET" action="{{ route('admin.laporan.gaji.index') }}"
-              class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
 
             <input type="hidden" name="jenis_karyawan_id" value="{{ $jenisKaryawan }}">
 
-            {{-- Periode --}}
+            {{-- Bulan --}}
             <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Periode Gaji</label>
-                <select name="periode_id"
+                <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Bulan</label>
+                <select name="bulan"
                         class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    <option value="">Semua Periode</option>
-                    @foreach($semuaPeriode as $p)
-                        <option value="{{ $p->id }}" @selected($p->id == $periodeId)>
-                            {{ $p->nama_periode }}
+                    @foreach(range(1, 12) as $m)
+                        <option value="{{ $m }}" @selected($m == $bulan)>
+                            {{ \Carbon\Carbon::create(null, $m)->translatedFormat('F') }}
                         </option>
                     @endforeach
                 </select>
+            </div>
+
+            {{-- Tahun --}}
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Tahun</label>
+                <input type="text"
+                       name="tahun"
+                       value="{{ $tahun }}"
+                       placeholder="Contoh: 2026"
+                       class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
             </div>
 
             {{-- Mitra (Khusus Karyawan Kontrak) --}}
@@ -81,7 +90,7 @@
             {{-- Tombol Export --}}
             @if($slipGaji->count() > 0)
             <div>
-                <a href="{{ route('admin.laporan.gaji.export', ['periode_id' => $periodeId, 'mitra_id' => $mitraId, 'jenis_karyawan_id' => $jenisKaryawan]) }}"
+                <a href="{{ route('admin.laporan.gaji.export', ['bulan' => $bulan, 'tahun' => $tahun, 'mitra_id' => $mitraId, 'jenis_karyawan_id' => $jenisKaryawan]) }}"
                    target="_blank"
                    class="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition shadow-sm shadow-emerald-200">
                     <i data-lucide="download" class="w-4 h-4"></i>
@@ -100,8 +109,9 @@
                 <thead class="sticky top-0 z-10 bg-slate-50 border-b border-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wider shadow-sm">
                     <tr>
                         <th class="px-6 py-4 text-left">No.</th>
-                        <th class="px-6 py-4 text-left">NIK / Nama</th>
+                        <th class="px-6 py-4 text-left">NIK / Nama / Email</th>
                         <th class="px-6 py-4 text-left">Jabatan / Mitra</th>
+                        <th class="px-6 py-4 text-left">Periode</th>
                         <th class="px-3 py-4 text-center">Hdr</th>
                         <th class="px-3 py-4 text-center">Tlt</th>
                         <th class="px-3 py-4 text-center">Izn</th>
@@ -119,13 +129,24 @@
                         <td class="px-6 py-4 text-slate-400">{{ $i + 1 }}</td>
                         <td class="px-6 py-4">
                             <p class="font-black text-slate-800">{{ $slip->karyawan?->nama ?? '-' }}</p>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ $slip->karyawan?->user?->nip ?? '-' }}</p>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ $slip->karyawan?->nip ?? '-' }}</p>
+                            @if($slip->karyawan?->email)
+                                <p class="text-xs text-slate-500 font-normal mt-0.5 flex items-center gap-1">
+                                    <i data-lucide="mail" class="w-3 h-3 text-slate-400"></i>
+                                    <span>{{ $slip->karyawan->email }}</span>
+                                </p>
+                            @endif
                         </td>
                         <td class="px-6 py-4">
                             <p class="text-slate-700 font-medium">{{ $slip->karyawan?->jabatan ?? '-' }}</p>
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                {{ $slip->karyawan?->penempatanAktif?->mitra?->nama_mitra ?? ($slip->karyawan?->isTetap() ? 'Kantor CBN' : '-') }}
+                                {{ $slip->karyawan?->isTetap() ? 'PT. Citra Bangun Nagari (Pusat)' : ($slip->karyawan?->penempatanAktif?->mitra?->nama_mitra ?? '-') }}
                             </p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                {{ $slip->periodeGaji?->nama_periode ?? '-' }}
+                            </span>
                         </td>
                         <td class="px-3 py-4 text-center font-bold text-emerald-600">{{ $slip->total_hadir }}</td>
                         <td class="px-3 py-4 text-center font-bold text-amber-500">{{ $slip->total_telat }}</td>
@@ -151,7 +172,7 @@
                 </tbody>
                 <tfoot class="sticky bottom-0 z-10 bg-slate-50 shadow-sm border-t border-slate-200">
                     <tr class="font-black text-slate-800">
-                        <td colspan="11" class="px-6 py-4 text-right uppercase tracking-widest text-xs">Total Keseluruhan</td>
+                        <td colspan="12" class="px-6 py-4 text-right uppercase tracking-widest text-xs">Total Keseluruhan</td>
                         <td class="px-6 py-4 text-right font-mono text-blue-600">
                             {{ number_format($slipGaji->sum('gaji_bersih'), 0, ',', '.') }}
                         </td>

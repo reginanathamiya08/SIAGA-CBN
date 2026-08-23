@@ -418,7 +418,7 @@ class MonitoringKehadiranController extends Controller
 
         $query = Absensi::with(['karyawan', 'mitra'])
             ->whereBetween('tanggal', [$dari->toDateString(), $sampai->toDateString()])
-            ->orderBy('tanggal')->orderBy('user_id');
+            ->orderBy('tanggal', 'desc')->orderBy('user_id');
 
         if ($mitraId)    $query->where('mitra_id', $mitraId);
         if ($karyawanId) $query->where('user_id', $karyawanId);

@@ -105,8 +105,7 @@
 
     <div class="flex items-center justify-between">
         <p class="text-sm text-slate-500">
-            Menampilkan <span class="font-bold text-slate-700">{{ $absensiList->count() }}</span> record —
-            Total hari kerja bulan ini: <span class="font-bold text-blue-600">{{ $totalHariKerja }} hari</span>
+            Menampilkan <span class="font-bold text-slate-700">{{ $absensiList->count() }}</span> record
         </p>
 
         {{-- Tombol Export Excel --}}

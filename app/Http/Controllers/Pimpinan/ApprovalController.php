@@ -33,14 +33,14 @@ class ApprovalController extends Controller
         };
  
         // Perizinan
-        $perizinan = DetailPerizinan::with(['karyawan', 'jenisPerizinan'])
+        $perizinan = DetailPerizinan::with(['karyawan.role', 'jenisPerizinan', 'rekanKerja'])
             ->where($filterJenis)
             ->when($status !== 'semua', fn($q) => $q->where('status_approval', $status))
             ->orderBy('created_at', 'desc')
             ->paginate(10, ['*'], 'page_p');
  
         // Lembur
-        $lembur = Lembur::with('karyawan')
+        $lembur = Lembur::with(['karyawan.role'])
             ->where($filterJenis)
             ->when($status !== 'semua', fn($q) => $q->where('status_approval', $status))
             ->orderBy('created_at', 'desc')

@@ -333,7 +333,9 @@ function onJenisChange(element) {
     
     var isKaryawanKontrak = {{ Auth::user()->isKaryawanKontrak() ? 'true' : 'false' }};
     
-    if (wajibBukti || slug === 'cuti') {
+    // Hanya tampilkan kotak upload jika wajib_bukti = true di database
+    // Karyawan Tetap yang mengajukan Cuti tidak perlu upload apapun (murni digital)
+    if (wajibBukti) {
         wrapDokter.classList.remove('hidden');
         
         var titleElem = document.getElementById('bukti-title');
@@ -342,16 +344,7 @@ function onJenisChange(element) {
         var dotElem = document.getElementById('bukti-dot');
         var inputElem = document.getElementById('bukti-input');
         
-        if (slug === 'cuti') {
-            wrapDokter.className = "bg-indigo-50 rounded-3xl border border-indigo-200 shadow-sm p-6";
-            titleElem.textContent = "Upload Form/Dokumen Cuti Tahunan";
-            titleElem.className = "font-black text-indigo-700 italic text-[11px] mb-3 flex items-center gap-2";
-            dotElem.className = "w-1 h-4 bg-indigo-500 rounded-full";
-            descElem.textContent = "Pengajuan Cuti Tahunan wajib mengunggah file formulir/dokumen cuti yang disetujui.";
-            descElem.className = "text-xs text-indigo-600 font-semibold mb-4";
-            labelElem.textContent = "File Form/Dokumen Cuti";
-            inputElem.className = "w-full px-4 py-3 rounded-xl border border-indigo-200 bg-white text-sm font-semibold text-gray-700 outline-none focus:border-indigo-400";
-        } else if (slug === 'dinas_luar') {
+        if (slug === 'dinas_luar') {
             wrapDokter.className = "bg-emerald-50 rounded-3xl border border-emerald-200 shadow-sm p-6";
             titleElem.textContent = "Upload Surat Tugas";
             titleElem.className = "font-black text-emerald-700 italic text-[11px] mb-3 flex items-center gap-2";

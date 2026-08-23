@@ -55,7 +55,9 @@ class StorePerizinanRequest extends FormRequest
         
         $isRequired = false;
         if ($jenis) {
-            if ($jenis->wajib_upload_bukti || $jenis->slug === 'cuti') {
+            // Hanya wajib upload jika database menandai wajib_upload_bukti = true
+            // Cuti Karyawan Tetap = TIDAK perlu upload (murni digital via sistem)
+            if ($jenis->wajib_upload_bukti) {
                 $isRequired = true;
             }
         }

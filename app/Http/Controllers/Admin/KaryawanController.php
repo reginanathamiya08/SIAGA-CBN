@@ -70,6 +70,7 @@ class KaryawanController extends Controller
             'keuangan'       => UsernameGeneratorService::daftarJabatan('karyawan_tetap', 'keuangan'),
             'koordinator_cs' => UsernameGeneratorService::daftarJabatan('karyawan_tetap', 'koordinator_cs'),
             'adm_umum'       => UsernameGeneratorService::daftarJabatan('karyawan_tetap', 'adm_umum'),
+            'manajemen'      => UsernameGeneratorService::daftarJabatan('karyawan_tetap', 'manajemen'),
             'HC'             => UsernameGeneratorService::daftarJabatan('karyawan_kontrak', 'HC'),
             'umum'           => UsernameGeneratorService::daftarJabatan('karyawan_kontrak', 'umum'),
         ];

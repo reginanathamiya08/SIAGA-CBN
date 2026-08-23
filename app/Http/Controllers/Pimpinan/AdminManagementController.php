@@ -79,6 +79,32 @@ class AdminManagementController extends Controller
         ]);
     }
 
+    public function update(Request $request, User $user)
+    {
+        $request->validate([
+            'nama'     => 'required|string|max:255',
+            'jabatan'  => 'required|string|max:100',
+            'divisi'   => 'nullable|string|max:100',
+            'no_hp'    => 'nullable|string|max:20',
+            'password' => 'nullable|string|min:8',
+        ]);
+
+        $data = [
+            'nama'    => trim($request->nama),
+            'jabatan' => trim($request->jabatan),
+            'divisi'  => $request->divisi ?? $user->divisi,
+            'no_hp'   => $request->no_hp ?? $user->no_hp,
+        ];
+
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        $user->update($data);
+
+        return back()->with('success', "Data pengguna {$user->nama} berhasil diperbarui.");
+    }
+
     public function toggleStatus(User $user)
     {
         // PROTEKSI: Tidak boleh menonaktifkan diri sendiri

@@ -50,7 +50,7 @@ class AttendanceHelper
                 ['date' => "{$year}-06-01", 'name' => 'Hari Lahir Pancasila'],
                 ['date' => "{$year}-06-16", 'name' => 'Tahun Baru Islam'],
                 ['date' => "{$year}-08-17", 'name' => 'Hari Kemerdekaan RI'],
-                ['date' => "{$year}-08-25", 'name' => 'Maulid Nabi Muhammad SAW'],
+                ['date' => "{$year}-09-04", 'name' => 'Maulid Nabi Muhammad SAW'],
                 ['date' => "{$year}-12-25", 'name' => 'Hari Raya Natal'],
             ];
         });

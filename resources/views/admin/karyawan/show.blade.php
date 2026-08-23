@@ -175,13 +175,22 @@
                 <span class="w-1 h-4 bg-teal-500 rounded-full"></span>
                 Penempatan Aktif
             </h3>
-            @if ($karyawan->penempatanAktif)
+            @if ($karyawan->isKaryawanTetap() || $karyawan->isTetap())
+                <div class="bg-[#1E3A5F]/5 rounded-2xl p-4 border border-[#1E3A5F]/10">
+                    <p class="text-sm font-black text-[#1E3A5F] uppercase">
+                        PT. CITRA BANGUN NAGARI (KANTOR PUSAT)
+                    </p>
+                    <p class="text-[9px] text-[#1E3A5F]/70 font-bold mt-1">
+                        Karyawan Tetap Internal • Sejak {{ $karyawan->tanggal_masuk ? $karyawan->tanggal_masuk->translatedFormat('d F Y') : '-' }}
+                    </p>
+                </div>
+            @elseif ($karyawan->penempatanAktif)
                 <div class="bg-teal-50 rounded-2xl p-4 border border-teal-100">
                     <p class="text-sm font-black text-teal-700 uppercase">
                         {{ $karyawan->penempatanAktif->mitra->nama_mitra }}
                     </p>
                     <p class="text-[9px] text-teal-500 mt-1">
-                        Sejak {{ $karyawan->penempatanAktif->tanggal_mulai->translatedFormat('d F Y') }}
+                        Penempatan Mitra • Sejak {{ $karyawan->penempatanAktif->tanggal_mulai->translatedFormat('d F Y') }}
                     </p>
                 </div>
             @else

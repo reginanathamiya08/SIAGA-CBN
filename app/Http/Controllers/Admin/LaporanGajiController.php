@@ -14,6 +14,8 @@ class LaporanGajiController extends Controller
 {
     public function index(Request $request)
     {
+        $bulan         = $request->input('bulan', now()->month);
+        $tahun         = $request->input('tahun', now()->year);
         $periodeId     = $request->input('periode_id');
         $mitraId       = $request->input('mitra_id');
         $jenisKaryawan = $request->input('jenis_karyawan_id', 'tetap');
@@ -27,6 +29,14 @@ class LaporanGajiController extends Controller
         if ($jenisKaryawan) {
             $roleSlug = in_array($jenisKaryawan, ['tetap', 'karyawan_tetap', 'JNS-00001']) ? 'karyawan_tetap' : 'karyawan_kontrak';
             $query->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->where('slug', $roleSlug)));
+        }
+
+        if ($bulan) {
+            $query->whereHas('periodeGaji', fn($q) => $q->whereMonth('tanggal_selesai', $bulan));
+        }
+
+        if ($tahun) {
+            $query->whereHas('periodeGaji', fn($q) => $q->whereYear('tanggal_selesai', $tahun));
         }
 
         if ($periodeId) {
@@ -46,6 +56,8 @@ class LaporanGajiController extends Controller
             'semuaPeriode',
             'semuaMitra',
             'periodeId',
+            'bulan',
+            'tahun',
             'mitraId',
             'jenisKaryawan'
         ));
@@ -53,6 +65,8 @@ class LaporanGajiController extends Controller
 
     public function export(Request $request)
     {
+        $bulan         = $request->input('bulan', now()->month);
+        $tahun         = $request->input('tahun', now()->year);
         $periodeId     = $request->input('periode_id');
         $mitraId       = $request->input('mitra_id');
         $jenisKaryawan = $request->input('jenis_karyawan_id', 'tetap');
@@ -66,6 +80,14 @@ class LaporanGajiController extends Controller
         if ($jenisKaryawan) {
             $roleSlug = in_array($jenisKaryawan, ['tetap', 'karyawan_tetap', 'JNS-00001']) ? 'karyawan_tetap' : 'karyawan_kontrak';
             $query->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->where('slug', $roleSlug)));
+        }
+
+        if ($bulan) {
+            $query->whereHas('periodeGaji', fn($q) => $q->whereMonth('tanggal_selesai', $bulan));
+        }
+
+        if ($tahun) {
+            $query->whereHas('periodeGaji', fn($q) => $q->whereYear('tanggal_selesai', $tahun));
         }
 
         if ($periodeId) {
@@ -85,7 +107,7 @@ class LaporanGajiController extends Controller
         $sheet->setTitle('Laporan Gaji');
 
         $headers = [
-            'No.', 'NIK', 'Nama Karyawan', 'Jabatan', 'Mitra', 
+            'No.', 'NIK', 'Nama Karyawan', 'Email', 'Jabatan', 'Mitra', 'Periode',
             'Hadir', 'Telat', 'Izin/Sakit', 'Alfa', 'Cuti',
             'Gaji Pokok', 'Uang Makan', 'Uang Transport', 
             'Total Potongan', 'Gaji Bersih'
@@ -113,8 +135,10 @@ class LaporanGajiController extends Controller
                 $i + 1,
                 $k?->nip ?? '-',
                 $k?->nama ?? '-',
+                $k?->email ?? '-',
                 $k?->jabatan ?? '-',
                 $m,
+                $slip->periodeGaji?->nama_periode ?? '-',
                 $slip->total_hadir,
                 $slip->total_telat,
                 $slip->total_izin,
@@ -132,7 +156,7 @@ class LaporanGajiController extends Controller
                 $sheet->setCellValue($cellAddr, $value);
                 
                 // Format Currency for salary columns (starting from Gaji Pokok)
-                if ($col >= 10) {
+                if ($col >= 12) {
                     $sheet->getStyle($cellAddr)->getNumberFormat()
                         ->setFormatCode('#,##0');
                 }

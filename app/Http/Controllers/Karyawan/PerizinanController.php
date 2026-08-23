@@ -96,7 +96,7 @@ class PerizinanController extends Controller
 
         $jenisPerizinan = JenisPerizinan::where('slug', '!=', 'dinas_luar')->get();
 
-        // Cari rekan kerja yang aktif untuk delegasi/backup (hanya karyawan tetap)
+        // Cari rekan kerja yang aktif untuk persetujuan cuti (hanya karyawan tetap)
         $rekanKerjaList = \App\Models\User::where('id', '!=', $karyawan->id)
             ->whereHas('role', function($q) {
                 $q->where('slug', 'karyawan_tetap');
@@ -195,15 +195,15 @@ class PerizinanController extends Controller
             // Kirim notifikasi ke rekan kerja
             \App\Models\Notification::send(
                 $rekanKerjaId,
-                'Permintaan Backup Cuti 📋',
-                "Rekan kerja Anda, {$karyawan->nama}, menunjuk Anda sebagai backup cutinya untuk tanggal {$mulai->format('d M Y')} s/d {$selesai->format('d M Y')}.",
+                'Permintaan Persetujuan Cuti 📋',
+                "Rekan kerja Anda, {$karyawan->nama}, meminta persetujuan (diketahui oleh) Anda untuk cuti tanggal {$mulai->format('d M Y')} s/d {$selesai->format('d M Y')}. Silakan buka menu Persetujuan Rekan.",
                 'info',
                 route('karyawan.perizinan.backup.index')
             );
 
             return redirect()
                 ->route('karyawan.perizinan.index')
-                ->with('success', 'Pengajuan perizinan berhasil dikirim. Menunggu persetujuan rekan kerja pengganti.');
+                ->with('success', 'Pengajuan cuti berhasil dikirim. Menunggu persetujuan rekan kerja.');
         }
 
         if ($statusApproval === 'menunggu') {
@@ -275,7 +275,7 @@ class PerizinanController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // BACKUP INDEX - Daftar delegasi cuti rekan kerja
+    // PERSETUJUAN REKAN INDEX - Daftar persetujuan cuti rekan kerja
     // ─────────────────────────────────────────────────────────────────
     public function backupIndex()
     {
@@ -290,7 +290,7 @@ class PerizinanController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // BACKUP APPROVE - Setujui backup cuti rekan
+    // PERSETUJUAN REKAN APPROVE - Setujui persetujuan cuti rekan
     // ─────────────────────────────────────────────────────────────────
     public function backupApprove(DetailPerizinan $perizinan)
     {
@@ -313,8 +313,8 @@ class PerizinanController extends Controller
         // Notifikasi ke pemohon
         \App\Models\Notification::send(
             $perizinan->user_id,
-            'Backup Cuti Disetujui 🤝',
-            "Rekan kerja Anda, {$karyawan->nama}, bersedia mem-backup pekerjaan Anda. Pengajuan cuti kini diteruskan ke Pimpinan.",
+            'Persetujuan Rekan Disetujui 🤝',
+            "Rekan kerja Anda, {$karyawan->nama}, telah menyetujui pengajuan cuti Anda. Pengajuan cuti kini diteruskan ke Pimpinan.",
             'success',
             route('karyawan.perizinan.show', $perizinan->id)
         );
@@ -324,8 +324,8 @@ class PerizinanController extends Controller
         foreach ($pimpinans as $pimpinan) {
             \App\Models\Notification::send(
                 $pimpinan->id,
-                'Persetujuan Cuti Baru (Backup OK) 📋',
-                "Pengajuan cuti Karyawan Tetap {$perizinan->karyawan->nama} telah disetujui oleh rekan kerja pengganti ({$karyawan->nama}) dan memerlukan persetujuan Anda.",
+                'Persetujuan Cuti Baru 📋',
+                "Pengajuan cuti Karyawan Tetap {$perizinan->karyawan->nama} telah disetujui oleh rekan kerja ({$karyawan->nama}) dan memerlukan persetujuan Anda.",
                 'warning',
                 route('pimpinan.approval.index')
             );
@@ -333,11 +333,11 @@ class PerizinanController extends Controller
 
         return redirect()
             ->route('karyawan.perizinan.backup.index')
-            ->with('success', 'Berhasil menyetujui backup pekerjaan rekan kerja.');
+            ->with('success', 'Berhasil menyetujui pengajuan cuti rekan kerja.');
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // BACKUP REJECT - Tolak backup cuti rekan
+    // PERSETUJUAN REKAN REJECT - Tolak persetujuan cuti rekan
     // ─────────────────────────────────────────────────────────────────
     public function backupReject(DetailPerizinan $perizinan)
     {
@@ -354,21 +354,21 @@ class PerizinanController extends Controller
         $perizinan->update([
             'status_rekan'    => 'ditolak',
             'status_approval' => 'ditolak',
-            'alasan_tolak'    => "Ditolak oleh rekan kerja pengganti ({$karyawan->nama}).",
+            'alasan_tolak'    => "Ditolak oleh rekan kerja ({$karyawan->nama}).",
         ]);
 
         // Notifikasi ke pemohon
         \App\Models\Notification::send(
             $perizinan->user_id,
-            'Backup Cuti Ditolak ❌',
-            "Rekan kerja Anda, {$karyawan->nama}, menolak mem-backup pekerjaan Anda. Pengajuan Anda otomatis ditolak.",
+            'Persetujuan Rekan Ditolak ❌',
+            "Rekan kerja Anda, {$karyawan->nama}, menolak menyetujui pengajuan cuti Anda. Pengajuan Anda otomatis ditolak.",
             'danger',
             route('karyawan.perizinan.show', $perizinan->id)
         );
 
         return redirect()
             ->route('karyawan.perizinan.backup.index')
-            ->with('success', 'Berhasil menolak backup pekerjaan rekan kerja.');
+            ->with('success', 'Berhasil menolak pengajuan cuti rekan kerja.');
     }
 
     // ─────────────────────────────────────────────────────────────────

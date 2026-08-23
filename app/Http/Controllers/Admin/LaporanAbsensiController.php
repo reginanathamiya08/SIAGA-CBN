@@ -60,12 +60,12 @@ class LaporanAbsensiController extends Controller
             ];
         }
 
-        // Query absensi utama bulanan
+        // Query absensi utama bulanan (tgl 1 s.d akhir bulan)
         $query = Absensi::with(['karyawan', 'karyawan.penempatanAktif.mitra', 'mitra'])
             ->whereHas('karyawan', fn($q) => $q->whereHas('role', fn($r) => $r->where('slug', $roleSlug)))
             ->whereMonth('tanggal', $bulan)
             ->whereYear('tanggal', $tahun)
-            ->orderBy('tanggal')
+            ->orderBy('tanggal', 'desc')
             ->orderBy('user_id');
 
         if ($mitraId) {
@@ -383,13 +383,8 @@ class LaporanAbsensiController extends Controller
      */
     private function hitungHariKerja(int $bulan, int $tahun): int
     {
-        $start   = Carbon::create($tahun, $bulan, 1);
-        $end     = $start->copy()->endOfMonth();
-
-        // Jika periode adalah bulan berjalan, batasi perhitungan hari kerja sampai hari ini
-        if ($bulan === now()->month && $tahun === now()->year) {
-            $end = now();
-        }
+        $start = Carbon::create($tahun, $bulan, 1);
+        $end   = $start->copy()->endOfMonth();
 
         return \App\Helpers\AttendanceHelper::countWorkingDays($start, $end);
     }

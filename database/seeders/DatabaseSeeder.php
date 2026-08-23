@@ -43,7 +43,7 @@ class DatabaseSeeder extends Seeder
             'role_id'        => $rolePimpinan->id,
             'nip'            => 'PM-CBN-0001',
             'password'       => Hash::make('pimpinan123'),
-            'nama'           => 'Pimpinan PT CBN',
+            'nama'           => 'H. IRMED, SE.,MM',
             'divisi'         => 'manajemen',
             'jabatan'        => 'Direktur Utama',
             'tanggal_masuk'  => now(),

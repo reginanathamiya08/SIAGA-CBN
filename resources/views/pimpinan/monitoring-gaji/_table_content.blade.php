@@ -176,7 +176,7 @@
                     <td class="px-5 py-4 whitespace-nowrap">
                         <p class="text-xs font-bold text-[#1E3A5F]">{{ $slip->karyawan?->jabatan ?? '-' }}</p>
                         <p class="text-[10px] text-gray-400 font-bold uppercase mt-0.5">
-                            {{ $slip->karyawan?->penempatanAktif?->mitra?->nama_mitra ?? '-' }}
+                            {{ $slip->karyawan?->isTetap() ? 'PT. Citra Bangun Nagari (Pusat)' : ($slip->karyawan?->penempatanAktif?->mitra?->nama_mitra ?? '-') }}
                         </p>
                     </td>
                     <td class="px-5 py-4 whitespace-nowrap">

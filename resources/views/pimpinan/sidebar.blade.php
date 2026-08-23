@@ -225,8 +225,11 @@
                     {{ $initials }}
                 </div>
                 <div x-show="sidebarOpen" x-transition.opacity class="flex-1 min-w-0">
-                    <p class="text-[11px] font-black text-[#1E3A5F] truncate" title="{{ Auth::user()->nama }}">{{ Auth::user()->nama }}</p>
-                    <p class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">Pimpinan</p>
+                    <p class="text-[11px] font-black text-[#1E3A5F] truncate uppercase" title="{{ Auth::user()->nama }}">{{ Auth::user()->nama }}</p>
+                    <p class="text-[9px] text-gray-400 font-medium">{{ Auth::user()->jabatan ?? 'Pimpinan' }}</p>
+                    <p class="text-[8px] text-gray-300 font-bold uppercase tracking-wider mt-0.5">
+                        NIP: {{ Auth::user()->nip ?? '-' }}
+                    </p>
                 </div>
                 <form method="POST" action="{{ route('logout') }}" x-show="sidebarOpen" onsubmit="return confirmLogout(event, this)">
                     @csrf

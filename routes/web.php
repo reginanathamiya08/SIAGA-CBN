@@ -159,6 +159,7 @@ Route::prefix('pimpinan')->name('pimpinan.')->middleware(['auth','role:pimpinan'
     // ── Kelola Admin ──────────────────────────────────────────────────
     Route::get  ('admin',               [AdminManagementController::class, 'index'])       ->name('admin.index');
     Route::post ('admin',               [AdminManagementController::class, 'store'])       ->name('admin.store');
+    Route::put  ('admin/{user}',        [AdminManagementController::class, 'update'])      ->name('admin.update');
     Route::patch('admin/{user}/toggle', [AdminManagementController::class, 'toggleStatus'])->name('admin.toggle');
     Route::delete('admin/{user}',       [AdminManagementController::class, 'destroy'])     ->name('admin.destroy');
 

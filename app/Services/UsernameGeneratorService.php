@@ -113,6 +113,7 @@ class UsernameGeneratorService
                 'keuangan'       => 'Keuangan',
                 'koordinator_cs' => 'Koordinator CS',
                 'adm_umum'       => 'Administrasi & Umum',
+                'manajemen'      => 'Manajemen / Direksi',
             ];
         }
 
@@ -136,9 +137,10 @@ class UsernameGeneratorService
 
         if ($slug === 'karyawan_tetap') {
             return match ($divisi) {
-                'keuangan'       => ['Staff Keuangan'],
-                'koordinator_cs' => ['Koordinator CS'],
-                'adm_umum'       => ['Staff Administrasi & Umum'],
+                'keuangan'       => ['Kepala Divisi Keuangan', 'Staff Keuangan'],
+                'koordinator_cs' => ['Kepala Divisi CS', 'Staff CS'],
+                'adm_umum'       => ['Kepala Divisi Administrasi & Umum', 'Staff Administrasi & Umum'],
+                'manajemen'      => ['Direktur Utama'],
                 default          => [],
             };
         }
@@ -179,8 +181,6 @@ class UsernameGeneratorService
     {
         return [
             'Satpam',
-            'Card Center',
-            'Card Centre',
             'Monitoring ATM dan Jaringan',
         ];
     }

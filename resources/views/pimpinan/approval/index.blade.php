@@ -212,10 +212,10 @@
                     <!-- Left column (Hanya muncul jika ada file bukti atau surat tugas) -->
                     <template x-if="activeItem.file_bukti || activeItem.file_surat_tugas">
                         <div class="w-full md:w-5/12 bg-gray-50 flex flex-col p-8 border-r border-gray-100">
-                            <!-- Rekan Backup (Jika ada) -->
+                            <!-- Diketahui Oleh Rekan Kerja (Jika ada) -->
                             <template x-if="activeItem.rekan_kerja">
                                 <div class="mb-5 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                                    <h4 class="text-[9px] font-black text-gray-400 mb-2.5 uppercase tracking-wider">Rekan Backup</h4>
+                                    <h4 class="text-[9px] font-black text-gray-400 mb-2.5 uppercase tracking-wider">Diketahui Oleh</h4>
                                     <div class="flex items-center gap-2">
                                         <div class="w-7 h-7 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center font-bold text-xs shrink-0">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
@@ -283,7 +283,7 @@
                         </div>
 
                         <div class="space-y-6 flex-1">
-                            <!-- Rekan Backup (Hanya muncul jika tidak ada berkas file) -->
+                            <!-- Diketahui Oleh Rekan Kerja (Hanya muncul jika tidak ada berkas file) -->
                             <template x-if="!(activeItem.file_bukti || activeItem.file_surat_tugas) && activeItem.rekan_kerja">
                                 <div class="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 flex items-center justify-between shadow-sm">
                                     <div class="flex items-center gap-2.5">
@@ -292,7 +292,7 @@
                                         </div>
                                         <div class="min-w-0">
                                             <p class="text-xs font-black text-gray-800 truncate" x-text="activeItem.rekan_kerja.nama"></p>
-                                            <p class="text-[9px] text-gray-400 font-bold uppercase tracking-wider truncate" x-text="'Rekan Backup • ' + (activeItem.rekan_kerja.jabatan || '-')"></p>
+                                            <p class="text-[9px] text-gray-400 font-bold uppercase tracking-wider truncate" x-text="'Diketahui Oleh • ' + (activeItem.rekan_kerja.jabatan || '-')"></p>
                                         </div>
                                     </div>
                                     <div>

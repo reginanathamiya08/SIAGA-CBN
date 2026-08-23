@@ -11,7 +11,7 @@ $tarifPanganHarian = $gajiPanganDefault / 23;
 $jabatanUmumList = ['CS', 'CS ATM', 'Ekspedisi'];
 
 $periodes = App\Models\PeriodeGaji::all();
-$karyawanList = App\Models\User::whereHas('role', fn($r) => $r->whereIn('slug', ['karyawan_tetap', 'karyawan_kontrak']))->get();
+$karyawanList = App\Models\User::all();
 
 foreach ($periodes as $p) {
     $tglMulai = $p->tanggal_mulai->toDateString();

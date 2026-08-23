@@ -76,11 +76,11 @@
                 </div>
             @endforeach
 
-            {{-- Rekan Kerja Backup (jika ada) --}}
+            {{-- Diketahui Oleh Rekan Kerja (jika ada) --}}
             @if ($perizinan->rekan_kerja_id)
                 <div class="flex justify-between items-start border-b border-gray-50 pb-3">
                     <span class="text-[10px] font-black text-gray-400 tracking-widest w-36 shrink-0">
-                        Rekan Backup
+                        Diketahui Oleh
                     </span>
                     <div class="text-sm font-semibold text-gray-700 text-right">
                         <p>{{ $perizinan->rekanKerja?->nama }}</p>

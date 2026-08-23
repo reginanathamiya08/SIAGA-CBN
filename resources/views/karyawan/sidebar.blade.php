@@ -248,6 +248,9 @@
                 <p class="text-[9px] text-gray-400 font-medium">
                     {{ Auth::user()->karyawan?->jabatan ?? '-' }}
                 </p>
+                <p class="text-[8px] text-gray-300 font-bold uppercase tracking-wider mt-0.5">
+                    NIP: {{ Auth::user()->nip ?? '-' }}
+                </p>
             </div>
             <form method="POST" action="{{ route('logout') }}" x-show="sidebarOpen" onsubmit="return confirmLogout(event, this)">
                 @csrf

@@ -289,7 +289,22 @@
                             <td class="px-8 py-4"><div class="flex items-center gap-4"><div class="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-[11px] shrink-0 shadow-sm {{ $kar->isTetap() ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500' }}">{{ strtoupper(substr($kar->nama, 0, 2)) }}</div><div><p class="text-[13px] font-black text-slate-700 group-hover:text-[#1E3A5F] transition-colors tracking-tight">{{ $kar->nama }}</p><p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter opacity-80">{{ $kar->jabatan }} <span class="mx-1 opacity-20">•</span> {{ $kar->labelDivisi() }} <span class="mx-1 opacity-20">•</span> {{ $kar->pendidikan ?? '-' }}</p></div></div></td>
                             <td class="px-8 py-4 text-right">@if ($kg && $kg->gaji_pokok > 0)<div class="text-[14px] font-black text-[#1E3A5F] tracking-tight"><span class="text-[10px] font-medium opacity-30 mr-1">Rp</span>{{ number_format($kg->gaji_pokok, 0, ',', '.') }}</div><span class="text-[8px] px-2 py-0.5 rounded-lg font-black uppercase tracking-tight {{ $kar->gaji_atas_umr ? 'bg-emerald-50 text-emerald-500 border border-emerald-100/50' : 'bg-blue-50 text-blue-500 border border-blue-100/50' }}">{{ $kar->gaji_atas_umr ? 'Expert' : 'UMR' }}</span>@else<span class="text-[10px] font-black text-amber-500 uppercase tracking-tight opacity-60">Belum Terdata</span>@endif</td>
                             <td class="px-8 py-4 text-right"><div class="text-[11px] font-bold text-slate-500 tracking-tight">Rp {{ number_format($kg->uang_makan ?? 35000, 0, ',', '.') }} <span class="text-[9px] font-black text-slate-300 uppercase ml-1 opacity-40">Makan</span></div><div class="text-[11px] font-bold text-slate-500 tracking-tight mt-0.5">Rp {{ number_format($kg->uang_transport ?? 45000, 0, ',', '.') }} <span class="text-[9px] font-black text-slate-300 uppercase ml-1 opacity-40">Trnsp</span></div></td>
-                            <td class="px-8 py-4 text-center"><a href="{{ route('admin.komponen-gaji-karyawan.edit', $kar->id) }}" class="inline-flex items-center gap-2 px-5 py-2 rounded-xl font-black text-[9px] uppercase tracking-tight transition-all {{ (!$kg || $kg->gaji_pokok == 0) ? 'bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white shadow-sm' : 'bg-slate-50 text-slate-400 hover:bg-[#1E3A5F] hover:text-white shadow-sm' }}"><i data-lucide="{{ (!$kg || $kg->gaji_pokok == 0) ? 'zap' : 'edit-3' }}" class="w-3.5 h-3.5"></i>{{ (!$kg || $kg->gaji_pokok == 0) ? 'Lengkapi' : 'Update' }}</a></td>
+                            <td class="px-8 py-4 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    <a href="{{ route('admin.karyawan.show', $kar->id) }}" 
+                                       class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-black text-[9px] uppercase tracking-tight transition-all bg-blue-50 text-blue-600 hover:bg-[#1E3A5F] hover:text-white shadow-sm"
+                                       title="Lihat Detail Karyawan">
+                                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                        Lihat
+                                    </a>
+                                    <a href="{{ route('admin.komponen-gaji-karyawan.edit', $kar->id) }}" 
+                                       class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-black text-[9px] uppercase tracking-tight transition-all {{ (!$kg || $kg->gaji_pokok == 0) ? 'bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white shadow-sm' : 'bg-slate-50 text-slate-500 hover:bg-[#1E3A5F] hover:text-white shadow-sm' }}"
+                                       title="Edit Komponen Gaji">
+                                        <i data-lucide="{{ (!$kg || $kg->gaji_pokok == 0) ? 'zap' : 'edit-3' }}" class="w-3.5 h-3.5"></i>
+                                        {{ (!$kg || $kg->gaji_pokok == 0) ? 'Lengkapi' : 'Edit' }}
+                                    </a>
+                                </div>
+                            </td>
                         </tr>
                     @empty
                         <tr><td colspan="4" class="py-24 text-center"><div class="flex flex-col items-center opacity-20"><i data-lucide="inbox" class="w-16 h-16 mb-4"></i><p class="text-sm font-black uppercase tracking-[0.3em]">Data Tidak Ditemukan</p></div></td></tr>
