@@ -104,3 +104,4 @@ class SlipGajiPeriode extends Model
         return 'Rp ' . number_format($angka, 0, ',', '.');
     }
 }
+

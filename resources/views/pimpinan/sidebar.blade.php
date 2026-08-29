@@ -270,7 +270,7 @@
                      x-transition:enter="transition ease-out duration-200"
                      x-transition:enter-start="opacity-0 scale-95 translate-y-[-10px]"
                      x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                     class="absolute right-0 mt-3 w-72 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                     class="fixed sm:absolute top-16 sm:top-auto left-4 sm:left-auto right-4 sm:right-0 mt-2 sm:mt-3 sm:w-72 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden"
                      style="display: none;">
                     
                     <div class="p-4 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
@@ -323,7 +323,7 @@
                 </div>
             </div>
 
-            <span class="text-[11px] font-semibold text-gray-400">{{ now()->translatedFormat('l, d F Y') }}</span>
+            <span class="text-[11px] font-semibold text-gray-400 hidden sm:inline-block">{{ now()->translatedFormat('l, d F Y') }}</span>
         </div>
 
         <div class="px-6 pt-5">

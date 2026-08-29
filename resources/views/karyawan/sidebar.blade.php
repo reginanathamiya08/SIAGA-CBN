@@ -196,7 +196,7 @@
                 <div class="flex items-center gap-3">
                     <i data-lucide="users-round" class="w-4 h-4 shrink-0"></i>
                     <span x-show="sidebarOpen" x-transition.opacity
-                          class="text-[11px] font-black uppercase tracking-wider">Rekan Pengganti</span>
+                          class="text-[11px] font-black uppercase tracking-wider">Persetujuan Cuti Rekan</span>
                 </div>
                 @php
                     $pendingBackups = \App\Models\DetailPerizinan::where('rekan_kerja_id', Auth::user()->id)
@@ -295,7 +295,8 @@
                  x-transition:enter="transition ease-out duration-200"
                  x-transition:enter-start="opacity-0 scale-95 translate-y-[-10px]"
                  x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                 class="absolute right-0 mt-3 w-72 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                 class="fixed sm:absolute top-16 sm:top-auto left-4 sm:left-auto right-4 sm:right-0 mt-2 sm:mt-3 sm:w-72 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                 style="display: none;">
                 
                 <div class="p-4 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
                     <h3 class="text-[10px] font-black text-[#1E3A5F] uppercase tracking-widest">Notifikasi</h3>
@@ -339,7 +340,7 @@
             </div>
         </div>
 
-        <span class="text-[11px] font-semibold text-gray-400">
+        <span class="text-[11px] font-semibold text-gray-400 hidden sm:inline-block">
             {{ now()->translatedFormat('l, d F Y') }}
         </span>
     </div>
