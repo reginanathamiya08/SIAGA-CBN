@@ -23,11 +23,6 @@
         </div>
     </header>
 
-    <!-- Status Banner Area -->
-    <div id="status-banner-container">
-        @include('pimpinan.monitoring-gaji._status_banner')
-    </div>
-
     <!-- Tab Card Gaji (dengan Filter Terintegrasi) -->
     <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
 
@@ -128,6 +123,11 @@
         </div>
 
     </div>{{-- /Tab Card Gaji --}}
+
+    <!-- Status Banner Area (Kirim Keputusan Penggajian di bawah tabel) -->
+    <div id="status-banner-container" class="pt-2">
+        @include('pimpinan.monitoring-gaji._status_banner')
+    </div>
 </div>
 
 <style>
@@ -198,7 +198,6 @@
         if (mitraId) url.searchParams.set('mitra_id', mitraId);
 
         const tableContainer = document.getElementById('table-content-container');
-        tableContainer.style.opacity = '0.5';
 
         fetch(url, {
             headers: {
@@ -208,7 +207,6 @@
         })
         .then(res => res.json())
         .then(data => {
-            tableContainer.style.opacity = '1';
 
             if (data.success) {
                 document.getElementById('status-banner-container').innerHTML = data.htmlBanner;
@@ -252,7 +250,6 @@
             }
         })
         .catch(err => {
-            tableContainer.style.opacity = '1';
             console.error('Error fetching table data:', err);
         });
     }

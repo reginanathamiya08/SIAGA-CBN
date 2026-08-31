@@ -241,10 +241,11 @@ class MonitoringKehadiranController extends Controller
             $persen = $totalHariKerja > 0 ? round(($hadir / $totalHariKerja) * 100, 1) : 0;
 
             return [
-                'id'      => $k?->id,
-                'nama'    => $k?->nama ?? '-',
-                'jabatan' => $k?->jabatan ?? '-',
-                'mitra'   => $rows->first()->mitra?->nama_mitra ?? ($k?->isTetap() ? 'Kantor CBN' : '-'),
+                'id'       => $k?->id,
+                'nama'     => $k?->nama ?? '-',
+                'jabatan'  => $k?->jabatan ?? '-',
+                'is_tetap' => $k?->isTetap() ?? false,
+                'mitra'    => $rows->first()->mitra?->nama_mitra ?? ($k?->isTetap() ? 'Kantor CBN' : '-'),
                 'hadir'   => $hadir,
                 'telat'   => $rows->where('is_telat', true)->count(),
                 'alfa'    => $rows->where('status', 'alfa')->count(),

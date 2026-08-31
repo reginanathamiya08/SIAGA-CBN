@@ -99,13 +99,23 @@
             z-index: 999999 !important;
         }
 
-        /* Page Transition Effect */
-        @keyframes pageIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* Matikan animasi & transisi di seluruh halaman KECUALI fungsionalitas sidebar */
+        .page-animate,
+        .page-animate *:not(aside):not(aside *):not(#sidebar-toggle-btn):not(#sidebar-toggle-btn *) {
+            transition: none !important;
+            transition-property: none !important;
+            transition-duration: 0s !important;
+            animation: none !important;
+            animation-duration: 0s !important;
         }
-        .page-animate {
-            animation: pageIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+
+        /* Pertahankan transisi halus khusus untuk sliding sidebar */
+        aside,
+        aside *,
+        .sidebar-slide {
+            transition-property: transform, width, margin, opacity !important;
+            transition-duration: 300ms !important;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
     </style>
 </head>
@@ -271,7 +281,7 @@
      class="fixed inset-0 bg-black/40 z-[1990] md:hidden">
 </div>
 
-<div class="transition-all duration-300 page-animate min-w-0" :class="sidebarOpen ? 'ml-0 md:ml-64' : 'ml-0 md:ml-16'">
+<div class="transition-all duration-300 sidebar-slide page-animate min-w-0" :class="sidebarOpen ? 'ml-0 md:ml-64' : 'ml-0 md:ml-16'">
     <div class="sticky top-0 z-[1005] bg-white/80 backdrop-blur-sm border-b border-gray-100
                 px-6 py-3 flex items-center gap-4">
         <button @click="sidebarOpen=!sidebarOpen"

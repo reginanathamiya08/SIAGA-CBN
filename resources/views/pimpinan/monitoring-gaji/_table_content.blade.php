@@ -21,7 +21,7 @@
             </thead>
             <tbody class="divide-y divide-gray-50">
                 @forelse($slipTetap as $slip)
-                <tr class="hover:bg-gray-50/50 transition-colors group">
+                <tr class="hover:bg-gray-50/50 group">
                     <td class="px-5 py-4">
                         <div class="flex items-center gap-3">
                             <div class="w-9 h-9 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center font-black text-xs shadow-sm shrink-0">
@@ -29,7 +29,7 @@
                             </div>
                             <div>
                                 <div class="flex items-center gap-2">
-                                    <p class="text-xs font-black text-[#1E3A5F] group-hover:text-blue-600 transition-colors whitespace-nowrap">
+                                    <p class="text-xs font-black text-[#1E3A5F] group-hover:text-blue-600 whitespace-nowrap">
                                         {{ $slip->karyawan?->nama ?? 'Karyawan Tidak Ditemukan' }}
                                     </p>
                                     @if($slip->status === 'direvisi')
@@ -94,16 +94,16 @@
                                 
                                 <input type="hidden" name="slips[{{ $slip->id }}][alasan]" :value="alasan">
 
-                                <div x-show="keputusan === 'tolak' && !isSaved" x-transition class="mt-1 flex flex-col gap-1.5">
+                                <div x-show="keputusan === 'tolak' && !isSaved" class="mt-1 flex flex-col gap-1.5">
                                     <textarea x-model="alasan" placeholder="Tulis alasan penolakan..." rows="2"
-                                              class="w-full p-2.5 border border-red-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all resize-none"></textarea>
+                                              class="w-full p-2.5 border border-red-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"></textarea>
                                     <button type="button" @click="if(alasan.trim() !== '') isSaved = true"
-                                            class="self-end px-3 py-1 bg-[#1E3A5F] hover:bg-blue-900 text-white rounded-lg text-[10px] font-black transition-all">
+                                            class="self-end px-3 py-1 bg-[#1E3A5F] hover:bg-blue-900 text-white rounded-lg text-[10px] font-black">
                                         OK
                                     </button>
                                 </div>
 
-                                <div x-show="keputusan === 'tolak' && isSaved" x-transition class="mt-1 text-left p-2.5 bg-red-50 border border-red-100 rounded-xl max-w-[200px]">
+                                <div x-show="keputusan === 'tolak' && isSaved" class="mt-1 text-left p-2.5 bg-red-50 border border-red-100 rounded-xl max-w-[200px]">
                                     <p class="text-[10px] text-red-700 font-bold italic leading-relaxed">Catatan: "<span x-text="alasan"></span>"</p>
                                     <button type="button" @click="isSaved = false" class="text-[9px] text-blue-600 underline font-bold mt-1 block hover:text-blue-800">
                                         Ubah Catatan
@@ -152,15 +152,15 @@
             </thead>
             <tbody class="divide-y divide-gray-50">
                 @forelse($slipKontrak as $slip)
-                <tr class="hover:bg-gray-50/50 transition-colors group">
+                <tr class="hover:bg-gray-50/50 group">
                     <td class="px-5 py-4">
                         <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center font-black text-xs shadow-sm shrink-0">
+                            <div class="w-9 h-9 bg-teal-100 text-teal-700 rounded-xl flex items-center justify-center font-black text-xs shadow-sm shrink-0">
                                 {{ strtoupper(substr($slip->karyawan?->nama ?? '?', 0, 2)) }}
                             </div>
                             <div>
                                 <div class="flex items-center gap-2">
-                                    <p class="text-xs font-black text-[#1E3A5F] group-hover:text-blue-600 transition-colors whitespace-nowrap">
+                                    <p class="text-xs font-black text-[#1E3A5F] group-hover:text-blue-600 whitespace-nowrap">
                                         {{ $slip->karyawan?->nama ?? 'Karyawan Tidak Ditemukan' }}
                                     </p>
                                     @if($slip->status === 'direvisi')
@@ -233,16 +233,16 @@
                                 
                                 <input type="hidden" name="slips[{{ $slip->id }}][alasan]" :value="alasan">
 
-                                <div x-show="keputusan === 'tolak' && !isSaved" x-transition class="mt-1 flex flex-col gap-1.5">
+                                <div x-show="keputusan === 'tolak' && !isSaved" class="mt-1 flex flex-col gap-1.5">
                                     <textarea x-model="alasan" placeholder="Tulis alasan penolakan..." rows="2"
-                                              class="w-full p-2.5 border border-red-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all resize-none"></textarea>
+                                              class="w-full p-2.5 border border-red-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"></textarea>
                                     <button type="button" @click="if(alasan.trim() !== '') isSaved = true"
-                                            class="self-end px-3 py-1 bg-[#1E3A5F] hover:bg-blue-900 text-white rounded-lg text-[10px] font-black transition-all">
+                                            class="self-end px-3 py-1 bg-[#1E3A5F] hover:bg-blue-900 text-white rounded-lg text-[10px] font-black">
                                         OK
                                     </button>
                                 </div>
 
-                                <div x-show="keputusan === 'tolak' && isSaved" x-transition class="mt-1 text-left p-2.5 bg-red-50 border border-red-100 rounded-xl max-w-[200px]">
+                                <div x-show="keputusan === 'tolak' && isSaved" class="mt-1 text-left p-2.5 bg-red-50 border border-red-100 rounded-xl max-w-[200px]">
                                     <p class="text-[10px] text-red-700 font-bold italic leading-relaxed">Catatan: "<span x-text="alasan"></span>"</p>
                                     <button type="button" @click="isSaved = false" class="text-[9px] text-blue-600 underline font-bold mt-1 block hover:text-blue-800">
                                         Ubah Catatan

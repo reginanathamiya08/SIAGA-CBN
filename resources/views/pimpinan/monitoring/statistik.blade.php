@@ -126,7 +126,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {{-- Grafik Tren Harian --}}
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <h2 class="font-black text-slate-600 text-xs  tracking-wider mb-4">Tren Ketidakhadiran Per Hari</h2>
+            <h2 class="font-black text-slate-600 text-xs  tracking-wider mb-4">Ketidakhadiran Per Hari</h2>
             <canvas id="trenChart" height="200"></canvas>
         </div>
         {{-- Top 10 --}}
@@ -136,16 +136,42 @@
         </div>
     </div>
 
-    {{-- Tabel Rekap Per Karyawan --}}
-    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 class="font-black text-slate-700 text-sm  tracking-wider">Rekap Per Karyawan</h2>
-            <span class="text-xs text-slate-400">*Merah = kehadiran &lt; 80%</span>
+    {{-- Tabel Rekap Per Karyawan (Dikelompokkan Karyawan Tetap & Kontrak) --}}
+    @php
+        $rekapTetap   = $rekapTabel->where('is_tetap', true)->values();
+        $rekapKontrak = $rekapTabel->where('is_tetap', false)->values();
+    @endphp
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden" x-data="{ tabRekap: 'tetap' }">
+        <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
+            <div class="flex items-center gap-3">
+                <button type="button" @click="tabRekap = 'tetap'"
+                        :class="tabRekap === 'tetap' ? 'bg-[#1E3A5F] text-white' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'"
+                        class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all shadow-sm">
+                    <span class="w-2.5 h-2.5 rounded-full bg-teal-400"></span>
+                    Karyawan Tetap
+                    <span :class="tabRekap === 'tetap' ? 'bg-teal-500 text-white' : 'bg-teal-100 text-teal-800'" class="px-2 py-0.5 rounded-full text-[10px] font-black">
+                        {{ $rekapTetap->count() }}
+                    </span>
+                </button>
+                <button type="button" @click="tabRekap = 'kontrak'"
+                        :class="tabRekap === 'kontrak' ? 'bg-[#1E3A5F] text-white' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'"
+                        class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all shadow-sm">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                    Karyawan Kontrak
+                    <span :class="tabRekap === 'kontrak' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-800'" class="px-2 py-0.5 rounded-full text-[10px] font-black">
+                        {{ $rekapKontrak->count() }}
+                    </span>
+                </button>
+            </div>
+            <span class="text-xs text-slate-400 font-medium">*Merah = kehadiran &lt; 80%</span>
         </div>
-        <div class="overflow-x-auto">
+
+        {{-- Panel Karyawan Tetap --}}
+        <div x-show="tabRekap === 'tetap'" class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="bg-blue-600 text-white text-xs font-bold  tracking-wider">
+                    <tr class="bg-[#1E3A5F] text-white text-xs font-bold tracking-wider">
                         <th class="px-4 py-3 text-left">No.</th>
                         <th class="px-4 py-3 text-left">Nama Karyawan</th>
                         <th class="px-4 py-3 text-left">Jabatan</th>
@@ -162,9 +188,9 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    @forelse($rekapTabel as $i => $r)
+                    @forelse($rekapTetap as $i => $r)
                     @php $merah = $r['persen'] < 80; @endphp
-                    <tr class="{{ $i%2===0 ? 'bg-white':'bg-slate-50' }} {{ $merah ? 'hover:bg-red-50':'hover:bg-blue-50' }} transition">
+                    <tr class="{{ $i%2===0 ? 'bg-white':'bg-slate-50' }} {{ $merah ? 'hover:bg-red-50':'hover:bg-blue-50' }}">
                         <td class="px-4 py-3 text-slate-400">{{ $i+1 }}</td>
                         <td class="px-4 py-3 font-semibold {{ $merah ? 'text-red-600':'text-slate-800' }}">{{ $r['nama'] }}</td>
                         <td class="px-4 py-3 text-slate-500 text-xs">{{ $r['jabatan'] }}</td>
@@ -185,14 +211,71 @@
                         <td class="px-4 py-3 text-center">
                             @if($r['id'])
                             <a href="{{ route('pimpinan.monitoring.detail', $r['id']) }}"
-                               class="text-blue-500 hover:text-blue-700 transition">
+                               class="text-blue-500 hover:text-blue-700">
                                 <i data-lucide="eye" class="w-4 h-4 inline"></i>
                             </a>
                             @endif
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="13" class="px-4 py-12 text-center text-slate-400">Tidak ada data untuk filter yang dipilih.</td></tr>
+                    <tr><td colspan="13" class="px-4 py-12 text-center text-slate-400 font-medium">Tidak ada data rekap karyawan tetap.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Panel Karyawan Kontrak --}}
+        <div x-show="tabRekap === 'kontrak'" class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-[#1E3A5F] text-white text-xs font-bold tracking-wider">
+                        <th class="px-4 py-3 text-left">No.</th>
+                        <th class="px-4 py-3 text-left">Nama Karyawan</th>
+                        <th class="px-4 py-3 text-left">Jabatan</th>
+                        <th class="px-4 py-3 text-left">Mitra / Cabang</th>
+                        <th class="px-4 py-3 text-center">Hadir</th>
+                        <th class="px-4 py-3 text-center">Telat</th>
+                        <th class="px-4 py-3 text-center">Alfa</th>
+                        <th class="px-4 py-3 text-center">Izin</th>
+                        <th class="px-4 py-3 text-center">Sakit</th>
+                        <th class="px-4 py-3 text-center">Cuti</th>
+                        <th class="px-4 py-3 text-center">Dinas</th>
+                        <th class="px-4 py-3 text-center">% Hadir</th>
+                        <th class="px-4 py-3 text-center">Detail</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @forelse($rekapKontrak as $i => $r)
+                    @php $merah = $r['persen'] < 80; @endphp
+                    <tr class="{{ $i%2===0 ? 'bg-white':'bg-slate-50' }} {{ $merah ? 'hover:bg-red-50':'hover:bg-blue-50' }}">
+                        <td class="px-4 py-3 text-slate-400">{{ $i+1 }}</td>
+                        <td class="px-4 py-3 font-semibold {{ $merah ? 'text-red-600':'text-slate-800' }}">{{ $r['nama'] }}</td>
+                        <td class="px-4 py-3 text-slate-500 text-xs">{{ $r['jabatan'] }}</td>
+                        <td class="px-4 py-3 text-slate-500 text-xs">{{ $r['mitra'] }}</td>
+                        <td class="px-4 py-3 text-center font-bold text-emerald-600">{{ $r['hadir'] }}</td>
+                        <td class="px-4 py-3 text-center font-bold text-amber-500">{{ $r['telat'] }}</td>
+                        <td class="px-4 py-3 text-center font-bold text-red-500">{{ $r['alfa'] }}</td>
+                        <td class="px-4 py-3 text-center text-slate-600">{{ $r['izin'] }}</td>
+                        <td class="px-4 py-3 text-center text-slate-600">{{ $r['sakit'] }}</td>
+                        <td class="px-4 py-3 text-center text-slate-600">{{ $r['cuti'] }}</td>
+                        <td class="px-4 py-3 text-center text-slate-600">{{ $r['dinas'] }}</td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold
+                                {{ $merah ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700' }}">
+                                {{ $r['persen'] }}%
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            @if($r['id'])
+                            <a href="{{ route('pimpinan.monitoring.detail', $r['id']) }}"
+                               class="text-blue-500 hover:text-blue-700">
+                                <i data-lucide="eye" class="w-4 h-4 inline"></i>
+                            </a>
+                            @endif
+                        </td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="13" class="px-4 py-12 text-center text-slate-400 font-medium">Tidak ada data rekap karyawan kontrak.</td></tr>
                     @endforelse
                 </tbody>
             </table>
