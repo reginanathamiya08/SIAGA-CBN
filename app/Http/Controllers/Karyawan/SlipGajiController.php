@@ -15,7 +15,7 @@ class SlipGajiController extends Controller
     {
         $karyawan = Auth::user()->karyawan;
 
-        $slipGaji = SlipGajiPeriode::with('periodeGaji')
+        $slipGaji = SlipGajiPeriode::with(['periodeGaji', 'details.komponenGaji', 'karyawan.komponenGaji'])
                             ->join('periode_gaji', 'periode_gaji.id', '=', 'slip_gaji_periode.periode_id')
                             ->where('slip_gaji_periode.user_id', $karyawan->id)
                             ->where('slip_gaji_periode.status', 'diterbitkan')

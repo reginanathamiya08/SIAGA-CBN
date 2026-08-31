@@ -26,6 +26,23 @@ use App\Http\Controllers\Karyawan\SlipGajiController;
 
 Route::get('/', fn () => view('landing'));
 
+// ── TEMPORARY ROUTE UNTUK DEMO SEMHAS (Buka di browser hosting untuk generate data absensi) ──
+Route::get('/seed-kehadiran-demo-secret99', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'KehadiranDemoSeeder']);
+        return "<div style='font-family:sans-serif; padding:40px; text-align:center;'>
+            <h2 style='color:#10b981;'>✅ Berhasil!</h2>
+            <p>Data kehadiran demo seluruh karyawan sudah terisi di database hosting.</p>
+            <p style='color:#6b7280; font-size:14px;'>Silakan refresh halaman Monitoring Kehadiran di web kamu.</p>
+        </div>";
+    } catch (\Throwable $e) {
+        return "<div style='font-family:sans-serif; padding:40px; text-align:center;'>
+            <h2 style='color:#ef4444;'>❌ Gagal</h2>
+            <p>Error: " . htmlspecialchars($e->getMessage()) . "</p>
+        </div>";
+    }
+});
+
 // ── AUTH ──────────────────────────────────────────────────────────────
 Route::get ('/login',  [LoginController::class, 'showLogin'])->name('login');
 Route::post('/login',  [LoginController::class, 'login'])->name('login.post');

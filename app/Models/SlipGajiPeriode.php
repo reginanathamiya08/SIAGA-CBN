@@ -94,6 +94,17 @@ class SlipGajiPeriode extends Model
         return $detail ? (float) $detail->nominal : 0.0;
     }
 
+    public function getGajiPokokAttribute(): float
+    {
+        $detail = $this->details->first(function($d) {
+            return $d->komponen_gaji_id === 'MKG-00001' || ($d->komponenGaji?->nama_komponen ?? '') === 'Gaji Pokok';
+        });
+        if ($detail) {
+            return (float) $detail->nominal;
+        }
+        return (float) ($this->karyawan?->komponenGaji?->firstWhere('komponen_gaji_id', 'MKG-00001')?->nominal ?? 0.0);
+    }
+
     public function getPendapatanLainnya(): float
     {
         return $this->getNominal('Pendapatan Lainnya');
