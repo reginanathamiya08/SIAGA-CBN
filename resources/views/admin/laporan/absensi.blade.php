@@ -6,6 +6,30 @@
 @section('content')
 <div class="space-y-6">
 
+    @if(session('success'))
+        <div class="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-2xl flex items-center gap-3">
+            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600"></i>
+            <span>{{ session('success') }}</span>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="p-4 bg-red-50 border border-red-200 text-red-700 font-bold rounded-2xl flex items-center gap-3">
+            <i data-lucide="alert-circle" class="w-5 h-5 text-red-600"></i>
+            <span>{{ session('error') }}</span>
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="p-4 bg-red-50 border border-red-200 text-red-700 font-bold rounded-2xl">
+            <ul class="list-disc list-inside space-y-1">
+                @foreach($errors->all() as $err)
+                    <li>{{ $err }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     {{-- Header --}}
     <div class="flex items-center justify-between">
         <div>
@@ -291,8 +315,8 @@
 </div>
 
 {{-- MODAL EDIT ABSENSI --}}
-<div id="modal-edit-absen" class="fixed inset-0 z-[9999] hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden my-auto relative">
+<div id="modal-edit-absen" class="fixed inset-0 z-[9999] hidden bg-slate-900/60 backdrop-blur-sm overflow-y-auto p-4 sm:p-6 flex items-center justify-center min-h-screen">
+    <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden my-auto relative transform transition-all">
         <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
             <h3 class="font-black text-slate-800 uppercase tracking-tight text-sm">Edit Absensi <span id="edit-nama-karyawan"></span></h3>
             <button onclick="closeModal('modal-edit-absen')" class="text-slate-400 hover:text-slate-600">
@@ -302,6 +326,7 @@
         <form method="POST" id="form-edit-absen" class="p-5 space-y-3">
             @csrf
             @method('PUT')
+            <input type="hidden" name="mitra_id" id="edit-mitra-id">
             
             {{-- Info Tanggal --}}
             <div>
@@ -315,9 +340,13 @@
                 <label class="block text-xs font-bold text-slate-600 mb-0.5">Status Kehadiran</label>
                 <select name="status" id="edit-status" required onchange="toggleTimeFields('edit-status', 'edit-times')"
                         class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    <option value="hadir">Tepat Waktu</option>
+                    <option value="hadir">Hadir (Tepat Waktu)</option>
                     <option value="telat">Telat</option>
                     <option value="alfa">Alfa</option>
+                    <option value="izin">Izin</option>
+                    <option value="sakit">Sakit</option>
+                    <option value="cuti">Cuti</option>
+                    <option value="dinas_luar">Dinas Luar</option>
                 </select>
             </div>
 
@@ -367,7 +396,8 @@
     }
     function openEditAbsenModal(id, tanggalRaw, tanggalFormat, status, waktuMasuk, waktuPulang, mitraId, namaKaryawan) {
         const form = document.getElementById('form-edit-absen');
-        form.action = `/admin/laporan/absensi/${id}`;
+        form.action = `/admin/laporan/absensi/${id}/update-manual`;
+        document.getElementById('edit-mitra-id').value = mitraId || '';
         document.getElementById('edit-nama-karyawan').innerText = `(${namaKaryawan})`;
         document.getElementById('edit-tanggal').value = tanggalFormat;
         document.getElementById('edit-status').value = status;

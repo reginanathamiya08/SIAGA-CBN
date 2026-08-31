@@ -437,29 +437,55 @@ class LaporanAbsensiController extends Controller
     {
         $request->validate([
             'status'       => 'required|in:hadir,telat,alfa,izin,sakit,cuti,dinas_luar',
-            'mitra_id'     => 'required|exists:mitra,id',
+            'mitra_id'     => 'nullable|exists:mitra,id',
             'waktu_masuk'  => 'nullable|string',
             'waktu_pulang' => 'nullable|string',
         ]);
 
         $waktuMasuk = null;
-        if ($request->filled('waktu_masuk')) {
+        if ($request->filled('waktu_masuk') && in_array($request->status, ['hadir', 'telat'])) {
             $waktuMasuk = Carbon::parse($absensi->tanggal->toDateString() . ' ' . $request->waktu_masuk);
         }
 
         $waktuPulang = null;
-        if ($request->filled('waktu_pulang')) {
+        if ($request->filled('waktu_pulang') && in_array($request->status, ['hadir', 'telat'])) {
             $waktuPulang = Carbon::parse($absensi->tanggal->toDateString() . ' ' . $request->waktu_pulang);
         }
 
+        $mitraId = $request->input('mitra_id') ?: ($absensi->mitra_id ?: $absensi->karyawan?->penempatanAktif?->mitra_id);
+
         $absensi->update([
             'status'       => $request->status,
-            'mitra_id'     => $request->mitra_id,
+            'mitra_id'     => $mitraId,
             'waktu_masuk'  => $waktuMasuk,
             'waktu_pulang' => $waktuPulang,
             'is_telat'     => $request->status === 'telat',
         ]);
 
         return back()->with('success', 'Absensi berhasil diperbarui.');
+    }
+
+    /**
+     * Tampilkan atau redirect ke halaman detail laporan absensi berdasarkan ID absensi (termasuk dari notifikasi).
+     */
+    public function show($id)
+    {
+        $absensi = Absensi::with('karyawan')->find($id);
+
+        if ($absensi) {
+            $bulan         = $absensi->tanggal ? $absensi->tanggal->month : now()->month;
+            $tahun         = $absensi->tanggal ? $absensi->tanggal->year : now()->year;
+            $karyawan      = $absensi->karyawan;
+            $jenisKaryawan = ($karyawan && $karyawan->isTetap()) ? 'tetap' : 'kontrak';
+
+            return redirect()->route('admin.laporan.absensi.index', [
+                'bulan'             => $bulan,
+                'tahun'             => $tahun,
+                'jenis_karyawan_id' => $jenisKaryawan,
+                'user_id'           => $absensi->user_id,
+            ]);
+        }
+
+        return redirect()->route('admin.laporan.absensi.index');
     }
 }

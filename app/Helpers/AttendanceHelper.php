@@ -103,7 +103,13 @@ class AttendanceHelper
     public static function runAutoAlfaDeduction(): void
     {
         $today = Carbon::today();
-        
+        $todayStr = $today->toDateString();
+
+        // Cache guard: jika auto-alfa sudah selesai diperiksa hari ini, langsung return (0 ms execution time)
+        if (Cache::has('auto_alfa_completed_' . $todayStr)) {
+            return;
+        }
+
         // Batas tanggal yang diproses: jika jam >= 23 malam, hari ini sudah bisa di-process.
         // Jika belum jam 23 malam, maksimal process sampai kemarin.
         $maxDate = Carbon::now()->hour >= 23 ? $today->copy() : $today->copy()->subDay();
@@ -220,5 +226,7 @@ class AttendanceHelper
                 }
             });
         }
+
+        Cache::put('auto_alfa_completed_' . $todayStr, true, 86400);
     }
 }

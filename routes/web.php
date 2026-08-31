@@ -112,6 +112,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth','role:admin'])->group
         Route::get ('absensi/export',                [LaporanAbsensiController::class, 'export'])       ->name('absensi.export');
         Route::post('absensi/store-manual',          [LaporanAbsensiController::class, 'storeManual'])  ->name('absensi.store-manual');
         Route::put ('absensi/{absensi}/update-manual', [LaporanAbsensiController::class, 'updateManual'])->name('absensi.update-manual');
+        Route::put ('absensi/{absensi}',               [LaporanAbsensiController::class, 'updateManual']);
+        Route::get ('absensi/{id}',                  [LaporanAbsensiController::class, 'show'])        ->name('absensi.show');
         Route::get ('gaji',                          [LaporanGajiController::class, 'index'])           ->name('gaji.index');
         Route::get ('gaji/export',                   [LaporanGajiController::class, 'export'])          ->name('gaji.export');
         Route::get ('lembur',                        [LaporanLemburController::class, 'index'])          ->name('lembur.index');

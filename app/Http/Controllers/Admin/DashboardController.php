@@ -42,7 +42,7 @@ class DashboardController extends Controller
         $telatHariIni  = Absensi::whereDate('tanggal', $today)->where('is_telat', true)->count();
         $izinSakit     = ($kehadiran['izin'] ?? 0) + ($kehadiran['sakit'] ?? 0) + ($kehadiran['cuti'] ?? 0);
         
-        // Persentase "Kepatuhan" (Siapa yang sudah absen/lapor vs Total Karyawan)
+        // Persentase Kehadiran
         $terdataHariIni = $hadirHariIni + $izinSakit;
         $persenHadir    = $totalKaryawan > 0
                             ? round(($terdataHariIni / $totalKaryawan) * 100)
