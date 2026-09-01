@@ -269,15 +269,16 @@
                     @endphp
                     @php
                         $gajiPokokVal     = $slipGaji->getNominal('Gaji Pokok');
-                        $tunjJamsostekVal = $slipGaji->getNominal('Tunjangan Jamsostek');
-                        $tunjAskesVal     = $slipGaji->getNominal('Tunjangan Askes');
-                        $potTkVal         = $slipGaji->getNominal('Potongan BPJS Ketenagakerjaan');
-                        $potKesVal        = $slipGaji->getNominal('Potongan BPJS Kesehatan');
 
-                        $pctTunjJamsostek = ($gajiPokokVal > 0 && $tunjJamsostekVal > 0) ? round(($tunjJamsostekVal / $gajiPokokVal) * 100, 2) : (float) \App\Models\Configuration::getValue('persen_tunjangan_jamsostek', 6.24);
-                        $pctTunjAskes     = ($gajiPokokVal > 0 && $tunjAskesVal > 0) ? round(($tunjAskesVal / $gajiPokokVal) * 100, 2) : (float) \App\Models\Configuration::getValue('persen_tunjangan_askes', 4.00);
-                        $pctPotTk         = ($gajiPokokVal > 0 && $potTkVal > 0) ? round(($potTkVal / $gajiPokokVal) * 100, 2) : (float) \App\Models\Configuration::getValue('persen_potongan_bpjs_tk', 9.24);
-                        $pctPotKes        = ($gajiPokokVal > 0 && $potKesVal > 0) ? round(($potKesVal / $gajiPokokVal) * 100, 2) : (float) \App\Models\Configuration::getValue('persen_potongan_bpjs_kes', 5.00);
+                        $pctTunjJamsostek = (float) \App\Models\Configuration::getValue('persen_tunjangan_jamsostek', 6.24);
+                        $pctTunjAskes     = (float) \App\Models\Configuration::getValue('persen_tunjangan_askes', 4.00);
+                        $pctPotKes        = (float) \App\Models\Configuration::getValue('persen_potongan_bpjs_kes', 5.00);
+                        $pctPotTk         = (float) \App\Models\Configuration::getValue('persen_potongan_bpjs_tk', 9.24);
+
+                        $tunjJamsostekVal = ($gajiPokokVal > 0) ? round($gajiPokokVal * ($pctTunjJamsostek / 100)) : $slipGaji->getNominal('Tunjangan Jamsostek');
+                        $tunjAskesVal     = ($gajiPokokVal > 0) ? round($gajiPokokVal * ($pctTunjAskes / 100))     : $slipGaji->getNominal('Tunjangan Askes');
+                        $potKesVal        = ($gajiPokokVal > 0) ? round($gajiPokokVal * ($pctPotKes / 100))        : $slipGaji->getNominal('Potongan BPJS Kesehatan');
+                        $potTkVal         = ($gajiPokokVal > 0) ? round($gajiPokokVal * ($pctPotTk / 100))         : $slipGaji->getNominal('Potongan BPJS Ketenagakerjaan');
                     @endphp
                     <div class="row-item">
                         <span class="label">UANG MAKAN</span>
