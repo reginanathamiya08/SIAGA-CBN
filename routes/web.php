@@ -237,3 +237,57 @@ Route::prefix('karyawan')->name('karyawan.')->middleware(['auth','role:karyawan_
     Route::get('notifications/{id}/read',   [\App\Http\Controllers\Karyawan\NotificationController::class, 'read'])       ->name('notifications.read');
     Route::post('notifications/mark-all',   [\App\Http\Controllers\Karyawan\NotificationController::class, 'markAllRead'])->name('notifications.mark-all');
 });
+
+// ── ROUTE RAHASIA SYNC BPJS DEMO SEMHAS ─────────────────────────────────────
+Route::get('/sync-bpjs-demo-secret99', function () {
+    $pctTunjJamsostek = (float) \App\Models\Configuration::getValue('persen_tunjangan_jamsostek', 6.24);
+    $pctTunjAskes     = (float) \App\Models\Configuration::getValue('persen_tunjangan_askes', 4.00);
+    $pctPotKes        = (float) \App\Models\Configuration::getValue('persen_potongan_bpjs_kes', 5.00);
+    $pctPotTk         = (float) \App\Models\Configuration::getValue('persen_potongan_bpjs_tk', 9.24);
+
+    $slips = \App\Models\SlipGajiPeriode::with('details')->get();
+    $updatedCount = 0;
+
+    foreach ($slips as $slip) {
+        $gpDetail = $slip->details->firstWhere('komponen_gaji_id', 'MKG-00001');
+        $gajiPokok = $gpDetail ? (float) $gpDetail->nominal : (float) ($slip->karyawan?->komponenGaji?->firstWhere('komponen_gaji_id', 'MKG-00001')?->nominal ?? 3500000);
+
+        $mapComponents = [
+            'MKG-00005' => round($gajiPokok * ($pctTunjJamsostek / 100)),
+            'MKG-00006' => round($gajiPokok * ($pctTunjAskes / 100)),
+            'MKG-00009' => round($gajiPokok * ($pctPotKes / 100)),
+            'MKG-00010' => round($gajiPokok * ($pctPotTk / 100)),
+        ];
+
+        foreach ($mapComponents as $compId => $nom) {
+            $exist = \App\Models\DetailGajiKomponen::where('slip_gaji_periode_id', $slip->id)
+                ->where('komponen_gaji_id', $compId)
+                ->first();
+
+            if ($exist) {
+                $exist->update(['nominal' => $nom]);
+            } else {
+                \App\Models\DetailGajiKomponen::create([
+                    'user_id' => $slip->user_id,
+                    'slip_gaji_periode_id' => $slip->id,
+                    'komponen_gaji_id' => $compId,
+                    'nominal' => $nom,
+                ]);
+            }
+        }
+
+        // Recalculate total_potongan
+        $totalPot = \App\Models\DetailGajiKomponen::where('slip_gaji_periode_id', $slip->id)
+            ->whereIn('komponen_gaji_id', ['MKG-00009', 'MKG-00010', 'MKG-00014'])
+            ->sum('nominal');
+
+        $slip->update([
+            'total_potongan' => $totalPot,
+            'gaji_bersih'    => max(0, $slip->totalPendapatan() - $totalPot)
+        ]);
+
+        $updatedCount++;
+    }
+
+    return "<h2>Sync BPJS Berhasil!</h2><p>{$updatedCount} Slip Gaji (Semua Bulan) berhasil diperbarui ke persentase: Tunjangan Jamsostek {$pctTunjJamsostek}%, Tunjangan Askes {$pctTunjAskes}%, Potongan BPJS Kes {$pctPotKes}%, Potongan BPJS TK {$pctPotTk}%.</p>";
+});
