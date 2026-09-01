@@ -270,15 +270,25 @@
                     @php
                         $gajiPokokVal     = $slipGaji->getNominal('Gaji Pokok');
 
-                        $pctTunjJamsostek = (float) \App\Models\Configuration::getValue('persen_tunjangan_jamsostek', 6.24);
-                        $pctTunjAskes     = (float) \App\Models\Configuration::getValue('persen_tunjangan_askes', 4.00);
-                        $pctPotKes        = (float) \App\Models\Configuration::getValue('persen_potongan_bpjs_kes', 5.00);
-                        $pctPotTk         = (float) \App\Models\Configuration::getValue('persen_potongan_bpjs_tk', 9.24);
+                        $rawTunjJamsostek = str_replace(',', '.', (string) \App\Models\Configuration::getValue('persen_tunjangan_jamsostek', '6.24'));
+                        $rawTunjAskes     = str_replace(',', '.', (string) \App\Models\Configuration::getValue('persen_tunjangan_askes', '4.00'));
+                        $rawPotKes        = str_replace(',', '.', (string) \App\Models\Configuration::getValue('persen_potongan_bpjs_kes', '5.00'));
+                        $rawPotTk         = str_replace(',', '.', (string) \App\Models\Configuration::getValue('persen_potongan_bpjs_tk', '9.24'));
+
+                        $pctTunjJamsostek = (float) $rawTunjJamsostek;
+                        $pctTunjAskes     = (float) $rawTunjAskes;
+                        $pctPotKes        = (float) $rawPotKes;
+                        $pctPotTk         = (float) $rawPotTk;
 
                         $tunjJamsostekVal = ($gajiPokokVal > 0) ? round($gajiPokokVal * ($pctTunjJamsostek / 100)) : $slipGaji->getNominal('Tunjangan Jamsostek');
                         $tunjAskesVal     = ($gajiPokokVal > 0) ? round($gajiPokokVal * ($pctTunjAskes / 100))     : $slipGaji->getNominal('Tunjangan Askes');
                         $potKesVal        = ($gajiPokokVal > 0) ? round($gajiPokokVal * ($pctPotKes / 100))        : $slipGaji->getNominal('Potongan BPJS Kesehatan');
                         $potTkVal         = ($gajiPokokVal > 0) ? round($gajiPokokVal * ($pctPotTk / 100))         : $slipGaji->getNominal('Potongan BPJS Ketenagakerjaan');
+
+                        $lblPctTunjJamsostek = str_replace('.', ',', (string) $pctTunjJamsostek);
+                        $lblPctTunjAskes     = str_replace('.', ',', (string) $pctTunjAskes);
+                        $lblPctPotKes        = str_replace('.', ',', (string) $pctPotKes);
+                        $lblPctPotTk         = str_replace('.', ',', (string) $pctPotTk);
                     @endphp
                     <div class="row-item">
                         <span class="label">UANG MAKAN</span>
@@ -291,12 +301,12 @@
                         <span class="value">{{ $uangTransportVal > 0 ? number_format($uangTransportVal, 0, ',', '.') : '-' }}</span>
                     </div>
                     <div class="row-item">
-                        <span class="label">JAMSOSTEK ({{ $pctTunjJamsostek }}%)</span>
+                        <span class="label">JAMSOSTEK ({{ $lblPctTunjJamsostek }}%)</span>
                         <span class="colon">:</span>
                         <span class="value">{{ number_format($tunjJamsostekVal, 0, ',', '.') }}</span>
                     </div>
                     <div class="row-item">
-                        <span class="label">ASKES ({{ $pctTunjAskes }}%)</span>
+                        <span class="label">ASKES ({{ $lblPctTunjAskes }}%)</span>
                         <span class="colon">:</span>
                         <span class="value">{{ number_format($tunjAskesVal, 0, ',', '.') }}</span>
                     </div>
@@ -349,12 +359,12 @@
                         <span class="value">-</span>
                     </div>
                     <div class="row-item">
-                        <span class="label">JAMSOSTEK ({{ $pctPotTk }}%)</span>
+                        <span class="label">JAMSOSTEK ({{ $lblPctPotTk }}%)</span>
                         <span class="colon">:</span>
                         <span class="value">{{ number_format($potTkVal, 0, ',', '.') }}</span>
                     </div>
                     <div class="row-item">
-                        <span class="label">ASKES ({{ $pctPotKes }}%)</span>
+                        <span class="label">ASKES ({{ $lblPctPotKes }}%)</span>
                         <span class="colon">:</span>
                         <span class="value">{{ number_format($potKesVal, 0, ',', '.') }}</span>
                     </div>
