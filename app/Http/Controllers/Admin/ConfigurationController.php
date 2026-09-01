@@ -24,11 +24,7 @@ class ConfigurationController extends Controller
         $data = $request->except('_token', '_method');
 
         foreach ($data as $key => $value) {
-            $config = Configuration::where('key', $key)->first();
-            if ($config) {
-                $config->value = $value;
-                $config->save();
-            }
+            Configuration::setValue($key, $value, null, 'string', 'gaji');
         }
 
         // Sinkronisasi otomatis seluruh data karyawan jika kuota cuti tahunan diubah oleh admin

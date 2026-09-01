@@ -75,6 +75,10 @@
                     $batasGajiConfig = $configs['gaji']?->firstWhere('key', 'batas_tanggal_gaji');
                     $kesConfig = $configs['gaji']?->firstWhere('key', 'persen_bpjs_kes');
                     $tkConfig = $configs['gaji']?->firstWhere('key', 'persen_bpjs_tk');
+                    $tunjJamsostekConfig = $configs['gaji']?->firstWhere('key', 'persen_tunjangan_jamsostek') ?? $tkConfig;
+                    $tunjAskesConfig     = $configs['gaji']?->firstWhere('key', 'persen_tunjangan_askes') ?? $kesConfig;
+                    $potBpjsKesConfig    = $configs['gaji']?->firstWhere('key', 'persen_potongan_bpjs_kes') ?? $kesConfig;
+                    $potBpjsTkConfig     = $configs['gaji']?->firstWhere('key', 'persen_potongan_bpjs_tk') ?? $tkConfig;
                 @endphp
 
                 {{-- UMR BERJALAN --}}
@@ -194,20 +198,38 @@
                                                    class="w-32 px-3 py-1.5 border rounded-xl text-xs font-black transition-all">
                                             <span class="text-[10px] text-gray-400 font-bold uppercase">/ Hari (Tetap)</span>
                                         </div>
-                                    @elseif($comp->id === 'MKG-00005' || $comp->id === 'MKG-00010')
+                                    @elseif($comp->id === 'MKG-00005')
                                         <div class="flex items-center gap-2">
-                                            <input type="text" name="persen_bpjs_tk" value="{{ $tkConfig?->value ?? '2' }}"
-                                                   :readonly="editingRow !== '{{ $comp->id }}'"
-                                                   :class="editingRow === '{{ $comp->id }}' ? 'bg-white border-emerald-500 ring-4 ring-emerald-500/10 text-[#1E3A5F]' : 'bg-gray-50/50 border-gray-100 text-gray-700 cursor-not-allowed'"
+                                            <input type="text" name="persen_tunjangan_jamsostek" value="{{ $tunjJamsostekConfig?->value ?? '5' }}"
+                                                   :readonly="editingRow !== 'MKG-00005'"
+                                                   :class="editingRow === 'MKG-00005' ? 'bg-white border-emerald-500 ring-4 ring-emerald-500/10 text-[#1E3A5F]' : 'bg-gray-50/50 border-gray-100 text-gray-700 cursor-not-allowed'"
                                                    class="w-20 px-3 py-1.5 border rounded-xl text-xs font-black transition-all text-center">
                                             <span class="text-xs font-bold text-gray-400">%</span>
                                             <span class="text-[10px] text-gray-400 font-medium ml-1">dari Gaji Pokok</span>
                                         </div>
-                                    @elseif($comp->id === 'MKG-00006' || $comp->id === 'MKG-00009')
+                                    @elseif($comp->id === 'MKG-00006')
                                         <div class="flex items-center gap-2">
-                                            <input type="text" name="persen_bpjs_kes" value="{{ $kesConfig?->value ?? '1' }}"
-                                                   :readonly="editingRow !== '{{ $comp->id }}'"
-                                                   :class="editingRow === '{{ $comp->id }}' ? 'bg-white border-emerald-500 ring-4 ring-emerald-500/10 text-[#1E3A5F]' : 'bg-gray-50/50 border-gray-100 text-gray-700 cursor-not-allowed'"
+                                            <input type="text" name="persen_tunjangan_askes" value="{{ $tunjAskesConfig?->value ?? '3' }}"
+                                                   :readonly="editingRow !== 'MKG-00006'"
+                                                   :class="editingRow === 'MKG-00006' ? 'bg-white border-emerald-500 ring-4 ring-emerald-500/10 text-[#1E3A5F]' : 'bg-gray-50/50 border-gray-100 text-gray-700 cursor-not-allowed'"
+                                                   class="w-20 px-3 py-1.5 border rounded-xl text-xs font-black transition-all text-center">
+                                            <span class="text-xs font-bold text-gray-400">%</span>
+                                            <span class="text-[10px] text-gray-400 font-medium ml-1">dari Gaji Pokok</span>
+                                        </div>
+                                    @elseif($comp->id === 'MKG-00009')
+                                        <div class="flex items-center gap-2">
+                                            <input type="text" name="persen_potongan_bpjs_kes" value="{{ $potBpjsKesConfig?->value ?? '3' }}"
+                                                   :readonly="editingRow !== 'MKG-00009'"
+                                                   :class="editingRow === 'MKG-00009' ? 'bg-white border-emerald-500 ring-4 ring-emerald-500/10 text-[#1E3A5F]' : 'bg-gray-50/50 border-gray-100 text-gray-700 cursor-not-allowed'"
+                                                   class="w-20 px-3 py-1.5 border rounded-xl text-xs font-black transition-all text-center">
+                                            <span class="text-xs font-bold text-gray-400">%</span>
+                                            <span class="text-[10px] text-gray-400 font-medium ml-1">dari Gaji Pokok</span>
+                                        </div>
+                                    @elseif($comp->id === 'MKG-00010')
+                                        <div class="flex items-center gap-2">
+                                            <input type="text" name="persen_potongan_bpjs_tk" value="{{ $potBpjsTkConfig?->value ?? '5' }}"
+                                                   :readonly="editingRow !== 'MKG-00010'"
+                                                   :class="editingRow === 'MKG-00010' ? 'bg-white border-emerald-500 ring-4 ring-emerald-500/10 text-[#1E3A5F]' : 'bg-gray-50/50 border-gray-100 text-gray-700 cursor-not-allowed'"
                                                    class="w-20 px-3 py-1.5 border rounded-xl text-xs font-black transition-all text-center">
                                             <span class="text-xs font-bold text-gray-400">%</span>
                                             <span class="text-[10px] text-gray-400 font-medium ml-1">dari Gaji Pokok</span>

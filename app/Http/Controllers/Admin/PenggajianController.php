@@ -318,12 +318,14 @@ class PenggajianController extends Controller
         $uangMakan     = $isTetap ? (float) ($kg->uang_makan     ?? $defMakan) * $totalHadir : 0.0;
         $uangTransport = $isTetap ? (float) ($kg->uang_transport ?? $defTransport) * $totalHadir : 0.0;
 
-        // BPJS dengan Fallback Standar dari Konfigurasi Sistem
-        $persenKes = $kg->persen_bpjs_kes ?? Configuration::getValue('persen_bpjs_kes', 9.24);
-        $persenTk  = $kg->persen_bpjs_tk  ?? Configuration::getValue('persen_bpjs_tk', 5.00);
+        // BPJS dengan Fallback Standar dari Konfigurasi Sistem (Berdiri Sendiri Independen)
+        $pctTunjJamsostek = (float) Configuration::getValue('persen_tunjangan_jamsostek', Configuration::getValue('persen_bpjs_tk', 5.00));
+        $pctTunjAskes     = (float) Configuration::getValue('persen_tunjangan_askes', Configuration::getValue('persen_bpjs_kes', 3.00));
+        $pctPotBpjsKes    = (float) ($kg->persen_bpjs_kes ?? Configuration::getValue('persen_potongan_bpjs_kes', Configuration::getValue('persen_bpjs_kes', 3.00)));
+        $pctPotBpjsTk     = (float) ($kg->persen_bpjs_tk  ?? Configuration::getValue('persen_potongan_bpjs_tk', Configuration::getValue('persen_bpjs_tk', 5.00)));
 
-        $potonganBpjsKes = $gajiPokok * ((float) $persenKes / 100);
-        $potonganBpjsTk  = $gajiPokok * ((float) $persenTk  / 100);
+        $potonganBpjsKes  = $gajiPokok * ($pctPotBpjsKes / 100);
+        $potonganBpjsTk   = $gajiPokok * ($pctPotBpjsTk / 100);
 
         // Tidak ada potongan denda lagi untuk telat, izin/cuti, atau alfa
         $potonganTelat = 0.0;
@@ -340,9 +342,9 @@ class PenggajianController extends Controller
         $tarifPanganHarian = $gajiPanganDefault / $jumlahHariKerjaEff;
         $gajiPangan = $isKontrakUmum ? round($tarifPanganHarian * $totalHadir) : 0.0;
         
-        // Tunjangan BPJS murni sesuai persentase yang dimasukkan (berlaku sama untuk Tetap & Kontrak)
-        $tunjanganBpjsKes = $potonganBpjsKes;
-        $tunjanganBpjsTk  = $potonganBpjsTk;
+        // Tunjangan BPJS murni sesuai persentase yang dimasukkan (berdiri sendiri secara independen)
+        $tunjanganBpjsKes = $gajiPokok * ($pctTunjAskes / 100);
+        $tunjanganBpjsTk  = $gajiPokok * ($pctTunjJamsostek / 100);
 
         // Extra Fooding / Uang Saku Tambahan (Pendapatan Lainnya) khusus Satpam Rp 100.000
         $extraFoodingSatpam = (float) Configuration::getValue('extra_fooding_satpam', 100000);

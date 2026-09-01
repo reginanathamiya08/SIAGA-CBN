@@ -349,9 +349,7 @@ class AbsensiController extends Controller
         ]);
     }
 
-    /**
-     * Helper pintar untuk validasi IP Public Mitra (Fokus IPv4 & Wildcard)
-     */
+    //Helper pintar untuk validasi IP Public Mitra (Fokus IPv4 & Wildcard)
     private function isIpAllowed(string $ipKaryawan, string $ipMitraConfig): bool
     {
         if (empty(trim($ipMitraConfig))) {
