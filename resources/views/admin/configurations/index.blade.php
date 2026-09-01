@@ -67,18 +67,21 @@
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2 border-t border-gray-50">
                 @php
-                    $umrConfig = $configs['gaji']?->firstWhere('key', 'umr_tahun_ini');
-                    $makanConfig = $configs['gaji']?->firstWhere('key', 'uang_makan_default');
-                    $transportConfig = $configs['gaji']?->firstWhere('key', 'uang_transport_default');
-                    $satpamConfig = $configs['gaji']?->firstWhere('key', 'extra_fooding_satpam');
-                    $cutiConfig = $configs['cuti']?->firstWhere('key', 'kuota_cuti_tahunan');
-                    $batasGajiConfig = $configs['gaji']?->firstWhere('key', 'batas_tanggal_gaji');
-                    $kesConfig = $configs['gaji']?->firstWhere('key', 'persen_bpjs_kes');
-                    $tkConfig = $configs['gaji']?->firstWhere('key', 'persen_bpjs_tk');
-                    $tunjJamsostekConfig = $configs['gaji']?->firstWhere('key', 'persen_tunjangan_jamsostek') ?? $tkConfig;
-                    $tunjAskesConfig     = $configs['gaji']?->firstWhere('key', 'persen_tunjangan_askes') ?? $kesConfig;
-                    $potBpjsKesConfig    = $configs['gaji']?->firstWhere('key', 'persen_potongan_bpjs_kes') ?? $kesConfig;
-                    $potBpjsTkConfig     = $configs['gaji']?->firstWhere('key', 'persen_potongan_bpjs_tk') ?? $tkConfig;
+                    $gajiGroup = $configs['gaji'] ?? collect();
+                    $cutiGroup = $configs['cuti'] ?? collect();
+
+                    $umrConfig = $gajiGroup->firstWhere('key', 'umr_tahun_ini');
+                    $makanConfig = $gajiGroup->firstWhere('key', 'uang_makan_default');
+                    $transportConfig = $gajiGroup->firstWhere('key', 'uang_transport_default');
+                    $satpamConfig = $gajiGroup->firstWhere('key', 'extra_fooding_satpam');
+                    $cutiConfig = $cutiGroup->firstWhere('key', 'kuota_cuti_tahunan');
+                    $batasGajiConfig = $gajiGroup->firstWhere('key', 'batas_tanggal_gaji');
+                    $kesConfig = $gajiGroup->firstWhere('key', 'persen_bpjs_kes');
+                    $tkConfig = $gajiGroup->firstWhere('key', 'persen_bpjs_tk');
+                    $tunjJamsostekConfig = $gajiGroup->firstWhere('key', 'persen_tunjangan_jamsostek') ?? $tkConfig;
+                    $tunjAskesConfig     = $gajiGroup->firstWhere('key', 'persen_tunjangan_askes') ?? $kesConfig;
+                    $potBpjsKesConfig    = $gajiGroup->firstWhere('key', 'persen_potongan_bpjs_kes') ?? $kesConfig;
+                    $potBpjsTkConfig     = $gajiGroup->firstWhere('key', 'persen_potongan_bpjs_tk') ?? $tkConfig;
                 @endphp
 
                 {{-- UMR BERJALAN --}}
