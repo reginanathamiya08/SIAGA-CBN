@@ -110,7 +110,7 @@
         }
         .row-item .label {
             text-transform: uppercase;
-            width: 140px;
+            width: 175px;
             display: inline-block;
         }
         .row-item .colon {
@@ -267,6 +267,18 @@
                         $uangMakanVal = $isTetapKaryawan ? $slipGaji->getNominal('Uang Makan') : 0;
                         $uangTransportVal = $isTetapKaryawan ? $slipGaji->getNominal('Uang Transport') : 0;
                     @endphp
+                    @php
+                        $gajiPokokVal     = $slipGaji->getNominal('Gaji Pokok');
+                        $tunjJamsostekVal = $slipGaji->getNominal('Tunjangan Jamsostek');
+                        $tunjAskesVal     = $slipGaji->getNominal('Tunjangan Askes');
+                        $potTkVal         = $slipGaji->getNominal('Potongan BPJS Ketenagakerjaan');
+                        $potKesVal        = $slipGaji->getNominal('Potongan BPJS Kesehatan');
+
+                        $pctTunjJamsostek = ($gajiPokokVal > 0 && $tunjJamsostekVal > 0) ? round(($tunjJamsostekVal / $gajiPokokVal) * 100, 2) : (float) \App\Models\Configuration::getValue('persen_tunjangan_jamsostek', 6.24);
+                        $pctTunjAskes     = ($gajiPokokVal > 0 && $tunjAskesVal > 0) ? round(($tunjAskesVal / $gajiPokokVal) * 100, 2) : (float) \App\Models\Configuration::getValue('persen_tunjangan_askes', 4.00);
+                        $pctPotTk         = ($gajiPokokVal > 0 && $potTkVal > 0) ? round(($potTkVal / $gajiPokokVal) * 100, 2) : (float) \App\Models\Configuration::getValue('persen_potongan_bpjs_tk', 9.24);
+                        $pctPotKes        = ($gajiPokokVal > 0 && $potKesVal > 0) ? round(($potKesVal / $gajiPokokVal) * 100, 2) : (float) \App\Models\Configuration::getValue('persen_potongan_bpjs_kes', 5.00);
+                    @endphp
                     <div class="row-item">
                         <span class="label">UANG MAKAN</span>
                         <span class="colon">:</span>
@@ -278,14 +290,14 @@
                         <span class="value">{{ $uangTransportVal > 0 ? number_format($uangTransportVal, 0, ',', '.') : '-' }}</span>
                     </div>
                     <div class="row-item">
-                        <span class="label">JAMSOSTEK</span>
+                        <span class="label">JAMSOSTEK ({{ $pctTunjJamsostek }}%)</span>
                         <span class="colon">:</span>
-                        <span class="value">{{ number_format($slipGaji->getNominal('Tunjangan Jamsostek'), 0, ',', '.') }}</span>
+                        <span class="value">{{ number_format($tunjJamsostekVal, 0, ',', '.') }}</span>
                     </div>
                     <div class="row-item">
-                        <span class="label">ASKES</span>
+                        <span class="label">ASKES ({{ $pctTunjAskes }}%)</span>
                         <span class="colon">:</span>
-                        <span class="value">{{ number_format($slipGaji->getNominal('Tunjangan Askes'), 0, ',', '.') }}</span>
+                        <span class="value">{{ number_format($tunjAskesVal, 0, ',', '.') }}</span>
                     </div>
                     <div class="row-item">
                         <span class="label">PPh 21</span>
@@ -336,14 +348,14 @@
                         <span class="value">-</span>
                     </div>
                     <div class="row-item">
-                        <span class="label">JAMSOSTEK</span>
+                        <span class="label">JAMSOSTEK ({{ $pctPotTk }}%)</span>
                         <span class="colon">:</span>
-                        <span class="value">{{ number_format($slipGaji->getNominal('Potongan BPJS Ketenagakerjaan'), 0, ',', '.') }}</span>
+                        <span class="value">{{ number_format($potTkVal, 0, ',', '.') }}</span>
                     </div>
                     <div class="row-item">
-                        <span class="label">ASKES</span>
+                        <span class="label">ASKES ({{ $pctPotKes }}%)</span>
                         <span class="colon">:</span>
-                        <span class="value">{{ number_format($slipGaji->getNominal('Potongan BPJS Kesehatan'), 0, ',', '.') }}</span>
+                        <span class="value">{{ number_format($potKesVal, 0, ',', '.') }}</span>
                     </div>
                     @php
                         $nomPinjaman = $slipGaji->getNominal('Potongan Pinjaman');
