@@ -31,10 +31,22 @@
     @endif
 
     {{-- Header --}}
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h1 class="text-2xl font-black text-slate-800">Laporan Absensi</h1>
-            <p class="text-sm text-slate-500 mt-0.5">Rekap kehadiran karyawan per periode</p>
+            <p class="text-sm text-slate-500 mt-0.5">Rekap kehadiran karyawan per periode & kelola data historis</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="openModal('modal-import-excel')"
+                    class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs md:text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition">
+                <i data-lucide="file-up" class="w-4 h-4"></i>
+                Import Excel Data Lama
+            </button>
+            <button onclick="openModal('modal-tambah-absen')"
+                    class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                Tambah Manual
+            </button>
         </div>
     </div>
 
@@ -174,7 +186,7 @@
                 <tbody class="divide-y divide-slate-100">
                     @foreach($rekap as $i => $r)
                         @php
-                            $persen = $totalHariKerja > 0 ? round(($r['hadir'] / $totalHariKerja) * 100, 1) : 0;
+                            $persen = $totalHariKerja > 0 ? round((($r['hadir'] + $r['telat']) / $totalHariKerja) * 100, 1) : 0;
                             $merah  = $persen < 80;
                         @endphp
                         <tr class="{{ $i % 2 === 0 ? 'bg-white' : 'bg-slate-50' }} hover:bg-blue-50 transition">
@@ -372,6 +384,146 @@
                 <button type="submit"
                         class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition">
                     Simpan Perubahan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- MODAL TAMBAH ABSENSI MANUAL (INPUT DATA HISTORIS) --}}
+<div id="modal-tambah-absen" class="fixed inset-0 z-[9999] hidden bg-slate-900/60 backdrop-blur-sm overflow-y-auto p-4 sm:p-6 flex items-center justify-center min-h-screen">
+    <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden my-auto relative transform transition-all">
+        <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-black text-slate-800 uppercase tracking-tight text-sm flex items-center gap-2">
+                <i data-lucide="plus-circle" class="w-4 h-4 text-blue-600"></i>
+                Input Manual Absensi (Historis)
+            </h3>
+            <button onclick="closeModal('modal-tambah-absen')" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form method="POST" action="{{ route('admin.laporan.absensi.store-manual') }}" class="p-5 space-y-3">
+            @csrf
+            
+            {{-- Pilih Karyawan --}}
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-0.5">Pilih Karyawan</label>
+                <select name="user_id" required class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <option value="">-- Pilih Karyawan --</option>
+                    @foreach($semuaKaryawan as $k)
+                        <option value="{{ $k->id }}">{{ $k->nama }} ({{ $k->nip ?? 'No NIP' }})</option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Pilih Tanggal --}}
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-0.5">Tanggal Absensi</label>
+                <input type="date" name="tanggal" required value="{{ date('Y-m-d') }}"
+                       class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+            </div>
+
+            {{-- Status --}}
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-0.5">Status Kehadiran</label>
+                <select name="status" id="tambah-status" required onchange="toggleTimeFields('tambah-status', 'tambah-times')"
+                        class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <option value="hadir">Hadir (Tepat Waktu)</option>
+                    <option value="telat">Telat</option>
+                    <option value="alfa">Alfa</option>
+                </select>
+            </div>
+
+            {{-- Mitra --}}
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-0.5">Mitra / Lokasi</label>
+                <select name="mitra_id" required class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    @foreach($semuaMitra as $m)
+                        <option value="{{ $m->id }}">{{ $m->nama_mitra }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Jam Masuk & Pulang --}}
+            <div id="tambah-times" class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-0.5">Waktu Masuk</label>
+                    <input type="time" name="waktu_masuk" value="08:00"
+                           class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-0.5">Waktu Pulang</label>
+                    <input type="time" name="waktu_pulang" value="17:00"
+                           class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                </div>
+            </div>
+
+            <div class="pt-3 flex justify-end gap-2">
+                <button type="button" onclick="closeModal('modal-tambah-absen')"
+                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs transition">
+                    Batal
+                </button>
+                <button type="submit"
+                        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition">
+                    Simpan Absensi
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- MODAL IMPORT EXCEL DATA LAMA --}}
+<div id="modal-import-excel" class="fixed inset-0 z-[9999] hidden bg-slate-900/60 backdrop-blur-sm overflow-y-auto p-4 sm:p-6 flex items-center justify-center min-h-screen">
+    <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden my-auto relative transform transition-all">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-black text-slate-800 text-base flex items-center gap-2">
+                <i data-lucide="file-up" class="w-5 h-5 text-emerald-600"></i>
+                Import Excel Data Absensi Lama
+            </h3>
+            <button type="button" onclick="closeModal('modal-import-excel')" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <form action="{{ route('admin.laporan.absensi.import-excel') }}" method="POST" enctype="multipart/form-data" class="p-5 space-y-4">
+            @csrf
+
+            <p class="text-xs text-slate-500">
+                Gunakan fitur ini untuk menyuntikkan data absensi historis/lampau secara massal dari file Excel.
+            </p>
+
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-2">
+                <div class="flex items-center justify-between font-bold text-slate-700">
+                    <span class="flex items-center gap-1.5">
+                        <i data-lucide="info" class="w-4 h-4 text-blue-600"></i>
+                        Format File Excel:
+                    </span>
+                    <a href="{{ route('admin.laporan.absensi.template-excel') }}" class="text-blue-600 hover:underline font-bold flex items-center gap-1">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Template
+                    </a>
+                </div>
+                <ul class="list-disc list-inside text-slate-600 space-y-1 pl-1">
+                    <li>Kolom A: NIP / NIK Karyawan</li>
+                    <li>Kolom C: Tanggal (Format: DD/MM/YYYY atau YYYY-MM-DD)</li>
+                    <li>Kolom D: Status (hadir / telat / alfa / izin / sakit / cuti / dinas_luar)</li>
+                    <li>Kolom E & F: Waktu Masuk & Waktu Pulang (Format: HH:MM)</li>
+                </ul>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Upload File Excel (.xlsx / .csv)</label>
+                <input type="file" name="file_excel" accept=".xlsx,.xls,.csv" required
+                       class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-400">
+            </div>
+
+            <div class="pt-2 flex justify-end gap-2">
+                <button type="button" onclick="closeModal('modal-import-excel')"
+                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs transition">
+                    Batal
+                </button>
+                <button type="submit"
+                        class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2">
+                    <i data-lucide="upload-cloud" class="w-4 h-4"></i> Upload & Proses Data
                 </button>
             </div>
         </form>

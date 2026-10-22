@@ -26,6 +26,7 @@ class User extends Authenticatable
         'jabatan',
         'pendidikan',
         'tanggal_masuk',
+        'tanggal_berakhir_kontrak',
         'no_hp',
         'gaji_atas_umr',
         'is_shift',
@@ -39,11 +40,12 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'tanggal_masuk'       => 'date',
-        'gaji_atas_umr'       => 'boolean',
-        'is_shift'            => 'boolean',
-        'uang_makan_by_mitra' => 'boolean',
-        'is_active'           => 'boolean',
+        'tanggal_masuk'            => 'date',
+        'tanggal_berakhir_kontrak' => 'date',
+        'gaji_atas_umr'            => 'boolean',
+        'is_shift'                 => 'boolean',
+        'uang_makan_by_mitra'      => 'boolean',
+        'is_active'                => 'boolean',
     ];
 
     // ── Relasi ───────────────────────────────────────────────────────────

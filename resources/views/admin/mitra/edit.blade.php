@@ -23,6 +23,20 @@
     </div>
 </header>
 
+@if ($errors->any())
+    <div class="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700">
+        <p class="font-bold text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-red-500"></i>
+            Gagal Menyimpan Perubahan. Mohon periksa kesalahan berikut:
+        </p>
+        <ul class="list-disc list-inside text-xs space-y-1 font-semibold pl-2">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
 <form method="POST" action="{{ route('admin.mitra.update', $mitra->id) }}">
 @csrf @method('PUT')
 
@@ -209,23 +223,33 @@
                     <label class="block text-[10px] font-black text-gray-500 tracking-widest mb-2">
                         IP PUBLIC KANTOR <span class="text-red-400">*</span>
                     </label>
-                    <input type="text" name="ip_public"
-                           value="{{ old('ip_public', $mitra->ip_public) }}"
-                           placeholder="Contoh: 103.12.34.56"
-                           required
-                           class="w-full px-4 py-3 rounded-xl border text-sm font-semibold
-                                  text-gray-700 outline-none transition-all
-                                  @error('ip_public') border-red-400 bg-red-50
-                                  @else border-gray-200 bg-gray-50 focus:border-[#1E3A5F] focus:bg-white
-                                  @enderror">
+                    <div class="flex gap-2">
+                        <input type="text" name="ip_public" id="ip_public_edit"
+                               value="{{ old('ip_public', $mitra->ip_public) }}"
+                               placeholder="Contoh: 103.12.34.56 atau 103.12.34.*"
+                               required
+                               class="flex-1 px-4 py-3 rounded-xl border text-sm font-semibold
+                                      text-gray-700 outline-none transition-all
+                                      @error('ip_public') border-red-400 bg-red-50
+                                      @else border-gray-200 bg-gray-50 focus:border-[#1E3A5F] focus:bg-white
+                                      @enderror">
+                        <button type="button" onclick="deteksiIpOtomatis('ip_public_edit')"
+                                class="shrink-0 px-3 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-[10px] font-black rounded-xl transition-all flex items-center gap-1.5"
+                                title="Deteksi IP publik jaringan saat ini">
+                            <i data-lucide="radar" class="w-3.5 h-3.5"></i>
+                            Deteksi
+                        </button>
+                    </div>
                     @error('ip_public')
                         <p class="mt-1 text-xs text-red-500 font-semibold">{{ $message }}</p>
                     @enderror
-                    <p class="mt-1 text-[9px] text-gray-400 font-medium">
-                        IP Public jaringan WiFi kantor mitra. Karyawan <strong>hanya bisa absen</strong>
-                        saat terhubung ke jaringan ini. Tanyakan ke IT/ISP jika tidak tahu IP-nya.
+                    <p class="mt-1.5 text-[9px] text-gray-400 font-medium leading-relaxed">
+                        IP Public jaringan WiFi kantor mitra. Tombol <strong>Deteksi</strong> akan
+                        otomatis mengisi IPv4 <em>dan</em> IPv6 prefix sekaligus — penting karena HP modern
+                        kadang pakai IPv4, kadang IPv6 di jaringan yang sama. Pisahkan dengan koma jika ada lebih dari satu.
                     </p>
                 </div>
+
 
             </div>
         </div>
@@ -311,5 +335,49 @@ function syncSlider(val) {
     document.getElementById('slider-radius').value = Math.min(v, 500);
     document.getElementById('label-radius').textContent = v + ' m';
 }
+
+async function deteksiIpOtomatis(inputId) {
+    const btn = document.querySelector(`button[onclick="deteksiIpOtomatis('${inputId}')"]`);
+    const input = document.getElementById(inputId);
+    if (!btn || !input) return;
+
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> Mendeteksi...';
+
+    const prefixes = [];
+
+    // Deteksi IPv4 dan IPv6 secara bersamaan
+    const [res4, res6] = await Promise.allSettled([
+        fetch('https://api4.ipify.org?format=json', { signal: AbortSignal.timeout(5000) }).then(r => r.json()),
+        fetch('https://api6.ipify.org?format=json', { signal: AbortSignal.timeout(5000) }).then(r => r.json()),
+    ]);
+
+    if (res4.status === 'fulfilled' && res4.value?.ip) {
+        // IPv4: ambil 3 oktet pertama sebagai wildcard (misal: 103.12.34.*)
+        const prefix4 = res4.value.ip.split('.').slice(0, 3).join('.') + '.*';
+        prefixes.push(prefix4);
+    }
+
+    if (res6.status === 'fulfilled' && res6.value?.ip) {
+        // IPv6: ambil 3 hextet pertama sebagai prefix wildcard (misal: 2404:c0:d001:*)
+        const prefix6 = res6.value.ip.split(':').slice(0, 3).join(':') + ':*';
+        prefixes.push(prefix6);
+    }
+
+    if (prefixes.length > 0) {
+        input.value = prefixes.join(', ');
+        input.style.borderColor = '#10b981';
+        setTimeout(() => input.style.borderColor = '', 2500);
+    } else {
+        alert('Gagal mendeteksi IP Public. Pastikan koneksi internet aktif, atau tanyakan IP Public ke IT/ISP kantor mitra.');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 </script>
 @endpush
+

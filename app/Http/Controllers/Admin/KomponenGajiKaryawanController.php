@@ -195,8 +195,8 @@ class KomponenGajiKaryawanController extends Controller
             'gaji_pokok'      => 'required|numeric|min:0',
         ];
 
-        // Uang makan & transport hanya wajib jika dibayar CBN
-        if (!$karyawan->uang_makan_by_mitra) {
+        // Uang makan & transport hanya berlaku untuk Karyawan Tetap
+        if ($karyawan->isTetap()) {
             $rules['uang_makan']     = 'required|numeric|min:0';
             $rules['uang_transport'] = 'required|numeric|min:0';
         }
@@ -211,8 +211,8 @@ class KomponenGajiKaryawanController extends Controller
 
         $karyawan->updateKomponenGaji([
             'gaji_pokok'      => $request->gaji_pokok,
-            'uang_makan'      => $karyawan->uang_makan_by_mitra ? null : $request->uang_makan,
-            'uang_transport'  => $karyawan->uang_makan_by_mitra ? null : $request->uang_transport,
+            'uang_makan'      => $karyawan->isTetap() ? $request->uang_makan : null,
+            'uang_transport'  => $karyawan->isTetap() ? $request->uang_transport : null,
         ]);
 
         return redirect()

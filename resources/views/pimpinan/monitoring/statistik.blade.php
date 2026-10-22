@@ -225,60 +225,101 @@
         </div>
 
         {{-- Panel Karyawan Kontrak --}}
-        <div x-show="tabRekap === 'kontrak'" class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="bg-[#1E3A5F] text-white text-xs font-bold tracking-wider">
-                        <th class="px-4 py-3 text-left">No.</th>
-                        <th class="px-4 py-3 text-left">Nama Karyawan</th>
-                        <th class="px-4 py-3 text-left">Jabatan</th>
-                        <th class="px-4 py-3 text-left">Mitra / Cabang</th>
-                        <th class="px-4 py-3 text-center">Hadir</th>
-                        <th class="px-4 py-3 text-center">Telat</th>
-                        <th class="px-4 py-3 text-center">Alfa</th>
-                        <th class="px-4 py-3 text-center">Izin</th>
-                        <th class="px-4 py-3 text-center">Sakit</th>
-                        <th class="px-4 py-3 text-center">Cuti</th>
-                        <th class="px-4 py-3 text-center">Dinas</th>
-                        <th class="px-4 py-3 text-center">% Hadir</th>
-                        <th class="px-4 py-3 text-center">Detail</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    @forelse($rekapKontrak as $i => $r)
-                    @php $merah = $r['persen'] < 80; @endphp
-                    <tr class="{{ $i%2===0 ? 'bg-white':'bg-slate-50' }} {{ $merah ? 'hover:bg-red-50':'hover:bg-blue-50' }}">
-                        <td class="px-4 py-3 text-slate-400">{{ $i+1 }}</td>
-                        <td class="px-4 py-3 font-semibold {{ $merah ? 'text-red-600':'text-slate-800' }}">{{ $r['nama'] }}</td>
-                        <td class="px-4 py-3 text-slate-500 text-xs">{{ $r['jabatan'] }}</td>
-                        <td class="px-4 py-3 text-slate-500 text-xs">{{ $r['mitra'] }}</td>
-                        <td class="px-4 py-3 text-center font-bold text-emerald-600">{{ $r['hadir'] }}</td>
-                        <td class="px-4 py-3 text-center font-bold text-amber-500">{{ $r['telat'] }}</td>
-                        <td class="px-4 py-3 text-center font-bold text-red-500">{{ $r['alfa'] }}</td>
-                        <td class="px-4 py-3 text-center text-slate-600">{{ $r['izin'] }}</td>
-                        <td class="px-4 py-3 text-center text-slate-600">{{ $r['sakit'] }}</td>
-                        <td class="px-4 py-3 text-center text-slate-600">{{ $r['cuti'] }}</td>
-                        <td class="px-4 py-3 text-center text-slate-600">{{ $r['dinas'] }}</td>
-                        <td class="px-4 py-3 text-center">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold
-                                {{ $merah ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700' }}">
-                                {{ $r['persen'] }}%
-                            </span>
-                        </td>
-                        <td class="px-4 py-3 text-center">
-                            @if($r['id'])
-                            <a href="{{ route('pimpinan.monitoring.detail', $r['id']) }}"
-                               class="text-blue-500 hover:text-blue-700">
-                                <i data-lucide="eye" class="w-4 h-4 inline"></i>
-                            </a>
-                            @endif
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="13" class="px-4 py-12 text-center text-slate-400 font-medium">Tidak ada data rekap karyawan kontrak.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+        <div x-show="tabRekap === 'kontrak'" class="space-y-4">
+            {{-- Summary Banner Evaluasi Perpanjangan Kontrak Kerja --}}
+            <div class="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                        <i data-lucide="check-circle" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Sangat Layak (≥90%)</p>
+                        <p class="text-lg font-black text-emerald-700">{{ $evalKontrakStats['sangat_layak'] }} <span class="text-xs text-slate-400 font-normal">Karyawan</span></p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                        <i data-lucide="thumbs-up" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Layak Perpanjang (80-89%)</p>
+                        <p class="text-lg font-black text-blue-700">{{ $evalKontrakStats['layak'] }} <span class="text-xs text-slate-400 font-normal">Karyawan</span></p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="w-9 h-9 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
+                        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Perlu Evaluasi (&lt;80%)</p>
+                        <p class="text-lg font-black text-rose-700">{{ $evalKontrakStats['perlu_evaluasi'] }} <span class="text-xs text-slate-400 font-normal">Karyawan</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-[#1E3A5F] text-white text-xs font-bold tracking-wider">
+                            <th class="px-4 py-3 text-left">No.</th>
+                            <th class="px-4 py-3 text-left">Nama Karyawan</th>
+                            <th class="px-4 py-3 text-left">Jabatan</th>
+                            <th class="px-4 py-3 text-left">Mitra / Cabang</th>
+                            <th class="px-4 py-3 text-center">Hadir</th>
+                            <th class="px-4 py-3 text-center">Telat</th>
+                            <th class="px-4 py-3 text-center">Alfa</th>
+                            <th class="px-4 py-3 text-center">Izin</th>
+                            <th class="px-4 py-3 text-center">Sakit</th>
+                            <th class="px-4 py-3 text-center">Cuti</th>
+                            <th class="px-4 py-3 text-center">Dinas</th>
+                            <th class="px-4 py-3 text-center">% Hadir</th>
+                            <th class="px-4 py-3 text-center">Evaluasi Kontrak</th>
+                            <th class="px-4 py-3 text-center">Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($rekapKontrak as $i => $r)
+                        @php $merah = $r['persen'] < 80; @endphp
+                        <tr class="{{ $i%2===0 ? 'bg-white':'bg-slate-50' }} {{ $merah ? 'hover:bg-red-50':'hover:bg-blue-50' }}">
+                            <td class="px-4 py-3 text-slate-400">{{ $i+1 }}</td>
+                            <td class="px-4 py-3 font-semibold {{ $merah ? 'text-red-600':'text-slate-800' }}">{{ $r['nama'] }}</td>
+                            <td class="px-4 py-3 text-slate-500 text-xs">{{ $r['jabatan'] }}</td>
+                            <td class="px-4 py-3 text-slate-500 text-xs">{{ $r['mitra'] }}</td>
+                            <td class="px-4 py-3 text-center font-bold text-emerald-600">{{ $r['hadir'] }}</td>
+                            <td class="px-4 py-3 text-center font-bold text-amber-500">{{ $r['telat'] }}</td>
+                            <td class="px-4 py-3 text-center font-bold text-red-500">{{ $r['alfa'] }}</td>
+                            <td class="px-4 py-3 text-center text-slate-600">{{ $r['izin'] }}</td>
+                            <td class="px-4 py-3 text-center text-slate-600">{{ $r['sakit'] }}</td>
+                            <td class="px-4 py-3 text-center text-slate-600">{{ $r['cuti'] }}</td>
+                            <td class="px-4 py-3 text-center text-slate-600">{{ $r['dinas'] }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold
+                                    {{ $merah ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700' }}">
+                                    {{ $r['persen'] }}%
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-xl text-[11px] font-bold {{ $r['evaluasi_badge'] }}">
+                                    {{ $r['evaluasi_status'] }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                @if($r['id'])
+                                <a href="{{ route('pimpinan.monitoring.detail', $r['id']) }}"
+                                   class="text-blue-500 hover:text-blue-700">
+                                    <i data-lucide="eye" class="w-4 h-4 inline"></i>
+                                </a>
+                                @endif
+                            </td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="14" class="px-4 py-12 text-center text-slate-400 font-medium">Tidak ada data rekap karyawan kontrak.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

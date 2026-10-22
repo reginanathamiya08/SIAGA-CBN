@@ -10,25 +10,27 @@ class UpdateMitraRequest extends FormRequest
 
     public function rules(): array
     {
+        $timeRegex = 'regex:/^([0-1][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/';
+
         return [
             'nama_mitra'     => 'required|string|min:3|max:150',
             'latitude'       => 'required|numeric|between:-90,90',
             'longitude'      => 'required|numeric|between:-180,180',
-            'radius_meter'   => 'required|integer|min:50|max:5000',
+            'radius_meter'   => 'required|integer|min:10|max:5000',
             'ip_public'      => 'required|string',
             'mitra_induk_id' => 'nullable|exists:mitra,id',
-            'jam_masuk'      => 'required|date_format:H:i',
-            'jam_pulang'     => 'required|date_format:H:i',
+            'jam_masuk'      => ['required', $timeRegex],
+            'jam_pulang'     => ['required', $timeRegex],
             'is_pusat'       => 'nullable|boolean',
             'shifts'         => 'nullable|array',
-            'shifts.*.id'             => 'nullable|exists:shift,id',
-            'shifts.*.nama_shift'     => 'nullable',
-            'shifts.*.jam_mulai'      => 'nullable|date_format:H:i',
-            'shifts.*.jam_selesai'    => 'nullable|date_format:H:i',
-            'shifts.*.window_start'   => 'nullable|date_format:H:i',
-            'shifts.*.window_end'     => 'nullable|date_format:H:i',
-            'shifts.*.toleransi_menit'=> 'nullable|integer',
-            'shifts.*.is_lintas_hari' => 'nullable|boolean',
+            'shifts.*.id'              => 'nullable|exists:shift,id',
+            'shifts.*.nama_shift'      => 'nullable',
+            'shifts.*.jam_mulai'       => ['nullable', $timeRegex],
+            'shifts.*.jam_selesai'     => ['nullable', $timeRegex],
+            'shifts.*.window_start'    => ['nullable', $timeRegex],
+            'shifts.*.window_end'      => ['nullable', $timeRegex],
+            'shifts.*.toleransi_menit' => 'nullable|integer',
+            'shifts.*.is_lintas_hari'  => 'nullable|boolean',
         ];
     }
 
@@ -48,11 +50,11 @@ class UpdateMitraRequest extends FormRequest
             'radius_meter.min'      => 'Radius minimal 10 meter.',
             'radius_meter.max'      => 'Radius maksimal 5000 meter.',
             'ip_public.required'    => 'IP Public kantor wajib diisi.',
-            'ip_public.string'      => 'Format IP Public tidak valid. Gunakan format IP standar, wildcard (*), atau pisahkan beberapa IP dengan koma.',
+            'ip_public.string'      => 'Format IP Public tidak valid.',
             'jam_masuk.required'    => 'Jam masuk wajib diisi.',
-            'jam_masuk.date_format' => 'Format jam masuk tidak valid.',
+            'jam_masuk.regex'       => 'Format jam masuk tidak valid (gunakan HH:MM).',
             'jam_pulang.required'   => 'Jam pulang wajib diisi.',
-            'jam_pulang.date_format'=> 'Format jam pulang tidak valid.',
+            'jam_pulang.regex'      => 'Format jam pulang tidak valid (gunakan HH:MM).',
         ];
     }
 }

@@ -157,7 +157,17 @@
                             {{ number_format($slip->getNominal('Gaji Pokok'), 0, ',', '.') }}
                         </td>
                         <td class="px-6 py-4 text-right font-mono text-slate-600">
-                            {{ number_format($slip->getNominal('Uang Makan') + $slip->getNominal('Uang Transport'), 0, ',', '.') }}
+                            @php
+                                $nMakan  = $slip->getNominal('Uang Makan');
+                                $nTrans  = $slip->getNominal('Uang Transport');
+                                $nPangan = $slip->getNominal('Tunjangan Pangan');
+                            @endphp
+                            {{ number_format($nMakan + $nTrans + $nPangan, 0, ',', '.') }}
+                            @if ($nPangan > 0)
+                                <span class="block text-[8px] font-sans font-black uppercase text-emerald-500">Pangan</span>
+                            @elseif ($slip->karyawan?->uang_makan_by_mitra)
+                                <span class="block text-[8px] font-sans font-black uppercase text-amber-500">Dibayar Mitra</span>
+                            @endif
                         </td>
                         <td class="px-6 py-4 text-right font-mono text-red-500">
                             {{ number_format($slip->total_potongan, 0, ',', '.') }}

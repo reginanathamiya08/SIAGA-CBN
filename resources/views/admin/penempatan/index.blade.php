@@ -100,9 +100,7 @@
     </div>
 
     {{-- TAB NAVIGASI --}}
-    <div class="flex flex-col gap-4 mb-4">
-        <div class="flex items-center gap-2">">
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 mb-4">
         <button @click="tab = 'kontrak'"
                 :class="tab === 'kontrak' ? 'bg-[#1E3A5F] text-white shadow-lg shadow-blue-900/10' : 'bg-white text-gray-500 hover:bg-gray-50'"
                 class="px-5 py-2.5 rounded-xl text-xs font-black transition-all border border-gray-100 uppercase">
@@ -114,7 +112,6 @@
             Karyawan Tetap (CBN)
             <span class="px-1.5 py-0.5 bg-blue-500 text-white text-[8px] rounded-md">{{ count($karyawanTetap) }}</span>
         </button>
-    </div>
     </div>
 
     {{-- Tabel Container --}}
@@ -284,7 +281,7 @@
         </div>
 
     </div>
-</div></div>
+</div>
 
 @push('scripts')
 <script>

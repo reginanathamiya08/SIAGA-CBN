@@ -98,6 +98,22 @@ class AttendanceHelper
     }
 
     /**
+     * Menyaring koleksi absensi agar hanya berisi data pada hari kerja
+     * (membuang data di hari Sabtu, Minggu, dan libur nasional).
+     * Dipakai untuk rekap & % kehadiran agar jumlah Hadir + Tidak Hadir
+     * tidak pernah melebihi jumlah hari kerja.
+     */
+    public static function hanyaHariKerja($absensiList)
+    {
+        return $absensiList->filter(function ($absensi) {
+            if (!$absensi->tanggal) {
+                return false;
+            }
+            return !self::isHolidayOrWeekend(Carbon::parse($absensi->tanggal));
+        });
+    }
+
+    /**
      * Menjalankan proses otomatisasi Alfa & Pemotongan Quota Cuti untuk hari kerja yang sudah lewat / selesai.
      */
     public static function runAutoAlfaDeduction(): void

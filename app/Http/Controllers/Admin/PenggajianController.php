@@ -223,7 +223,15 @@ class PenggajianController extends Controller
                                         ->whereIn('status', ['ditolak', 'direvisi'])
                                         ->get();
 
-            return view('admin.penggajian.show', compact('periodeGaji', 'karyawan', 'karyawanBelumAda', 'slipDitolak'));
+            $jumlahHariKerja = $this->hitungHariKerja($periodeGaji->tanggal_mulai, $periodeGaji->tanggal_selesai);
+            $rekapKehadiran = [];
+            foreach ($karyawan as $kar) {
+                $rekap = $this->rekapKehadiran($kar, $periodeGaji, $jumlahHariKerja);
+                $rekap['estimasi'] = $this->estimasiTunjangan($kar, $rekap['total_masuk'], $jumlahHariKerja);
+                $rekapKehadiran[$kar->id] = $rekap;
+            }
+
+            return view('admin.penggajian.show', compact('periodeGaji', 'karyawan', 'karyawanBelumAda', 'slipDitolak', 'jumlahHariKerja', 'rekapKehadiran'));
         }
 
         $slipGaji = SlipGajiPeriode::with('karyawan')
@@ -297,15 +305,12 @@ class PenggajianController extends Controller
     ): void {
         $kg = $karyawan->komponenGaji;
 
-        $absensi = Absensi::where('user_id', $karyawan->id)
-                          ->whereBetween('tanggal', [$periode->tanggal_mulai->toDateString(), $periode->tanggal_selesai->toDateString()])
-                          ->get();
-
-        $totalHadir = $absensi->whereIn('status', ['hadir', 'telat'])->count();
-        $totalTelat = $absensi->where('is_telat', true)->count();
-        $totalIzin  = $absensi->whereIn('status', ['izin', 'sakit'])->count();
-        $totalCuti  = $absensi->where('status', 'cuti')->count();
-        $totalAlfa  = $absensi->where('status', 'alfa')->count() + max(0, $jumlahHariKerja - $absensi->count());
+        $rekap = $this->rekapKehadiran($karyawan, $periode, $jumlahHariKerja);
+        $totalHadir = $rekap['total_masuk']; // hadir tepat waktu + telat (dasar uang makan/transport/pangan)
+        $totalTelat = $rekap['telat'];
+        $totalIzin  = $rekap['izin_sakit'];
+        $totalCuti  = $rekap['cuti'];
+        $totalAlfa  = $rekap['alfa'];
 
         $gajiPokok     = (float) $kg->gaji_pokok;
         
@@ -446,11 +451,15 @@ class PenggajianController extends Controller
             $uangMakan     = $isTetap ? (float) ($request->uang_makan     ?? $defMakan) * $totalHadir : 0.0;
             $uangTransport = $isTetap ? (float) ($request->uang_transport ?? $defTransport) * $totalHadir : 0.0;
 
-            $persenKes = $kg->persen_bpjs_kes ?? Configuration::getValue('persen_bpjs_kes', 9.24);
-            $persenTk  = $kg->persen_bpjs_tk  ?? Configuration::getValue('persen_bpjs_tk', 5.00);
+            $pctTunjJamsostek = (float) Configuration::getValue('persen_tunjangan_jamsostek', Configuration::getValue('persen_bpjs_tk', 5.00));
+            $pctTunjAskes     = (float) Configuration::getValue('persen_tunjangan_askes', Configuration::getValue('persen_bpjs_kes', 3.00));
+            $pctPotBpjsKes    = (float) ($kg?->persen_bpjs_kes ?? Configuration::getValue('persen_potongan_bpjs_kes', Configuration::getValue('persen_bpjs_kes', 3.00)));
+            $pctPotBpjsTk     = (float) ($kg?->persen_bpjs_tk  ?? Configuration::getValue('persen_potongan_bpjs_tk', Configuration::getValue('persen_bpjs_tk', 5.00)));
 
-            $potonganBpjsKes = $gajiPokok * ((float) $persenKes / 100);
-            $potonganBpjsTk  = $gajiPokok * ((float) $persenTk  / 100);
+            $tunjanganBpjsKes = $gajiPokok * ($pctTunjAskes / 100);
+            $tunjanganBpjsTk  = $gajiPokok * ($pctTunjJamsostek / 100);
+            $potonganBpjsKes  = $gajiPokok * ($pctPotBpjsKes / 100);
+            $potonganBpjsTk   = $gajiPokok * ($pctPotBpjsTk / 100);
 
             $isKontrakUmum = $karyawan->isKaryawanKontrak() && (
                 in_array($karyawan->jabatan, ['CS', 'CS ATM', 'Ekspedisi']) || $karyawan->divisi === 'umum'
@@ -527,5 +536,73 @@ class PenggajianController extends Controller
         }
 
         return \App\Helpers\AttendanceHelper::countWorkingDays($dari, $akhir);
+    }
+
+    /**
+     * Rekap kehadiran karyawan dalam satu periode gaji (hanya hari kerja).
+     * total_masuk = hadir tepat waktu + telat → dasar pengali uang makan / transport / pangan.
+     */
+    private function rekapKehadiran(User $karyawan, PeriodeGaji $periode, int $jumlahHariKerja): array
+    {
+        $absensi = Absensi::where('user_id', $karyawan->id)
+                          ->whereBetween('tanggal', [$periode->tanggal_mulai->toDateString(), $periode->tanggal_selesai->toDateString()])
+                          ->get();
+        $absensi = \App\Helpers\AttendanceHelper::hanyaHariKerja($absensi);
+
+        $telat      = $absensi->filter(fn($a) => $a->status === 'telat' || ($a->status === 'hadir' && $a->is_telat))->count();
+        $hadirTepat = $absensi->filter(fn($a) => $a->status === 'hadir' && !$a->is_telat)->count();
+        $izinSakit  = $absensi->whereIn('status', ['izin', 'sakit'])->count();
+        $cuti       = $absensi->where('status', 'cuti')->count();
+        $dinasLuar  = $absensi->where('status', 'dinas_luar')->count();
+        $alfa       = $absensi->where('status', 'alfa')->count() + max(0, $jumlahHariKerja - $absensi->count());
+
+        return [
+            'hadir_tepat' => $hadirTepat,
+            'telat'       => $telat,
+            'total_masuk' => $hadirTepat + $telat,
+            'izin_sakit'  => $izinSakit,
+            'cuti'        => $cuti,
+            'dinas_luar'  => $dinasLuar,
+            'alfa'        => $alfa,
+        ];
+    }
+
+    /**
+     * Estimasi tunjangan berbasis kehadiran (dipakai untuk preview draft).
+     */
+    private function estimasiTunjangan(User $karyawan, int $totalMasuk, int $jumlahHariKerja): array
+    {
+        $kg = $karyawan->komponenGaji;
+        $isTetap = $karyawan->isKaryawanTetap();
+        $isKontrakUmum = $karyawan->isKaryawanKontrak() && (
+            in_array($karyawan->jabatan, ['CS', 'CS ATM', 'Ekspedisi']) || $karyawan->divisi === 'umum'
+        );
+
+        if ($isTetap) {
+            $tarifMakan     = (float) ($kg->uang_makan     ?? Configuration::getValue('uang_makan_default', 35000));
+            $tarifTransport = (float) ($kg->uang_transport ?? Configuration::getValue('uang_transport_default', 45000));
+            return [
+                'kategori'        => 'tetap',
+                'tarif_makan'     => $tarifMakan,
+                'tarif_transport' => $tarifTransport,
+                'uang_makan'      => $tarifMakan * $totalMasuk,
+                'uang_transport'  => $tarifTransport * $totalMasuk,
+                'total'           => ($tarifMakan + $tarifTransport) * $totalMasuk,
+            ];
+        }
+
+        if ($isKontrakUmum) {
+            $panganBulanan = (float) Configuration::getValue('tunjangan_pangan_kontrak_umum', 805000);
+            $tarifHarian   = $panganBulanan / max(1, $jumlahHariKerja);
+            $pangan        = round($tarifHarian * $totalMasuk);
+            return [
+                'kategori'    => 'kontrak_umum',
+                'tarif_makan' => $tarifHarian,
+                'uang_makan'  => $pangan,
+                'total'       => $pangan,
+            ];
+        }
+
+        return ['kategori' => 'kontrak_hc', 'total' => 0];
     }
 }

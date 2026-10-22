@@ -28,12 +28,12 @@
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Jam Mulai</label>
-                    <input type="time" name="shifts[{{ $num }}][jam_mulai]" value="{{ old('shifts.'.$num.'.jam_mulai', $shift?->jam_mulai) }}"
+                    <input type="time" name="shifts[{{ $num }}][jam_mulai]" value="{{ old('shifts.'.$num.'.jam_mulai', $shift?->jam_mulai ? substr($shift->jam_mulai, 0, 5) : '') }}"
                            class="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold outline-none focus:border-orange-400">
                 </div>
                 <div>
                     <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Jam Selesai</label>
-                    <input type="time" name="shifts[{{ $num }}][jam_selesai]" value="{{ old('shifts.'.$num.'.jam_selesai', $shift?->jam_selesai) }}"
+                    <input type="time" name="shifts[{{ $num }}][jam_selesai]" value="{{ old('shifts.'.$num.'.jam_selesai', $shift?->jam_selesai ? substr($shift->jam_selesai, 0, 5) : '') }}"
                            class="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold outline-none focus:border-orange-400">
                 </div>
             </div>
@@ -41,12 +41,12 @@
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 text-emerald-600">Window Mulai</label>
-                    <input type="time" name="shifts[{{ $num }}][window_start]" value="{{ old('shifts.'.$num.'.window_start', $shift?->window_start) }}"
+                    <input type="time" name="shifts[{{ $num }}][window_start]" value="{{ old('shifts.'.$num.'.window_start', $shift?->window_start ? substr($shift->window_start, 0, 5) : '') }}"
                            class="w-full px-3 py-2 rounded-xl border border-emerald-100 bg-emerald-50/30 text-xs font-bold outline-none focus:border-emerald-400">
                 </div>
                 <div>
                     <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 text-emerald-600">Window Akhir</label>
-                    <input type="time" name="shifts[{{ $num }}][window_end]" value="{{ old('shifts.'.$num.'.window_end', $shift?->window_end) }}"
+                    <input type="time" name="shifts[{{ $num }}][window_end]" value="{{ old('shifts.'.$num.'.window_end', $shift?->window_end ? substr($shift->window_end, 0, 5) : '') }}"
                            class="w-full px-3 py-2 rounded-xl border border-emerald-100 bg-emerald-50/30 text-xs font-bold outline-none focus:border-emerald-400">
                 </div>
             </div>

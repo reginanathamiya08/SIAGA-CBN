@@ -27,15 +27,16 @@ class UpdateKaryawanRequest extends FormRequest
         );
 
         return [
-            'nama'          => 'required|string|max:100',
-            'email'         => 'required|email|max:150|unique:users,email,' . $karyawan->id,
-            'divisi'        => 'required|in:' . implode(',', $divisiValid),
-            'jabatan'       => 'required|in:' . implode(',', $jabatanValid),
-            'pendidikan'    => 'required|in:S3,S2,S1,D3,SMA/SMK',
-            'tanggal_masuk' => 'required|date|before_or_equal:today',
-            'no_hp'         => 'nullable|string|max:20',
-            'jenis_dokumen' => 'nullable|in:KTA,SIM,ijazah,sertifikat,lainnya',
-            'file_dokumen'  => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            'nama'                     => 'required|string|max:100',
+            'email'                    => 'required|email|max:150|unique:users,email,' . $karyawan->id,
+            'divisi'                   => 'required|in:' . implode(',', $divisiValid),
+            'jabatan'                  => 'required|in:' . implode(',', $jabatanValid),
+            'pendidikan'               => 'required|in:S3,S2,S1,D3,SMA/SMK',
+            'tanggal_masuk'            => 'required|date|before_or_equal:today',
+            'tanggal_berakhir_kontrak' => 'nullable|date|after_or_equal:tanggal_masuk',
+            'no_hp'                    => 'nullable|string|max:20',
+            'jenis_dokumen'            => 'nullable|in:KTA,SIM,ijazah,sertifikat,lainnya',
+            'file_dokumen'             => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
         ];
     }
 

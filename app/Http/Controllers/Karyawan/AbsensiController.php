@@ -98,9 +98,39 @@ class AbsensiController extends Controller
                              ->groupBy('status')
                              ->pluck('total', 'status');
 
+        // Evaluasi Track Record Kontrak untuk Karyawan Kontrak
+        $evaluasiKontrak = null;
+        if ($karyawan->role?->slug === 'karyawan_kontrak') {
+            $hariKerjaBulanIni = \App\Helpers\AttendanceHelper::countWorkingDays($today->copy()->startOfMonth(), $today->copy()->endOfMonth());
+            $hadirBulanIni     = ($rekapBulan['hadir'] ?? 0) + ($rekapBulan['telat'] ?? 0);
+            $persenBulanIni    = $hariKerjaBulanIni > 0 ? round(($hadirBulanIni / $hariKerjaBulanIni) * 100, 1) : 0;
+            
+            $statusEval = match(true) {
+                $persenBulanIni >= 90 => 'Sangat Layak Perpanjang Kontrak',
+                $persenBulanIni >= 80 => 'Layak Perpanjang Kontrak',
+                default               => 'Perlu Evaluasi Kehadiran'
+            };
+
+            $badgeEval = match(true) {
+                $persenBulanIni >= 90 => 'bg-emerald-500 text-white',
+                $persenBulanIni >= 80 => 'bg-blue-600 text-white',
+                default               => 'bg-rose-600 text-white'
+            };
+
+            $evaluasiKontrak = [
+                'hari_kerja'   => $hariKerjaBulanIni,
+                'hadir'        => $hadirBulanIni,
+                'alfa'         => $rekapBulan['alfa'] ?? 0,
+                'telat'        => Absensi::where('user_id', $karyawan->id)->whereMonth('tanggal', $today->month)->whereYear('tanggal', $today->year)->where('is_telat', true)->count(),
+                'persen'       => $persenBulanIni,
+                'status'       => $statusEval,
+                'badge'        => $badgeEval,
+            ];
+        }
+
         return view('karyawan.absensi.index', compact(
             'karyawan', 'penempatan', 'absensi', 'riwayat', 'rekapBulan', 'bolehPulang', 'pesanBelumPulang',
-            'isLiburAtauIzin', 'statusLiburAtauIzin'
+            'isLiburAtauIzin', 'statusLiburAtauIzin', 'evaluasiKontrak'
         ));
     }
 
@@ -109,11 +139,17 @@ class AbsensiController extends Controller
         $request->validate([
             'latitude'  => 'required|numeric',
             'longitude' => 'required|numeric',
+            'accuracy'  => 'nullable|numeric',
         ]);
 
         $karyawan = Auth::user()->karyawan;
         $now      = Carbon::now();
         $today    = Carbon::today();
+
+        $accuracy = $request->filled('accuracy') ? (float) $request->accuracy : null;
+        if ($accuracy === null || $accuracy > 100) {
+            return back()->with('error', 'Sinyal GPS tidak akurat (akurasi: ' . ($accuracy ?? 'tidak terdeteksi') . 'm). Pastikan GPS aktif dan coba di area terbuka.');
+        }
 
         $statusHariIni = Absensi::where('user_id', $karyawan->id)
                                 ->whereDate('tanggal', $today)
@@ -145,22 +181,39 @@ class AbsensiController extends Controller
             return back()->with('error', "Lokasi tidak valid. Kamu berada " . number_format($jarak, 0) . "m dari " . $mitra->nama_mitra . ". Pastikan kamu berada di dalam area kantor.");
         }
 
-        // ✅ VALIDASI IP PUBLIC (Smart Validation: IPv4 & Smart IPv6 Prefix /48)
-        $ipKaryawan = $request->ip();
+        // ✅ VALIDASI IP PUBLIC (WAJIB — tidak ada bypass jika kosong)
+        $ipKaryawan = $this->normalizeIp($request->ip());
         $ipMitra    = $mitra->ip_public;
 
-        if ($ipMitra && !$this->isIpAllowed($ipKaryawan, $ipMitra)) {
+        if (empty(trim((string) $ipMitra))) {
+            return back()->with('error', "Absensi ditolak. Konfigurasi IP Publik untuk mitra " . $mitra->nama_mitra . " belum diatur oleh Admin. Hubungi Admin untuk melengkapi data ini sebelum melakukan presensi.");
+        }
+
+        if (!$this->isIpAllowed($ipKaryawan, $ipMitra)) {
             return back()->with('error', "Absensi ditolak. Gunakan jaringan WiFi kantor " . $mitra->nama_mitra . " untuk melakukan absensi. (IP terdeteksi: {$ipKaryawan})");
+        }
+
+        // ✅ CROSS-CHECK IP GEOLOCATION vs GPS (mitigasi VPN/proxy)
+        $ipGeoError = $this->cekIpGeolocation($ipKaryawan, (float) $mitra->latitude, (float) $mitra->longitude);
+        if ($ipGeoError) {
+            return back()->with('error', $ipGeoError);
         }
 
         $shiftTerdeteksi = null;
         if ($karyawan->is_shift) {
             $shifts = Shift::where('mitra_id', $mitra->id)->get();
-            foreach ($shifts as $s) {
-                if ($s->isInWindow($now)) {
-                    $shiftTerdeteksi = $s;
-                    break;
-                }
+            $kandidat = $shifts->filter(fn($s) => $s->isInWindow($now));
+
+            if ($kandidat->count() > 1) {
+                $nowMinutes = \Carbon\Carbon::parse($now)->hour * 60 + \Carbon\Carbon::parse($now)->minute;
+                $shiftTerdeteksi = $kandidat->sortBy(function ($s) use ($nowMinutes) {
+                    $jamMulai = \Carbon\Carbon::parse($s->jam_mulai);
+                    $jamMulaiMenit = $jamMulai->hour * 60 + $jamMulai->minute;
+                    $selisih = abs($nowMinutes - $jamMulaiMenit);
+                    return min($selisih, 1440 - $selisih);
+                })->first();
+            } else {
+                $shiftTerdeteksi = $kandidat->first();
             }
         }
 
@@ -208,7 +261,7 @@ class AbsensiController extends Controller
             return back()->with('error', 'Kamu sudah absen masuk hari ini.');
         }
 
-        $batasToleransi = $jamMulai->copy()->addMinutes($toleransi);
+        $batasToleransi = $jamMulai->copy()->addMinutes((int) $toleransi);
         $isTelat        = $now->gt($batasToleransi);
         $status         = $isTelat ? 'telat' : 'hadir';
 
@@ -261,8 +314,14 @@ class AbsensiController extends Controller
         $request->validate([
             'latitude'  => 'required|numeric',
             'longitude' => 'required|numeric',
+            'accuracy'  => 'nullable|numeric',
         ]);
-        
+
+        $accuracy = $request->filled('accuracy') ? (float) $request->accuracy : null;
+        if ($accuracy === null || $accuracy > 100) {
+            return back()->with('error', 'Sinyal GPS tidak akurat (akurasi: ' . ($accuracy ?? 'tidak terdeteksi') . 'm). Pastikan GPS aktif dan coba di area terbuka.');
+        }
+
         $karyawan = Auth::user()->karyawan;
         $now      = Carbon::now();
         $today    = Carbon::today();
@@ -325,12 +384,22 @@ class AbsensiController extends Controller
             return back()->with('error', "Lokasi tidak valid untuk absen pulang. Pastikan kamu berada di dalam area kantor.");
         }
 
-        // ✅ VALIDASI IP PUBLIC (Smart Validation: IPv4 & Smart IPv6 Prefix /48)
-        $ipKaryawan = $request->ip();
+        // ✅ VALIDASI IP PUBLIC (WAJIB — tidak ada bypass jika kosong)
+        $ipKaryawan = $this->normalizeIp($request->ip());
         $ipMitra    = $mitra->ip_public;
 
-        if ($ipMitra && !$this->isIpAllowed($ipKaryawan, $ipMitra)) {
+        if (empty(trim((string) $ipMitra))) {
+            return back()->with('error', "Absensi pulang ditolak. Konfigurasi IP Publik untuk mitra " . $mitra->nama_mitra . " belum diatur oleh Admin. Hubungi Admin untuk melengkapi data ini.");
+        }
+
+        if (!$this->isIpAllowed($ipKaryawan, $ipMitra)) {
             return back()->with('error', "Absensi pulang ditolak. Gunakan jaringan WiFi kantor " . $mitra->nama_mitra . " untuk melakukan absensi. (IP terdeteksi: {$ipKaryawan})");
+        }
+
+        // ✅ CROSS-CHECK IP GEOLOCATION vs GPS (mitigasi VPN/proxy)
+        $ipGeoError = $this->cekIpGeolocation($ipKaryawan, (float) $mitra->latitude, (float) $mitra->longitude);
+        if ($ipGeoError) {
+            return back()->with('error', $ipGeoError);
         }
 
         $absensi->update([
@@ -349,19 +418,59 @@ class AbsensiController extends Controller
         ]);
     }
 
-    //Helper pintar untuk validasi IP Public Mitra (Fokus IPv4 & Wildcard)
-    private function isIpAllowed(string $ipKaryawan, string $ipMitraConfig): bool
+    // Helper cross-check lokasi geografis IP karyawan (mitigasi VPN/proxy).
+    // Mengembalikan pesan error (string) jika terdeteksi mencurigakan, atau null jika aman/tidak dapat dicek.
+    private function cekIpGeolocation(string $ipKaryawan, float $mitraLat, float $mitraLon): ?string
     {
-        if (empty(trim($ipMitraConfig))) {
-            return true;
+        // IP privat/lokal (jaringan internal, localhost, testing) tidak bisa di-geolocate publik, lewati saja.
+        if (!filter_var($ipKaryawan, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            return null;
         }
 
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(3)
+                ->get("http://ip-api.com/json/{$ipKaryawan}", ['fields' => 'status,lat,lon,isp,proxy']);
+
+            if (!$response->successful()) {
+                return null; // API gagal/timeout -> fail-open, jangan blokir absensi karena API pihak ketiga down
+            }
+
+            $data = $response->json();
+            if (($data['status'] ?? null) !== 'success') {
+                return null;
+            }
+
+            // Jika penyedia data sudah menandai IP ini sebagai proxy/VPN diketahui
+            if (($data['proxy'] ?? false) === true) {
+                return "Absensi ditolak. Terdeteksi penggunaan VPN/proxy (ISP: " . ($data['isp'] ?? 'tidak diketahui') . ").";
+            }
+
+            // Bandingkan jarak lokasi IP (menurut basis data publik) terhadap lokasi mitra
+            $jarakIp = $this->hitungJarak($data['lat'], $data['lon'], $mitraLat, $mitraLon);
+            if ($jarakIp > 100000) { // lebih dari 100 km dianggap mencurigakan
+                return "Absensi ditolak. Lokasi jaringan (IP) terdeteksi " . number_format($jarakIp / 1000, 0) . " km dari kantor. Kemungkinan menggunakan VPN.";
+            }
+        } catch (\Exception $e) {
+            return null; // fail-open jika request gagal total
+        }
+
+        return null;
+    }
+
+    // Helper untuk validasi IP Public Mitra (IPv4 exact & wildcard + IPv6 prefix)
+    private function isIpAllowed(string $ipKaryawan, string $ipMitraConfig): bool
+    {
         $allowedIps = array_map('trim', explode(',', $ipMitraConfig));
 
         foreach ($allowedIps as $allowed) {
             if (empty($allowed)) continue;
 
-            // 1. Pencocokan IPv4 Wildcard (contoh: 182.9.200.*)
+            // 1. Exact match
+            if ($ipKaryawan === $allowed) {
+                return true;
+            }
+
+            // 2. Wildcard match — contoh: 182.9.200.* atau 2404:c0:d001:*
             if (str_contains($allowed, '*')) {
                 $prefix = str_replace('*', '', $allowed);
                 if (str_starts_with($ipKaryawan, $prefix)) {
@@ -369,26 +478,15 @@ class AbsensiController extends Controller
                 }
             }
 
-            // 2. Exact match IPv4
-            if ($ipKaryawan === $allowed) {
-                return true;
-            }
-
-            // 3. Jika DB diset IPv4 (misal 182.9.200.*) tapi koneksi masuk via IPv6 tunnel Ngrok, loloskan otomatis
-            if (str_contains($ipKaryawan, ':') && !str_contains($allowed, ':')) {
-                return true;
-            }
-
-            // 4. Pencocokan IPv6 Subnet Prefix jika DB juga diisi IPv6
+            // 3. IPv6 prefix match — cocokkan minimal 3 hextet pertama (subnet kantor)
             if (str_contains($allowed, ':') && str_contains($ipKaryawan, ':')) {
-                $partsKaryawan = explode(':', $ipKaryawan);
-                $partsAllowed  = explode(':', $allowed);
-
-                if (count($partsKaryawan) >= 3 && count($partsAllowed) >= 3) {
-                    $prefixKaryawan = implode(':', array_slice($partsKaryawan, 0, 3));
-                    $prefixAllowed  = implode(':', array_slice($partsAllowed, 0, 3));
-
-                    if ($prefixKaryawan === $prefixAllowed) {
+                $pK = explode(':', $ipKaryawan);
+                $pA = array_filter(explode(':', str_replace('*', '', $allowed)), fn($v) => $v !== '');
+                $count = min(count($pK), count($pA));
+                if ($count >= 3) {
+                    $prefixK = implode(':', array_slice($pK, 0, min(4, $count)));
+                    $prefixA = implode(':', array_slice($pA, 0, min(4, $count)));
+                    if (!empty($prefixA) && str_starts_with($prefixK, $prefixA)) {
                         return true;
                     }
                 }
@@ -441,6 +539,24 @@ class AbsensiController extends Controller
             'karyawan', 'riwayat', 'rekapBulan', 'bulan', 'tahun', 
             'daftarBulan', 'daftarTahun', 'hariKerja'
         ));
+    }
+
+    /**
+     * Normalisasi IP address:
+     * - Jika IPv4-mapped IPv6 (::ffff:x.x.x.x), ubah ke IPv4 biasa
+     * - Jika pure IPv6 atau IPv4, kembalikan apa adanya
+     */
+    private function normalizeIp(string $ip): string
+    {
+        // Hapus bracket jika ada, misal: [::1] -> ::1
+        $ip = trim($ip, '[]');
+
+        // IPv4-mapped IPv6: ::ffff:x.x.x.x atau ::ffff:xx.xx atau 0:0:0:0:0:ffff:...
+        if (preg_match('/^::ffff:((\d{1,3}\.){3}\d{1,3})$/i', $ip, $matches)) {
+            return $matches[1]; // Kembalikan bagian IPv4-nya saja
+        }
+
+        return $ip;
     }
 
     private function hitungJarak($lat1, $lon1, $lat2, $lon2)

@@ -274,8 +274,8 @@
 </div>
 
 <div class="transition-all duration-300 sidebar-slide page-animate min-w-0" :class="sidebarOpen ? 'ml-0 md:ml-64' : 'ml-0 md:ml-16'">
-    <div class="sticky top-0 z-[1005] bg-white/80 backdrop-blur-sm border-b border-gray-100
-                px-6 py-3 flex items-center gap-4">
+    <div class="sticky top-0 z-[1005] bg-white shadow-xs border-b border-gray-100
+                px-6 py-3.5 flex items-center gap-4">
         <button @click="sidebarOpen=!sidebarOpen"
                 class="text-gray-400 hover:text-[#1E3A5F] transition-colors">
             <i data-lucide="menu" class="w-5 h-5"></i>
@@ -353,10 +353,7 @@
         </span>
     </div>
 
-    <div class="px-6 pt-5">
-    </div>
-
-    <main class="px-6 pb-8">@yield('content')</main>
+    <main class="px-6 py-6">@yield('content')</main>
 </div>
 
 <script>lucide.createIcons();</script>

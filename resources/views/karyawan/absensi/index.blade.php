@@ -79,6 +79,7 @@
                             @csrf
                             <input type="hidden" name="latitude" x-model="lat">
                             <input type="hidden" name="longitude" x-model="lon">
+                            <input type="hidden" name="accuracy" x-model="accuracy">
                             <button type="button" @click="submitWithConfirm($refs.formMasuk, 'Masuk')"
                                     :disabled="!lat || !jarakValid || loading || submitting || {{ $absensi?->waktu_masuk ? 'true' : 'false' }}"
                                     class="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black transition-all shadow-sm active:scale-95 disabled:opacity-30 disabled:grayscale
@@ -93,6 +94,7 @@
                             @csrf
                             <input type="hidden" name="latitude" x-model="lat">
                             <input type="hidden" name="longitude" x-model="lon">
+                            <input type="hidden" name="accuracy" x-model="accuracy">
                             <button type="button" @click="submitWithConfirm($refs.formPulang, 'Pulang')"
                                     :disabled="!lat || !jarakValid || loading || submitting || !{{ $absensi?->waktu_masuk ? 'true' : 'false' }} || {{ $absensi?->waktu_pulang ? 'true' : 'false' }} || !{{ $bolehPulang ? 'true' : 'false' }}"
                                     class="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black transition-all shadow-sm active:scale-95 disabled:opacity-30 disabled:grayscale
@@ -189,21 +191,17 @@
                         $allowedIps = array_map('trim', explode(',', $penempatan->mitra->ip_public));
                         foreach ($allowedIps as $allowed) {
                             if (empty($allowed)) continue;
-                            // 1. IPv4 Wildcard (misal: 182.9.200.*)
+                            // 1. Exact Match
+                            if ($ipKaryawan === $allowed) {
+                                $ipValid = true; break;
+                            }
+                            // 2. IPv4 Wildcard (misal: 182.9.200.*)
                             if (str_contains($allowed, '*')) {
                                 if (str_starts_with($ipKaryawan, str_replace('*', '', $allowed))) {
                                     $ipValid = true; break;
                                 }
                             }
-                            // 2. Exact Match
-                            if ($ipKaryawan === $allowed) {
-                                $ipValid = true; break;
-                            }
-                            // 3. Fallback tunnel Ngrok / IPv6 vs IPv4
-                            if (str_contains($ipKaryawan, ':') && !str_contains($allowed, ':')) {
-                                $ipValid = true; break;
-                            }
-                            // 4. Smart IPv6 Subnet Prefix Match (/48)
+                            // 3. IPv6 Subnet Prefix Match (/48) jika DB diisi IPv6
                             if (str_contains($allowed, ':') && str_contains($ipKaryawan, ':')) {
                                 $pK = explode(':', $ipKaryawan);
                                 $pA = explode(':', $allowed);
@@ -236,6 +234,48 @@
         </div>
     </div>
 </div>
+
+@if($evaluasiKontrak)
+{{-- CARD EVALUASI KONTRAK KARYAWAN --}}
+<div class="mt-4 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3">
+        <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                <i data-lucide="award" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <h3 class="text-xs font-black text-[#1E3A5F]">Performa Evaluasi Kontrak Kerja</h3>
+                <p class="text-[10px] text-gray-500">Indikator Kuantitatif Perpanjangan Kontrak Mitra</p>
+            </div>
+        </div>
+        <span class="px-3 py-1 rounded-xl text-[11px] font-black {{ $evaluasiKontrak['badge'] }}">
+            {{ $evaluasiKontrak['status'] }}
+        </span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+        <div class="bg-gray-50 p-2 rounded-xl border border-gray-100">
+            <p class="text-[9px] font-bold text-gray-400 uppercase">Kehadiran Bulan Ini</p>
+            <p class="text-lg font-black text-emerald-600 mt-0.5">{{ $evaluasiKontrak['persen'] }}%</p>
+        </div>
+        <div class="bg-gray-50 p-2 rounded-xl border border-gray-100">
+            <p class="text-[9px] font-bold text-gray-400 uppercase">Hadir / Hari Kerja</p>
+            <p class="text-sm font-black text-slate-800 mt-1">{{ $evaluasiKontrak['hadir'] }} / {{ $evaluasiKontrak['hari_kerja'] }} <span class="text-[9px] text-gray-400">Hari</span></p>
+        </div>
+        <div class="bg-gray-50 p-2 rounded-xl border border-gray-100">
+            <p class="text-[9px] font-bold text-gray-400 uppercase">Terlambat</p>
+            <p class="text-sm font-black text-amber-500 mt-1">{{ $evaluasiKontrak['telat'] }} <span class="text-[9px] text-gray-400">Kali</span></p>
+        </div>
+        <div class="bg-gray-50 p-2 rounded-xl border border-gray-100">
+            <p class="text-[9px] font-bold text-gray-400 uppercase">Alfa (Tanpa Ket.)</p>
+            <p class="text-sm font-black {{ $evaluasiKontrak['alfa'] > 0 ? 'text-rose-600' : 'text-slate-700' }} mt-1">{{ $evaluasiKontrak['alfa'] }} <span class="text-[9px] text-gray-400">Hari</span></p>
+        </div>
+    </div>
+    <p class="text-[10px] text-gray-400 italic text-center sm:text-left">
+        *Catatan presensi Anda secara otomatis direkap oleh Pimpinan & HC sebagai bahan evaluasi perpanjangan kontrak di Mitra.
+    </p>
+</div>
+@endif
 
 {{-- RIWAYAT --}}
 <div class="mt-4 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -294,7 +334,7 @@
 <script>
 function absensiApp() {
     return {
-        lat: null, lon: null, jarak: null, jarakValid: false, loading: false, submitting: false, errorGps: null,
+        lat: null, lon: null, accuracy: null, jarak: null, jarakValid: false, loading: false, submitting: false, errorGps: null,
         currentTime: '00:00:00',
         mitraLat: {{ $penempatan?->mitra->latitude ?? 'null' }},
         mitraLon: {{ $penempatan?->mitra->longitude ?? 'null' }},
@@ -333,7 +373,20 @@ function absensiApp() {
             if (!navigator.geolocation) { this.errorGps = 'Browser tidak mendukung GPS.'; return; }
             this.loading = true; this.errorGps = null;
             navigator.geolocation.getCurrentPosition((pos) => {
-                this.lat = pos.coords.latitude; this.lon = pos.coords.longitude; this.loading = false;
+                this.lat = pos.coords.latitude; 
+                this.lon = pos.coords.longitude; 
+                this.accuracy = pos.coords.accuracy;
+                this.loading = false;
+
+                // DETEKSI ANTI-FAKE GPS & MOCK LOCATION
+                if (this.accuracy !== undefined && (this.accuracy <= 0 || this.accuracy < 0.1)) {
+                    this.errorGps = 'Absensi ditolak! Terdeteksi aktivitas manipulasi koordinat GPS (Fake GPS / Mock Location).';
+                    this.lat = null;
+                    this.lon = null;
+                    this.jarakValid = false;
+                    return;
+                }
+
                 const icon = L.divIcon({ 
                     html: `<div class="relative"><div class="absolute -inset-1 bg-green-500/30 rounded-full animate-ping"></div><div class="relative w-1.5 h-1.5 bg-green-500 rounded-full border border-white shadow-md"></div></div>`, 
                     className: '', iconSize: [6, 6], iconAnchor: [3, 3] 

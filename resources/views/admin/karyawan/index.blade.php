@@ -148,6 +148,20 @@
                                               : 'bg-red-100 text-red-700' }}">
                                 {{ $kar->isTetap() ? 'Tetap' : 'Kontrak' }}
                             </span>
+                            @if ($kar->isKontrak() && $kar->tanggal_berakhir_kontrak)
+                                @php
+                                    $sisaHariIdx = now()->startOfDay()->diffInDays($kar->tanggal_berakhir_kontrak->startOfDay(), false);
+                                @endphp
+                                @if ($sisaHariIdx < 0)
+                                    <br><span class="mt-1 inline-block px-2 py-0.5 bg-red-600 text-white rounded text-[8px] font-black">
+                                        BERAKHIR
+                                    </span>
+                                @elseif ($sisaHariIdx <= 30)
+                                    <br><span class="mt-1 inline-block px-2 py-0.5 bg-amber-400 text-white rounded text-[8px] font-black">
+                                        {{ $sisaHariIdx }}H lagi
+                                    </span>
+                                @endif
+                            @endif
                         </td>
                         <td class="px-6 py-4 text-center">
                             <span class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase

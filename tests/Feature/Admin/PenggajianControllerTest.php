@@ -330,4 +330,53 @@ class PenggajianControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertViewIs('admin.penggajian.show');
     }
+
+    public function test_admin_dapat_merevisi_absensi_dan_gaji_karyawan(): void
+    {
+        $this->seedBaseData();
+        $admin = $this->buatAdmin();
+        $karyawan = $this->buatKaryawanDenganGaji();
+
+        $periode = PeriodeGaji::create([
+            'nama_periode'    => 'Test Periode',
+            'tanggal_mulai'   => now()->subMonth()->toDateString(),
+            'tanggal_selesai' => now()->toDateString(),
+            'status'          => 'draft',
+        ]);
+
+        $slip = SlipGajiPeriode::create([
+            'user_id'        => $karyawan->id,
+            'periode_id'     => $periode->id,
+            'total_hadir'    => 20,
+            'total_telat'    => 0,
+            'total_alfa'     => 0,
+            'total_izin'     => 0,
+            'total_cuti'     => 0,
+            'total_potongan' => 100000,
+            'gaji_bersih'    => 3500000,
+            'status'         => 'draft',
+        ]);
+
+        $response = $this->actingAs($admin)->put(
+            route('admin.penggajian.slip.update-absensi', $slip->id),
+            [
+                'total_hadir'    => 22,
+                'total_telat'    => 1,
+                'total_alfa'     => 0,
+                'total_izin'     => 0,
+                'total_cuti'     => 0,
+                'gaji_pokok'     => 3500000,
+                'uang_makan'     => 35000,
+                'uang_transport' => 45000,
+            ]
+        );
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $slip->refresh();
+        $this->assertEquals(22, $slip->total_hadir);
+        $this->assertEquals(1, $slip->total_telat);
+        $this->assertEquals('direvisi', $slip->status);
+    }
 }

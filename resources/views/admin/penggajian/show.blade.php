@@ -197,36 +197,79 @@
                        class="pl-9 pr-4 py-2 w-full bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold text-[#1E3A5F] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
             </div>
         </div>
+        <div class="px-6 py-3 bg-slate-50/60 border-b border-gray-50 flex flex-wrap items-center gap-x-5 gap-y-1 text-[10px] font-bold text-slate-500">
+            <span class="flex items-center gap-1.5"><i data-lucide="calendar-days" class="w-3.5 h-3.5 text-blue-500"></i> Hari kerja periode: <b class="text-[#1E3A5F]">{{ $jumlahHariKerja }} hari</b></span>
+            <span><b class="text-emerald-600">H</b> = Hadir tepat waktu</span>
+            <span><b class="text-amber-600">T</b> = Telat</span>
+            <span><b class="text-sky-600">I/S</b> = Izin/Sakit</span>
+            <span><b class="text-violet-600">C</b> = Cuti</span>
+            <span><b class="text-red-600">A</b> = Alfa</span>
+            <span class="text-slate-400">· Tunjangan = (H + T) × tarif harian</span>
+        </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left" id="table-karyawan-proses">
                 <thead>
                     <tr class="text-[10px] font-black text-[#1E3A5F] uppercase tracking-wider border-b border-gray-50 bg-gray-50/50">
                         <th class="px-6 py-4">Karyawan</th>
-                        <th class="px-6 py-4">Jabatan</th>
-                        <th class="px-6 py-4">Divisi</th>
-                        <th class="px-6 py-4">Jenis</th>
+                        <th class="px-4 py-4">Jenis</th>
+                        <th class="px-4 py-4 text-center">Keterangan Kehadiran</th>
+                        <th class="px-4 py-4 text-right">Uang Makan / Transport</th>
                         <th class="px-6 py-4 text-right">Gaji Pokok Basis</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     @forelse ($karyawan as $kar)
+                        @php
+                            $rk  = $rekapKehadiran[$kar->id] ?? null;
+                            $est = $rk['estimasi'] ?? ['kategori' => 'kontrak_hc', 'total' => 0];
+                        @endphp
                         <tr class="hover:bg-gray-50 transition-all">
                             <td class="px-6 py-4">
                                 <p class="text-[11px] font-black text-[#1E3A5F] uppercase emp-name">
                                     {{ $kar->nama }}
                                 </p>
                                 <p class="text-[9px] text-gray-400 emp-nip">NIP: {{ $kar->nip }}</p>
+                                <p class="text-[9px] text-gray-500 font-semibold mt-0.5">{{ $kar->jabatan }} · {{ $kar->labelDivisi() }}</p>
                             </td>
-                            <td class="px-6 py-4 text-xs font-semibold text-gray-700">
-                                {{ $kar->jabatan }}
-                            </td>
-                            <td class="px-6 py-4 text-xs font-semibold text-gray-700">
-                                {{ $kar->labelDivisi() }}
-                            </td>
-                            <td class="px-6 py-4">
+                            <td class="px-4 py-4">
                                 <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase {{ $kar->isTetap() ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600' }}">
                                     {{ $kar->isTetap() ? 'Tetap' : 'Kontrak' }}
                                 </span>
+                            </td>
+                            <td class="px-4 py-4">
+                                @if ($rk)
+                                    <div class="flex items-center justify-center gap-1">
+                                        <span class="min-w-[34px] text-center px-1.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-black" title="Hadir tepat waktu">H {{ $rk['hadir_tepat'] }}</span>
+                                        <span class="min-w-[34px] text-center px-1.5 py-1 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-black" title="Telat">T {{ $rk['telat'] }}</span>
+                                        <span class="min-w-[34px] text-center px-1.5 py-1 rounded-lg bg-sky-50 text-sky-700 text-[10px] font-black" title="Izin / Sakit">I/S {{ $rk['izin_sakit'] }}</span>
+                                        <span class="min-w-[34px] text-center px-1.5 py-1 rounded-lg bg-violet-50 text-violet-700 text-[10px] font-black" title="Cuti">C {{ $rk['cuti'] }}</span>
+                                        <span class="min-w-[34px] text-center px-1.5 py-1 rounded-lg bg-red-50 text-red-700 text-[10px] font-black" title="Alfa / tanpa keterangan">A {{ $rk['alfa'] }}</span>
+                                    </div>
+                                    <p class="text-[9px] text-center text-gray-400 font-bold mt-1">
+                                        Total masuk: <span class="text-[#1E3A5F]">{{ $rk['total_masuk'] }}</span> / {{ $jumlahHariKerja }} hari
+                                        @if ($rk['dinas_luar'] > 0) · DL {{ $rk['dinas_luar'] }} @endif
+                                    </p>
+                                @endif
+                            </td>
+                            <td class="px-4 py-4 text-right">
+                                @if ($est['kategori'] === 'tetap')
+                                    <p class="text-[10px] text-gray-500 font-semibold">
+                                        Makan: {{ $rk['total_masuk'] }} × Rp {{ number_format($est['tarif_makan'], 0, ',', '.') }}
+                                        = <b class="text-gray-700">Rp {{ number_format($est['uang_makan'], 0, ',', '.') }}</b>
+                                    </p>
+                                    <p class="text-[10px] text-gray-500 font-semibold">
+                                        Transport: {{ $rk['total_masuk'] }} × Rp {{ number_format($est['tarif_transport'], 0, ',', '.') }}
+                                        = <b class="text-gray-700">Rp {{ number_format($est['uang_transport'], 0, ',', '.') }}</b>
+                                    </p>
+                                    <p class="text-xs font-black text-emerald-600 mt-0.5">Rp {{ number_format($est['total'], 0, ',', '.') }}</p>
+                                @elseif ($est['kategori'] === 'kontrak_umum')
+                                    <p class="text-[10px] text-gray-500 font-semibold">
+                                        Pangan: {{ $rk['total_masuk'] }} × Rp {{ number_format($est['tarif_makan'], 0, ',', '.') }}
+                                    </p>
+                                    <p class="text-xs font-black text-emerald-600 mt-0.5">Rp {{ number_format($est['total'], 0, ',', '.') }}</p>
+                                @else
+                                    <span class="inline-flex px-2 py-1 rounded-lg text-[9px] font-black uppercase bg-amber-50 text-amber-700 border border-amber-200/60">Dibayar Mitra</span>
+                                @endif
                             </td>
                             <td class="px-6 py-4 text-right text-sm font-black text-[#1E3A5F]">
                                 Rp {{ number_format($kar->komponenGaji->gaji_pokok, 0, ',', '.') }}

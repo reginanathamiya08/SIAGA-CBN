@@ -6,57 +6,53 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreMitraRequest;
 use App\Http\Requests\Admin\UpdateMitraRequest;
 use App\Models\Mitra;
+use App\Models\Shift;
 use Illuminate\Http\Request;
 
 class MitraController extends Controller
 {
-    // ─────────────────────────────────────────────────────────────────
-    // INDEX - Daftar semua mitra induk beserta cabangnya
-    // ─────────────────────────────────────────────────────────────────
     public function index()
     {
-        // Ambil Kantor Pusat secara spesifik
         $kantorPusat = Mitra::where('is_pusat', true)
-                            ->withCount(['cabang', 'penempatan' => fn($q) => $q->where('status','aktif')])
+                            ->withCount([
+                                'penempatan' => fn($q) => $q->where('status', 'aktif')
+                            ])
                             ->first();
 
-        // Jika ada kantor pusat, hitung karyawan tetap sebagai "penempatan" otomatis
+        // Karyawan tetap tidak masuk tabel penempatan, hitung terpisah dan gabungkan
         if ($kantorPusat) {
-            $jumlahTetap = \App\Models\User::where('is_active', true)
-                                              ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_tetap'))
-                                              ->count();
-            // Kita tambahkan jumlah tetap ke penempatan_count
-            $kantorPusat->penempatan_count += $jumlahTetap;
+            $jumlahKaryawanTetap = \App\Models\User::where('is_active', true)
+                ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_tetap'))
+                ->count();
+            // Gabungkan: penempatan_count (karyawan kontrak di pusat) + karyawan tetap
+            $kantorPusat->penempatan_count = ($kantorPusat->penempatan_count ?? 0) + $jumlahKaryawanTetap;
         }
 
-        // Ambil Mitra Induk lainnya (yang bukan pusat)
-        $mitraInduk = Mitra::withCount(['cabang', 'penempatan' => fn($q) => $q->where('status','aktif')])
-                           ->with(['cabang' => fn($q) => $q->withCount(['penempatan' => fn($q2) => $q2->where('status','aktif')])])
-                           ->whereNull('mitra_induk_id')
+        $mitraInduk = Mitra::whereNull('mitra_induk_id')
                            ->where('is_pusat', false)
+                           ->with(['cabang' => function ($q) {
+                               $q->withCount([
+                                   'penempatan' => fn($p) => $p->where('status', 'aktif')
+                               ]);
+                           }])
+                           ->withCount([
+                               'cabang',
+                               'penempatan' => fn($q) => $q->where('status', 'aktif')
+                           ])
                            ->orderBy('nama_mitra')
                            ->get();
 
-        $totalMitra    = Mitra::whereNull('mitra_induk_id')->count();
-        $totalCabang   = Mitra::whereNotNull('mitra_induk_id')->count();
-        
-        $totalAktifKontrak = \App\Models\DetailRiwayatPenempatan::where('status','aktif')->count();
-        $totalAktifTetap   = \App\Models\User::where('is_active', true)
-                                                 ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_tetap'))
-                                                 ->count();
-        $totalAktif = $totalAktifKontrak + $totalAktifTetap;
+        $totalMitra  = Mitra::whereNull('mitra_induk_id')->count();
+        $totalCabang = Mitra::whereNotNull('mitra_induk_id')->count();
+        $totalAktif  = \App\Models\DetailRiwayatPenempatan::where('status', 'aktif')->count();
 
         return view('admin.mitra.index', compact(
             'kantorPusat', 'mitraInduk', 'totalMitra', 'totalCabang', 'totalAktif'
         ));
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // CREATE - Form tambah mitra
-    // ─────────────────────────────────────────────────────────────────
     public function create()
     {
-        // Untuk dropdown mitra induk saat tambah cabang
         $daftarInduk = Mitra::whereNull('mitra_induk_id')
                             ->orderBy('nama_mitra')
                             ->get(['id','nama_mitra']);
@@ -66,51 +62,52 @@ class MitraController extends Controller
         return view('admin.mitra.create', compact('daftarInduk', 'hasPusat'));
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // STORE - Simpan mitra baru
-    // ─────────────────────────────────────────────────────────────────
     public function store(StoreMitraRequest $request)
     {
         $data = $request->validated();
+        $shifts = $data['shifts'] ?? null;
+        unset($data['shifts']);
 
-        // Jika ada mitra_induk_id, ini adalah cabang
+        if (!empty($data['jam_masuk']))  $data['jam_masuk']  = substr($data['jam_masuk'], 0, 5);
+        if (!empty($data['jam_pulang'])) $data['jam_pulang'] = substr($data['jam_pulang'], 0, 5);
+
         $data['is_cabang'] = !empty($data['mitra_induk_id']);
         $data['is_pusat']  = $request->has('is_pusat');
 
         if ($data['is_pusat']) {
-            Mitra::where('id', '>', 0)->update(['is_pusat' => false]);
+            Mitra::query()->update(['is_pusat' => false]);
         }
 
         $mitra = Mitra::create($data);
 
-        // Simpan Konfigurasi Shift jika ada
-        if ($request->has('shifts')) {
-            foreach ($request->shifts as $shiftData) {
+        if ($shifts) {
+            foreach ($shifts as $shiftData) {
                 if (!empty($shiftData['jam_mulai'])) {
+                    $shiftData['is_lintas_hari'] = isset($shiftData['is_lintas_hari']) && $shiftData['is_lintas_hari'] == 1;
+                    if (!empty($shiftData['jam_mulai']))    $shiftData['jam_mulai']    = substr($shiftData['jam_mulai'], 0, 5);
+                    if (!empty($shiftData['jam_selesai']))  $shiftData['jam_selesai']  = substr($shiftData['jam_selesai'], 0, 5);
+                    if (!empty($shiftData['window_start'])) $shiftData['window_start'] = substr($shiftData['window_start'], 0, 5);
+                    if (!empty($shiftData['window_end']))   $shiftData['window_end']   = substr($shiftData['window_end'], 0, 5);
                     $mitra->shifts()->create($shiftData);
                 }
             }
         }
 
         $tipe = $data['is_cabang'] ? 'Cabang mitra' : 'Mitra';
+
         return redirect()
             ->route('admin.mitra.index')
             ->with('success', "{$tipe} berhasil ditambahkan.");
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // SHOW - Detail mitra beserta karyawan aktif
-    // ─────────────────────────────────────────────────────────────────
     public function show(Mitra $mitra)
     {
         $mitra->load([
             'induk',
             'cabang',
-            'penempatan' => fn($q) => $q->where('status','aktif')
-                                        ->with('karyawan'),
+            'penempatan' => fn($q) => $q->where('status','aktif')->with('karyawan'),
         ]);
 
-        // Jika ini kantor pusat, ambil juga karyawan tetap
         $karyawanTetap = collect();
         if ($mitra->is_pusat) {
             $karyawanTetap = \App\Models\User::where('is_active', true)
@@ -118,7 +115,6 @@ class MitraController extends Controller
                                             ->get();
         }
 
-        // Riwayat penempatan (semua status)
         $riwayat = $mitra->penempatan()
                          ->with('karyawan')
                          ->latest()
@@ -127,9 +123,6 @@ class MitraController extends Controller
         return view('admin.mitra.show', compact('mitra', 'riwayat', 'karyawanTetap'));
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // EDIT
-    // ─────────────────────────────────────────────────────────────────
     public function edit(Mitra $mitra)
     {
         $daftarInduk = Mitra::whereNull('mitra_induk_id')
@@ -144,12 +137,15 @@ class MitraController extends Controller
         return view('admin.mitra.edit', compact('mitra', 'daftarInduk', 'hasPusat'));
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // UPDATE
-    // ─────────────────────────────────────────────────────────────────
     public function update(UpdateMitraRequest $request, Mitra $mitra)
     {
         $data = $request->validated();
+        $shifts = $data['shifts'] ?? null;
+        unset($data['shifts']);
+
+        if (!empty($data['jam_masuk']))  $data['jam_masuk']  = substr($data['jam_masuk'], 0, 5);
+        if (!empty($data['jam_pulang'])) $data['jam_pulang'] = substr($data['jam_pulang'], 0, 5);
+
         $data['is_cabang'] = !empty($data['mitra_induk_id']);
         $data['is_pusat']  = $request->has('is_pusat');
 
@@ -159,14 +155,20 @@ class MitraController extends Controller
 
         $mitra->update($data);
 
-        // Update Konfigurasi Shift
-        if ($request->has('shifts')) {
-            foreach ($request->shifts as $shiftData) {
+        if ($shifts) {
+            foreach ($shifts as $shiftData) {
+                $shiftData['is_lintas_hari'] = isset($shiftData['is_lintas_hari']) && $shiftData['is_lintas_hari'] == 1;
+
+                if (!empty($shiftData['jam_mulai']))    $shiftData['jam_mulai']    = substr($shiftData['jam_mulai'], 0, 5);
+                if (!empty($shiftData['jam_selesai']))  $shiftData['jam_selesai']  = substr($shiftData['jam_selesai'], 0, 5);
+                if (!empty($shiftData['window_start'])) $shiftData['window_start'] = substr($shiftData['window_start'], 0, 5);
+                if (!empty($shiftData['window_end']))   $shiftData['window_end']   = substr($shiftData['window_end'], 0, 5);
+
                 if (!empty($shiftData['id'])) {
-                    // Update existing shift
-                    \App\Models\Shift::where('id', $shiftData['id'])->update(array_diff_key($shiftData, ['id' => 1]));
+                    $shiftId = $shiftData['id'];
+                    unset($shiftData['id']);
+                    Shift::where('id', $shiftId)->update($shiftData);
                 } else if (!empty($shiftData['jam_mulai'])) {
-                    // Create new shift for this mitra
                     $mitra->shifts()->create($shiftData);
                 }
             }
@@ -177,9 +179,6 @@ class MitraController extends Controller
             ->with('success', 'Data mitra berhasil diperbarui.');
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // DESTROY - Hapus mitra (hanya jika tidak ada karyawan aktif)
-    // ─────────────────────────────────────────────────────────────────
     public function destroy(Mitra $mitra)
     {
         $aktif = $mitra->penempatan()->where('status','aktif')->count();

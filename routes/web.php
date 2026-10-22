@@ -127,6 +127,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth','role:admin'])->group
     Route::prefix('laporan')->name('laporan.')->group(function () {
         Route::get ('absensi',                       [LaporanAbsensiController::class, 'index'])        ->name('absensi.index');
         Route::get ('absensi/export',                [LaporanAbsensiController::class, 'export'])       ->name('absensi.export');
+        Route::get ('absensi/template-excel',       [LaporanAbsensiController::class, 'downloadTemplate'])->name('absensi.template-excel');
+        Route::post('absensi/import-excel',         [LaporanAbsensiController::class, 'importExcel'])     ->name('absensi.import-excel');
         Route::post('absensi/store-manual',          [LaporanAbsensiController::class, 'storeManual'])  ->name('absensi.store-manual');
         Route::put ('absensi/{absensi}/update-manual', [LaporanAbsensiController::class, 'updateManual'])->name('absensi.update-manual');
         Route::put ('absensi/{absensi}',               [LaporanAbsensiController::class, 'updateManual']);

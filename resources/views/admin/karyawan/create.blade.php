@@ -181,6 +181,22 @@
                                 <p class="mt-1 text-xs text-red-500 font-semibold">{{ $message }}</p>
                             @enderror
                         </div>
+                        <div id="wrap-berakhir-kontrak" class="hidden">
+                            <label class="block text-[11px] font-black text-gray-500
+                                            mb-2">
+                                Berakhir Kontrak
+                            </label>
+                            <input type="date" name="tanggal_berakhir_kontrak"
+                                   value="{{ old('tanggal_berakhir_kontrak') }}"
+                                   class="w-full px-4 py-3 rounded-xl border text-sm font-semibold
+                                          text-gray-700 outline-none transition-all
+                                          @error('tanggal_berakhir_kontrak') border-red-400 bg-red-50
+                                          @else border-gray-200 bg-gray-50 focus:border-[#1E3A5F] focus:bg-white
+                                          @enderror">
+                            @error('tanggal_berakhir_kontrak')
+                                <p class="mt-1 text-xs text-red-500 font-semibold">{{ $message }}</p>
+                            @enderror
+                        </div>
                         <div>
                             <label class="block text-[11px] font-black text-gray-500
                                             mb-2">
@@ -370,17 +386,27 @@ try {
     sJns.addEventListener('change', function() {
         var opt  = this.options[this.selectedIndex];
         var slug = opt ? opt.getAttribute('data-slug') : '';
+        var wrapBerakhir = document.getElementById('wrap-berakhir-kontrak');
+        var inputBerakhir = document.querySelector('input[name="tanggal_berakhir_kontrak"]');
         fillSel(sDiv, [], '-- Pilih Divisi --');
         fillSel(sJab, [], '-- Pilih Jabatan --');
         wDok.classList.add('hidden'); wFlg.classList.add('hidden');
         pNip.textContent = '—'; tInf.textContent = '';
-        if (!slug) return;
+        if (!slug) {
+            wrapBerakhir.classList.add('hidden');
+            if (inputBerakhir) inputBerakhir.removeAttribute('required');
+            return;
+        }
         if (slug === 'karyawan_tetap') {
             fillSel(sDiv, DIV_TETAP, '-- Pilih Divisi --');
             tInf.textContent = 'Divisi internal PT Citra Bangun Nagari';
+            wrapBerakhir.classList.add('hidden');
+            if (inputBerakhir) inputBerakhir.removeAttribute('required');
         } else if (slug === 'karyawan_kontrak') {
             fillSel(sDiv, DIV_KONTRAK, '-- Pilih Divisi --');
             tInf.textContent = 'Divisi mitra alih daya (HC/Umum)';
+            wrapBerakhir.classList.remove('hidden');
+            if (inputBerakhir) inputBerakhir.setAttribute('required', 'required');
         }
     });
 

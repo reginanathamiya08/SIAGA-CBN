@@ -226,7 +226,7 @@ class LaporanAbsensiController extends Controller
         $rowR = $startRowRekap + 1;
         if (count($rekap) > 0) {
             foreach ($rekap as $i => $r) {
-                $persen = $totalHariKerja > 0 ? round(($r['hadir'] / $totalHariKerja) * 100, 1) : 0;
+                $persen = $totalHariKerja > 0 ? round((($r['hadir'] + $r['telat']) / $totalHariKerja) * 100, 1) : 0;
                 $rowData = [
                     $i + 1,
                     $r['nik'],
@@ -358,6 +358,9 @@ class LaporanAbsensiController extends Controller
             $k               = $rows->first()->karyawan;
             $aktifPenempatan = $k?->penempatanAktif?->mitra?->nama_mitra ?? ($k?->isTetap() ? 'Kantor CBN' : '-');
 
+            // Hanya hitung absensi di hari kerja (Sabtu/Minggu/tanggal merah tidak ikut direkap)
+            $rows = \App\Helpers\AttendanceHelper::hanyaHariKerja($rows);
+
             $rekap[] = [
                 'user_id' => $karyawanId,
                 'nik'         => $k?->nip ?? '-',
@@ -365,7 +368,8 @@ class LaporanAbsensiController extends Controller
                 'jabatan'     => $k?->jabatan ?? '-',
                 'divisi'      => $k?->labelDivisi() ?? '-',
                 'mitra'       => $aktifPenempatan,
-                'hadir'       => $rows->whereIn('status', ['hadir', 'telat'])->count(),
+                // Hadir = masuk tepat waktu saja; yang terlambat dihitung di kolom Telat
+                'hadir'       => $rows->whereIn('status', ['hadir', 'telat'])->where('is_telat', false)->count(),
                 'telat'       => $rows->where('is_telat', true)->count(),
                 'alfa'        => $rows->where('status', 'alfa')->count(),
                 'izin'        => $rows->where('status', 'izin')->count(),
@@ -463,6 +467,192 @@ class LaporanAbsensiController extends Controller
         ]);
 
         return back()->with('success', 'Absensi berhasil diperbarui.');
+    }
+
+    /**
+     * Download template Excel untuk import data absensi historis/lama.
+     */
+    public function downloadTemplate()
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+
+        $headers = [
+            'NIP / NIK Karyawan',
+            'Nama Karyawan (Opsional)',
+            'Tanggal (DD/MM/YYYY)',
+            'Status (hadir/telat/alfa/izin/sakit/cuti/dinas_luar)',
+            'Jam Masuk (HH:MM)',
+            'Jam Pulang (HH:MM)',
+            'ID Mitra (Opsional)'
+        ];
+
+        // ── Sheet 1: Karyawan Tetap ──────────────
+        $sheet1 = $spreadsheet->getActiveSheet();
+        $sheet1->setTitle('Karyawan Tetap');
+        $this->isiSheetTemplate($sheet1, $headers, 'karyawan_tetap');
+
+        // ── Sheet 2: Karyawan Kontrak ─────────────
+        $sheet2 = $spreadsheet->createSheet();
+        $sheet2->setTitle('Karyawan Kontrak');
+        $this->isiSheetTemplate($sheet2, $headers, 'karyawan_kontrak');
+
+        $spreadsheet->setActiveSheetIndex(0);
+
+        if (ob_get_length()) ob_end_clean();
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $fileName = 'Template_Import_Absensi_Historis_CBN.xlsx';
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        ]);
+    }
+
+    /**
+     * Helper privat untuk mengisi struktur sheet template Excel absensi.
+     */
+    private function isiSheetTemplate($sheet, array $headers, string $roleSlug)
+    {
+        foreach ($headers as $col => $header) {
+            $cellAddr = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col + 1) . '1';
+            $sheet->setCellValue($cellAddr, $header);
+            $sheet->getStyle($cellAddr)->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+            $sheet->getStyle($cellAddr)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FF1E3A5F');
+        }
+
+        // Isi otomatis NIP & Nama Karyawan yang aktif
+        $karyawanList = User::where('is_active', true)
+            ->whereHas('role', fn($r) => $r->where('slug', $roleSlug))
+            ->orderBy('nama')
+            ->get();
+
+        $row = 2;
+        foreach ($karyawanList as $k) {
+            $sheet->setCellValue("A{$row}", $k->nip ?? '');
+            $sheet->setCellValue("B{$row}", $k->nama);
+            // Kolom C (Tanggal), D (Status), E (Jam Masuk), F (Jam Pulang), G (ID Mitra) dibiarkan kosong untuk diisi Admin
+            $row++;
+        }
+
+        foreach (range(1, count($headers)) as $col) {
+            $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+        }
+    }
+
+    /**
+     * Import data absensi historis/lama secara massal via Excel (.xlsx / .csv).
+     */
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'file_excel' => 'required|file|mimes:xlsx,xls,csv|max:5120',
+        ]);
+
+        try {
+            $file = $request->file('file_excel');
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file->getRealPath());
+
+            $importedCount = 0;
+            $updatedCount  = 0;
+            $errorRows     = [];
+
+            // Proses SELURUH Sheet di dalam file Excel (Tetap, Kontrak, dll)
+            foreach ($spreadsheet->getAllSheets() as $sheetIndex => $sheet) {
+                $sheetData = $sheet->toArray();
+                if (count($sheetData) <= 1) {
+                    continue;
+                }
+
+                $sheetTitle = $sheet->getTitle();
+
+                for ($i = 1; $i < count($sheetData); $i++) {
+                    $row = $sheetData[$i];
+                    $nip = trim($row[0] ?? '');
+                    $tanggal = trim($row[2] ?? '');
+                    $status = strtolower(trim($row[3] ?? 'hadir'));
+                    $jamMasuk = trim($row[4] ?? '');
+                    $jamPulang = trim($row[5] ?? '');
+                    $mitraIdInput = trim($row[6] ?? '');
+
+                    if (empty($nip) || empty($tanggal)) {
+                        continue;
+                    }
+
+                    $karyawan = User::where('nip', $nip)->orWhere('id', $nip)->first();
+                    if (!$karyawan) {
+                        $errorRows[] = "[{$sheetTitle}] Baris " . ($i + 1) . ": Karyawan NIP/ID '{$nip}' tidak ditemukan.";
+                        continue;
+                    }
+
+                    try {
+                        if (is_numeric($tanggal)) {
+                            $parsedTanggal = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float) $tanggal)->format('Y-m-d');
+                        } elseif (preg_match('/^\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{4}$/', $tanggal)) {
+                            $normalizedTanggal = str_replace(['-', '.'], '/', $tanggal);
+                            $parsedTanggal = Carbon::createFromFormat('d/m/Y', $normalizedTanggal)->format('Y-m-d');
+                        } else {
+                            $parsedTanggal = Carbon::parse($tanggal)->toDateString();
+                        }
+                    } catch (\Throwable $e) {
+                        $errorRows[] = "[{$sheetTitle}] Baris " . ($i + 1) . ": Format tanggal '{$tanggal}' tidak valid.";
+                        continue;
+                    }
+
+                    $validStatus = ['hadir', 'telat', 'alfa', 'izin', 'sakit', 'cuti', 'dinas_luar'];
+                    if (!in_array($status, $validStatus)) {
+                        $status = 'hadir';
+                    }
+
+                    $waktuMasuk = null;
+                    if (!empty($jamMasuk) && in_array($status, ['hadir', 'telat'])) {
+                        try {
+                            $waktuMasuk = Carbon::parse($parsedTanggal . ' ' . $jamMasuk);
+                        } catch (\Throwable $e) {}
+                    }
+
+                    $waktuPulang = null;
+                    if (!empty($jamPulang) && in_array($status, ['hadir', 'telat'])) {
+                        try {
+                            $waktuPulang = Carbon::parse($parsedTanggal . ' ' . $jamPulang);
+                        } catch (\Throwable $e) {}
+                    }
+
+                    $mitraId = !empty($mitraIdInput) ? $mitraIdInput : ($karyawan->penempatanAktif?->mitra_id ?? Mitra::where('is_pusat', true)->first()?->id);
+
+                    $absensi = Absensi::updateOrCreate([
+                        'user_id' => $karyawan->id,
+                        'tanggal' => $parsedTanggal,
+                    ], [
+                        'status'       => $status,
+                        'mitra_id'     => $mitraId,
+                        'waktu_masuk'  => $waktuMasuk,
+                        'waktu_pulang' => $waktuPulang,
+                        'is_telat'     => ($status === 'telat'),
+                        'keterangan'   => 'Imported from Excel Historis Data',
+                    ]);
+
+                    if ($absensi->wasRecentlyCreated) {
+                        $importedCount++;
+                    } else {
+                        $updatedCount++;
+                    }
+                }
+            }
+
+            $message = "Berhasil mengimpor {$importedCount} data absensi baru dan memperbarui {$updatedCount} data absensi dari seluruh Sheet.";
+            if (count($errorRows) > 0) {
+                $message .= " Beberapa baris dilewati (" . implode('; ', array_slice($errorRows, 0, 3)) . ").";
+            }
+
+            return back()->with('success', $message);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal memproses file Excel: ' . $e->getMessage());
+        }
     }
 
     /**

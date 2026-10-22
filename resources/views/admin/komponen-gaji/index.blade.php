@@ -288,7 +288,36 @@
                         <tr class="group hover:bg-slate-50/50 transition-all duration-500">
                             <td class="px-8 py-4"><div class="flex items-center gap-4"><div class="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-[11px] shrink-0 shadow-sm {{ $kar->isTetap() ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500' }}">{{ strtoupper(substr($kar->nama, 0, 2)) }}</div><div><p class="text-[13px] font-black text-slate-700 group-hover:text-[#1E3A5F] transition-colors tracking-tight">{{ $kar->nama }}</p><p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter opacity-80">{{ $kar->jabatan }} <span class="mx-1 opacity-20">•</span> {{ $kar->labelDivisi() }} <span class="mx-1 opacity-20">•</span> {{ $kar->pendidikan ?? '-' }}</p></div></div></td>
                             <td class="px-8 py-4 text-right">@if ($kg && $kg->gaji_pokok > 0)<div class="text-[14px] font-black text-[#1E3A5F] tracking-tight"><span class="text-[10px] font-medium opacity-30 mr-1">Rp</span>{{ number_format($kg->gaji_pokok, 0, ',', '.') }}</div><span class="text-[8px] px-2 py-0.5 rounded-lg font-black uppercase tracking-tight {{ $kar->gaji_atas_umr ? 'bg-emerald-50 text-emerald-500 border border-emerald-100/50' : 'bg-blue-50 text-blue-500 border border-blue-100/50' }}">{{ $kar->gaji_atas_umr ? 'Expert' : 'UMR' }}</span>@else<span class="text-[10px] font-black text-amber-500 uppercase tracking-tight opacity-60">Belum Terdata</span>@endif</td>
-                            <td class="px-8 py-4 text-right"><div class="text-[11px] font-bold text-slate-500 tracking-tight">Rp {{ number_format($kg->uang_makan ?? 35000, 0, ',', '.') }} <span class="text-[9px] font-black text-slate-300 uppercase ml-1 opacity-40">Makan</span></div><div class="text-[11px] font-bold text-slate-500 tracking-tight mt-0.5">Rp {{ number_format($kg->uang_transport ?? 45000, 0, ',', '.') }} <span class="text-[9px] font-black text-slate-300 uppercase ml-1 opacity-40">Trnsp</span></div></td>
+                            <td class="px-8 py-4 text-right">
+                                @if ($kar->isTetap())
+                                    <div class="text-[11px] font-bold text-slate-600 tracking-tight">
+                                        Rp {{ number_format($kg->uang_makan ?? 35000, 0, ',', '.') }} 
+                                        <span class="text-[9px] font-black text-slate-400 uppercase ml-1 opacity-60">Makan</span>
+                                    </div>
+                                    <div class="text-[11px] font-bold text-slate-600 tracking-tight mt-0.5">
+                                        Rp {{ number_format($kg->uang_transport ?? 45000, 0, ',', '.') }} 
+                                        <span class="text-[9px] font-black text-slate-400 uppercase ml-1 opacity-60">Trnsp</span>
+                                    </div>
+                                @elseif ($kar->isKontrak() && $kar->isDivisiUmum())
+                                    @php $pangan = (float) \App\Models\Configuration::getValue('tunjangan_pangan_kontrak_umum', 805000); @endphp
+                                    <div class="text-[11px] font-bold text-emerald-600 tracking-tight">
+                                        Rp {{ number_format($pangan, 0, ',', '.') }} 
+                                        <span class="text-[9px] font-black text-emerald-500 uppercase ml-1">Pangan</span>
+                                    </div>
+                                    <div class="text-[10px] text-slate-400 font-semibold tracking-tight mt-0.5">
+                                        Transport: -
+                                    </div>
+                                @else
+                                    <div class="inline-flex items-center px-2.5 py-1 rounded-xl text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200/60 uppercase tracking-tight">
+                                        Dibayar Mitra
+                                    </div>
+                                    @if ($kar->jabatan === 'Satpam')
+                                        <div class="text-[10px] font-bold text-purple-600 tracking-tight mt-1">
+                                            + Rp 100.000 <span class="text-[8px] font-black uppercase text-purple-400">Fooding</span>
+                                        </div>
+                                    @endif
+                                @endif
+                            </td>
                             <td class="px-8 py-4 text-center">
                                 <div class="flex items-center justify-center gap-2">
                                     <a href="{{ route('admin.karyawan.show', $kar->id) }}" 

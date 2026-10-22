@@ -22,6 +22,20 @@
     </div>
 </header>
 
+@if ($errors->any())
+    <div class="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700">
+        <p class="font-bold text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-red-500"></i>
+            Gagal Menambahkan Mitra. Mohon periksa kesalahan berikut:
+        </p>
+        <ul class="list-disc list-inside text-xs space-y-1 font-semibold pl-2">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
 <form method="POST" action="{{ route('admin.mitra.store') }}">
 @csrf
 

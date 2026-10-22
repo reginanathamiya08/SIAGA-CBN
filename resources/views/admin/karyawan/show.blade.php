@@ -71,6 +71,43 @@
                         <p class="text-sm font-semibold text-gray-700">{{ $value }}</p>
                     </div>
                 @endforeach
+
+                {{-- Tanggal Berakhir Kontrak — hanya untuk karyawan kontrak --}}
+                @if ($karyawan->isKontrak())
+                <div class="sm:col-span-2">
+                    <p class="text-[9px] font-black text-gray-400 mb-1">BERAKHIR KONTRAK</p>
+                    @if ($karyawan->tanggal_berakhir_kontrak)
+                        @php
+                            $berakhir   = $karyawan->tanggal_berakhir_kontrak;
+                            $sisaHari   = now()->startOfDay()->diffInDays($berakhir->startOfDay(), false);
+                        @endphp
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <p class="text-sm font-semibold text-gray-700">
+                                {{ $berakhir->translatedFormat('d F Y') }}
+                            </p>
+                            @if ($sisaHari < 0)
+                                <span class="px-2.5 py-0.5 bg-red-100 text-red-700 rounded-full text-[9px] font-black uppercase">
+                                    Sudah Berakhir {{ abs((int)$sisaHari) }} hari lalu
+                                </span>
+                            @elseif ($sisaHari <= 7)
+                                <span class="px-2.5 py-0.5 bg-red-100 text-red-700 rounded-full text-[9px] font-black uppercase">
+                                    ⚠ Berakhir {{ $sisaHari }} hari lagi
+                                </span>
+                            @elseif ($sisaHari <= 30)
+                                <span class="px-2.5 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[9px] font-black uppercase">
+                                    🔔 Berakhir {{ $sisaHari }} hari lagi
+                                </span>
+                            @else
+                                <span class="px-2.5 py-0.5 bg-green-100 text-green-700 rounded-full text-[9px] font-black uppercase">
+                                    Aktif ({{ $sisaHari }} hari tersisa)
+                                </span>
+                            @endif
+                        </div>
+                    @else
+                        <p class="text-sm font-semibold text-gray-400 italic">Belum diatur</p>
+                    @endif
+                </div>
+                @endif
             </div>
             <div class="flex flex-wrap gap-2 mt-5 pt-4 border-t border-gray-50">
                 @if ($karyawan->is_shift)

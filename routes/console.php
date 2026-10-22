@@ -51,3 +51,9 @@ Artisan::command('payroll:reminder', function () {
 Schedule::command('payroll:reminder')
     ->dailyAt('08:00')
     ->when(fn() => now()->day === 24);
+
+// Jadwalkan notifikasi kontrak berakhir — jalankan setiap hari pukul 08:00 pagi
+Schedule::command('kontrak:notifikasi-berakhir')
+    ->dailyAt('08:00')
+    ->withoutOverlapping()
+    ->runInBackground();

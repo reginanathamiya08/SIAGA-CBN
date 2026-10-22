@@ -54,6 +54,121 @@
         </div>
     </div>
 
+    {{-- Track Record Kehadiran & Evaluasi Perpanjangan Kontrak (Khusus Karyawan Kontrak & Monitoring Performa) --}}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold">
+                    <i data-lucide="award" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h2 class="text-base font-black text-slate-800 tracking-wide">Evaluasi Perpanjangan Kontrak Kerja</h2>
+                    <p class="text-xs text-slate-500">Track Record Presensi Bulanan sebagai Bahan Rekomendasi Perpanjangan Kontrak Mitra</p>
+                </div>
+            </div>
+
+            {{-- Status Rekomendasi Utama --}}
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-500">Rekomendasi Evaluasi:</span>
+                <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider {{ $trackRecordBulanan['badge_total'] }}">
+                    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                    {{ $trackRecordBulanan['rekomendasi_total'] }}
+                </span>
+            </div>
+        </div>
+
+        {{-- Ringkasan Metrics 6 Bulan --}}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Rata-Rata Kehadiran</p>
+                <div class="flex items-baseline gap-2 mt-1">
+                    <span class="text-2xl font-black text-emerald-600">{{ $trackRecordBulanan['avg_persen'] }}%</span>
+                    <span class="text-[10px] text-slate-400 font-semibold">(6 Bulan Terakhir)</span>
+                </div>
+                <div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: {{ min(100, $trackRecordBulanan['avg_persen']) }}%"></div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Hari Kerja</p>
+                <p class="text-2xl font-black text-slate-800 mt-1">{{ $trackRecordBulanan['total_hari_kerja'] }} <span class="text-xs text-slate-400 font-normal">Hari</span></p>
+                <p class="text-[10px] text-slate-500 mt-1">Hadir Tepat: {{ $trackRecordBulanan['total_hadir'] }} Hari</p>
+            </div>
+
+            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Keterlambatan</p>
+                <p class="text-2xl font-black text-amber-500 mt-1">{{ $trackRecordBulanan['total_telat'] }} <span class="text-xs text-slate-400 font-normal">Kali</span></p>
+                <p class="text-[10px] text-slate-500 mt-1">Disiplin jam kerja</p>
+            </div>
+
+            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Akumulasi Alfa</p>
+                <p class="text-2xl font-black {{ $trackRecordBulanan['total_alfa'] > 0 ? 'text-rose-600' : 'text-slate-700' }} mt-1">
+                    {{ $trackRecordBulanan['total_alfa'] }} <span class="text-xs text-slate-400 font-normal">Hari</span>
+                </p>
+                <p class="text-[10px] {{ $trackRecordBulanan['total_alfa'] > 0 ? 'text-rose-500 font-bold' : 'text-slate-400' }} mt-1">
+                    {{ $trackRecordBulanan['total_alfa'] > 0 ? 'Catatan Kritis Evaluasi' : 'Tanpa Keterangan: 0 Hari' }}
+                </p>
+            </div>
+        </div>
+
+        {{-- Tabel Track Record Bulanan --}}
+        <div class="rounded-2xl border border-slate-200 overflow-hidden mt-4">
+            <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                    <i data-lucide="calendar-range" class="w-4 h-4 text-blue-600"></i>
+                    Track Record Presensi Bulanan (6 Bulan Terakhir)
+                </h3>
+                <span class="text-[10px] text-slate-400">*Acuan Evaluasi Perpanjangan Kontrak Mitra</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                    <thead>
+                        <tr class="bg-[#1E3A5F] text-white font-bold uppercase tracking-wider">
+                            <th class="px-4 py-3 text-left">Bulan & Tahun</th>
+                            <th class="px-4 py-3 text-center">Hari Kerja</th>
+                            <th class="px-4 py-3 text-center">Hadir</th>
+                            <th class="px-4 py-3 text-center">Telat</th>
+                            <th class="px-4 py-3 text-center">Alfa</th>
+                            <th class="px-4 py-3 text-center">Izin/Sakit/Cuti</th>
+                            <th class="px-4 py-3 text-center">% Kehadiran</th>
+                            <th class="px-4 py-3 text-center">Status Evaluasi Kontrak</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach($trackRecordBulanan['list'] as $i => $rec)
+                        <tr class="{{ $i%2===0 ? 'bg-white':'bg-slate-50/50' }} hover:bg-blue-50/50 transition">
+                            <td class="px-4 py-3 font-bold text-slate-800 flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                {{ $rec['bulan_label'] }}
+                            </td>
+                            <td class="px-4 py-3 text-center text-slate-600 font-semibold">{{ $rec['hari_kerja'] }} Hari</td>
+                            <td class="px-4 py-3 text-center text-emerald-600 font-black">{{ $rec['hadir'] }}</td>
+                            <td class="px-4 py-3 text-center text-amber-500 font-bold">{{ $rec['telat'] }}</td>
+                            <td class="px-4 py-3 text-center text-rose-600 font-black">{{ $rec['alfa'] }}</td>
+                            <td class="px-4 py-3 text-center text-slate-600">{{ $rec['izin'] + $rec['sakit'] + $rec['cuti'] + $rec['dinas'] }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    <div class="w-16 bg-slate-200 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-emerald-500 h-full rounded-full" style="width: {{ min(100, $rec['persen']) }}%"></div>
+                                    </div>
+                                    <span class="font-black text-slate-800">{{ $rec['persen'] }}%</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-3 py-1 rounded-xl text-[11px] font-bold shadow-sm inline-block {{ $rec['status_badge'] }}">
+                                    {{ $rec['status_evaluasi'] }}
+                                </span>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     {{-- Rekap Periode --}}
     <div class="grid grid-cols-4 md:grid-cols-7 gap-3">
         @foreach([

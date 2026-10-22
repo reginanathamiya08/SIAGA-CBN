@@ -107,7 +107,39 @@
                     @enderror
                 </div>
 
-                {{-- Uang Makan & Transport --}}
+                {{-- Uang Makan & Transport / Fasilitas --}}
+                @php
+                    $isTetap = $karyawan->isTetap();
+                    $isKontrakHC = $karyawan->isKontrak() && ($karyawan->isDivisiHC() || $karyawan->uang_makan_by_mitra);
+                    $isKontrakUmum = $karyawan->isKontrak() && !$isKontrakHC;
+                    $panganDefault = (float) \App\Models\Configuration::getValue('tunjangan_pangan_kontrak_umum', 805000);
+                @endphp
+
+                @if ($isKontrakHC)
+                    <div class="p-4 bg-amber-50 rounded-2xl border border-amber-200">
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="info" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+                            <div>
+                                <p class="text-xs font-black text-amber-800 uppercase tracking-tight">Uang Makan Dibayarkan Oleh Mitra</p>
+                                <p class="text-[11px] text-amber-700 mt-1 leading-relaxed">
+                                    Karyawan Kontrak Divisi HC tidak menerima uang makan & transport dari sistem PT CBN karena fasilitas uang makan dibayarkan langsung oleh Mitra tempat bekerja.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                @elseif ($isKontrakUmum)
+                    <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="utensils" class="w-5 h-5 text-emerald-600 shrink-0 mt-0.5"></i>
+                            <div>
+                                <p class="text-xs font-black text-emerald-800 uppercase tracking-tight">Fasilitas Uang Makan (Gaji Pangan)</p>
+                                <p class="text-[11px] text-emerald-700 mt-1 leading-relaxed">
+                                    Karyawan Kontrak Divisi Umum menerima tunjangan uang makan (Gaji Pangan) sebesar <strong>Rp {{ number_format($panganDefault, 0, ',', '.') }}/bulan</strong> (dihitung proporsional per hari kehadiran).
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                @else
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2">
@@ -151,9 +183,9 @@
                         </div>
                     </div>
                     <p class="text-[9px] text-gray-400 font-semibold">
-                        ⚠️ Jika karyawan <strong>telat/alfa</strong>: uang makan + transport dipotong
-                        (total Rp {{ number_format(35000 + 45000, 0, ',', '.') }}/hari)
+                        ⚠️ Uang makan & transport Karyawan Tetap dihitung berdasarkan jumlah kehadiran kerja.
                     </p>
+                @endif
 
             </div>
         </div>
@@ -180,13 +212,19 @@
                     <span class="font-black text-gray-800" id="prev-gaji-pokok">Rp 0</span>
                 </div>
                 <div class="flex justify-between text-sm">
-                    <span class="text-gray-600 font-semibold">Uang Makan (26hr)</span>
+                    <span class="text-gray-600 font-semibold" id="prev-label-makan">Uang Makan (26hr)</span>
                     <span class="font-black text-gray-800" id="prev-uang-makan">Rp 0</span>
                 </div>
-                <div class="flex justify-between text-sm">
+                <div class="flex justify-between text-sm" id="prev-row-transport">
                     <span class="text-gray-600 font-semibold">Uang Transport (26hr)</span>
                     <span class="font-black text-gray-800" id="prev-uang-transport">Rp 0</span>
                 </div>
+                @if ($karyawan->jabatan === 'Satpam')
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-600 font-semibold">Extra Fooding</span>
+                    <span class="font-black text-purple-600">Rp {{ number_format(\App\Models\Configuration::getValue('extra_fooding_satpam', 100000), 0, ',', '.') }}</span>
+                </div>
+                @endif
                 <div class="flex justify-between text-sm font-black border-t border-gray-100 pt-2">
                     <span class="text-gray-700">Total Pendapatan</span>
                     <span class="text-green-600" id="prev-total-pendapatan">Rp 0</span>
@@ -246,8 +284,13 @@
 
 @push('scripts')
 <script>
-var uangMakanByMitra = {{ $karyawan->uang_makan_by_mitra ? 'true' : 'false' }};
-var umrTahunIni      = {{ $umrTahunIni }};
+var isTetap       = {{ $karyawan->isTetap() ? 'true' : 'false' }};
+var isKontrakHC   = {{ ($karyawan->isKontrak() && ($karyawan->isDivisiHC() || $karyawan->uang_makan_by_mitra)) ? 'true' : 'false' }};
+var isKontrakUmum = {{ ($karyawan->isKontrak() && !($karyawan->isDivisiHC() || $karyawan->uang_makan_by_mitra)) ? 'true' : 'false' }};
+var isSatpam      = {{ $karyawan->jabatan === 'Satpam' ? 'true' : 'false' }};
+var panganDefault = {{ (float) \App\Models\Configuration::getValue('tunjangan_pangan_kontrak_umum', 805000) }};
+var extraFooding  = {{ (float) \App\Models\Configuration::getValue('extra_fooding_satpam', 100000) }};
+var umrTahunIni   = {{ $umrTahunIni }};
 
 function rp(angka) {
     return 'Rp ' + Math.round(angka).toLocaleString('id-ID');
@@ -255,21 +298,41 @@ function rp(angka) {
 
 function hitungPreview() {
     var gajiPokok   = parseFloat(document.getElementById('inp-gaji-pokok')?.value) || 0;
-    var uangMakan   = uangMakanByMitra ? 0 : (parseFloat(document.getElementById('inp-makan')?.value) || 0);
-    var transport   = uangMakanByMitra ? 0 : (parseFloat(document.getElementById('inp-transport')?.value) || 0);
+    var totalMakan  = 0;
+    var totalTransport = 0;
+    var tambahanLain = isSatpam ? extraFooding : 0;
+
+    if (isTetap) {
+        var uangMakanHarian = parseFloat(document.getElementById('inp-makan')?.value) || 0;
+        var transportHarian = parseFloat(document.getElementById('inp-transport')?.value) || 0;
+        totalMakan = uangMakanHarian * 26;
+        totalTransport = transportHarian * 26;
+        document.getElementById('prev-label-makan').textContent = 'Uang Makan (26hr)';
+        document.getElementById('prev-uang-makan').textContent = rp(totalMakan);
+        document.getElementById('prev-uang-transport').textContent = rp(totalTransport);
+    } else if (isKontrakUmum) {
+        totalMakan = panganDefault;
+        totalTransport = 0;
+        document.getElementById('prev-label-makan').textContent = 'Fasilitas Gaji Pangan';
+        document.getElementById('prev-uang-makan').textContent = rp(totalMakan);
+        document.getElementById('prev-uang-transport').textContent = '-';
+    } else { // isKontrakHC
+        totalMakan = 0;
+        totalTransport = 0;
+        document.getElementById('prev-label-makan').textContent = 'Uang Makan';
+        document.getElementById('prev-uang-makan').textContent = 'Dibayar Mitra';
+        document.getElementById('prev-uang-transport').textContent = '-';
+    }
+
     var persBpjsKes = {{ \App\Models\Configuration::getValue('persen_bpjs_kes', 9.24) }};
     var persBpjsTk  = {{ \App\Models\Configuration::getValue('persen_bpjs_tk', 5.00) }};
 
-    // Asumsi 26 hari kerja per bulan
-    var hariKerja     = 26;
-    var totalMakan    = uangMakan * hariKerja;
-    var totalTransport= transport * hariKerja;
-    var totalPendapatan = gajiPokok + totalMakan + totalTransport;
+    var totalPendapatan = gajiPokok + totalMakan + totalTransport + tambahanLain;
 
     var bpjsKes       = gajiPokok * (persBpjsKes / 100);
     var bpjsTk        = gajiPokok * (persBpjsTk / 100);
     var totalPotongan  = bpjsKes + bpjsTk;
-    var gajiBersih     = totalPendapatan - totalPotongan;
+    var gajiBersih     = Math.max(0, totalPendapatan - totalPotongan);
 
     // Update preview
     document.getElementById('prev-gaji-pokok').textContent    = rp(gajiPokok);
@@ -278,9 +341,6 @@ function hitungPreview() {
     document.getElementById('prev-bpjs-tk').textContent       = rp(bpjsTk);
     document.getElementById('prev-total-potongan').textContent = rp(totalPotongan);
     document.getElementById('prev-gaji-bersih').textContent   = rp(gajiBersih);
-
-    document.getElementById('prev-uang-makan').textContent = rp(totalMakan);
-    document.getElementById('prev-uang-transport').textContent = rp(totalTransport);
 
     // Warning UMR
     var warnEl = document.getElementById('warn-umr');

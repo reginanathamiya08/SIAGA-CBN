@@ -145,7 +145,7 @@ class LaporanGajiController extends Controller
                 $slip->total_alfa,
                 $slip->total_cuti,
                 $slip->getNominal('Gaji Pokok'),
-                $slip->getNominal('Uang Makan'),
+                $slip->getNominal('Uang Makan') + $slip->getNominal('Tunjangan Pangan'),
                 $slip->getNominal('Uang Transport'),
                 $slip->total_potongan,
                 $slip->gaji_bersih,

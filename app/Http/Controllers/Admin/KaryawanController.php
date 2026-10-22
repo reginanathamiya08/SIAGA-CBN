@@ -107,20 +107,21 @@ class KaryawanController extends Controller
 
             // 4. Buat data karyawan (sekaligus akun)
             $karyawan = User::create([
-                'role_id'             => $role->id,
-                'nip'                 => $username,
-                'password'            => Hash::make($data['password']),
-                'nama'                => $data['nama'],
-                'email'               => $data['email'],
-                'divisi'              => $data['divisi'] ?? null,
-                'jabatan'             => $jabatan,
-                'pendidikan'          => $data['pendidikan'],
-                'tanggal_masuk'       => $data['tanggal_masuk'],
-                'no_hp'               => $data['no_hp'] ?? null,
-                'gaji_atas_umr'       => $gaji_atas_umr,
-                'is_shift'            => $is_shift,
-                'uang_makan_by_mitra' => $uang_makan_mitra,
-                'is_active'           => true,
+                'role_id'                  => $role->id,
+                'nip'                      => $username,
+                'password'                 => Hash::make($data['password']),
+                'nama'                     => $data['nama'],
+                'email'                    => $data['email'],
+                'divisi'                   => $data['divisi'] ?? null,
+                'jabatan'                  => $jabatan,
+                'pendidikan'               => $data['pendidikan'],
+                'tanggal_masuk'            => $data['tanggal_masuk'],
+                'tanggal_berakhir_kontrak' => ($roleSlug === 'karyawan_kontrak') ? ($data['tanggal_berakhir_kontrak'] ?? null) : null,
+                'no_hp'                    => $data['no_hp'] ?? null,
+                'gaji_atas_umr'            => $gaji_atas_umr,
+                'is_shift'                 => $is_shift,
+                'uang_makan_by_mitra'      => $uang_makan_mitra,
+                'is_active'                => true,
             ]);
 
             // 5. Upload dokumen wajib

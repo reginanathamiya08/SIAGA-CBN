@@ -237,23 +237,40 @@ class MonitoringKehadiranController extends Controller
 
         $rekapTabel = $absensiList->groupBy('user_id')->map(function ($rows) use ($totalHariKerja) {
             $k      = $rows->first()->karyawan;
-            $hadir  = $rows->whereIn('status', ['hadir', 'telat'])->count();
-            $persen = $totalHariKerja > 0 ? round(($hadir / $totalHariKerja) * 100, 1) : 0;
+            $rows   = \App\Helpers\AttendanceHelper::hanyaHariKerja($rows);
+            $masuk  = $rows->whereIn('status', ['hadir', 'telat'])->count();          // hadir tepat waktu + telat
+            $hadir  = $rows->whereIn('status', ['hadir', 'telat'])->where('is_telat', false)->count(); // tepat waktu saja
+            $persen = $totalHariKerja > 0 ? round(($masuk / $totalHariKerja) * 100, 1) : 0;
+            $alfa   = $rows->where('status', 'alfa')->count();
+
+            $evaluasiStatus = match(true) {
+                $persen >= 90 => 'Sangat Layak',
+                $persen >= 80 => 'Layak',
+                default       => 'Perlu Evaluasi'
+            };
+
+            $evaluasiBadge = match(true) {
+                $persen >= 90 => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                $persen >= 80 => 'bg-blue-100 text-blue-800 border-blue-200',
+                default       => 'bg-rose-100 text-rose-800 border-rose-200'
+            };
 
             return [
-                'id'       => $k?->id,
-                'nama'     => $k?->nama ?? '-',
-                'jabatan'  => $k?->jabatan ?? '-',
-                'is_tetap' => $k?->isTetap() ?? false,
-                'mitra'    => $rows->first()->mitra?->nama_mitra ?? ($k?->isTetap() ? 'Kantor CBN' : '-'),
-                'hadir'   => $hadir,
-                'telat'   => $rows->where('is_telat', true)->count(),
-                'alfa'    => $rows->where('status', 'alfa')->count(),
-                'izin'    => $rows->where('status', 'izin')->count(),
-                'sakit'   => $rows->where('status', 'sakit')->count(),
-                'cuti'    => $rows->where('status', 'cuti')->count(),
-                'dinas'   => $rows->where('status', 'dinas_luar')->count(),
-                'persen'  => $persen,
+                'id'              => $k?->id,
+                'nama'            => $k?->nama ?? '-',
+                'jabatan'         => $k?->jabatan ?? '-',
+                'is_tetap'        => $k?->isTetap() ?? false,
+                'mitra'           => $rows->first()->mitra?->nama_mitra ?? ($k?->isTetap() ? 'Kantor CBN' : '-'),
+                'hadir'           => $hadir,
+                'telat'           => $rows->where('is_telat', true)->count(),
+                'alfa'            => $alfa,
+                'izin'            => $rows->where('status', 'izin')->count(),
+                'sakit'           => $rows->where('status', 'sakit')->count(),
+                'cuti'            => $rows->where('status', 'cuti')->count(),
+                'dinas'           => $rows->where('status', 'dinas_luar')->count(),
+                'persen'          => $persen,
+                'evaluasi_status' => $evaluasiStatus,
+                'evaluasi_badge'  => $evaluasiBadge,
             ];
         })->values();
 
@@ -268,11 +285,19 @@ class MonitoringKehadiranController extends Controller
             ->count();
         $countSemua = $countTetap + $countKontrak;
 
+        // Stats Evaluasi Kontrak untuk Karyawan Kontrak
+        $kontrakRekapList = $rekapTabel->where('is_tetap', false);
+        $evalKontrakStats = [
+            'sangat_layak'   => $kontrakRekapList->where('evaluasi_status', 'Sangat Layak')->count(),
+            'layak'          => $kontrakRekapList->where('evaluasi_status', 'Layak')->count(),
+            'perlu_evaluasi' => $kontrakRekapList->where('evaluasi_status', 'Perlu Evaluasi')->count(),
+        ];
+
         return view('pimpinan.monitoring.statistik', compact(
             'dari', 'sampai', 'trenPerHari', 'top10', 'rekapTabel',
             'totalHariKerja', 'semuaMitra', 'semuaKaryawan',
             'mitraId', 'divisi', 'jenisKaryawan', 'karyawanId',
-            'countTetap', 'countKontrak', 'countSemua',
+            'countTetap', 'countKontrak', 'countSemua', 'evalKontrakStats'
         ));
     }
 
@@ -302,7 +327,7 @@ class MonitoringKehadiranController extends Controller
         $riwayat = $query->get();
 
         $rekap = [
-            'hadir' => $riwayat->whereIn('status', ['hadir', 'telat'])->count(),
+            'hadir' => $riwayat->whereIn('status', ['hadir', 'telat'])->where('is_telat', false)->count(),
             'telat' => $riwayat->where('is_telat', true)->count(),
             'alfa'  => $riwayat->where('status', 'alfa')->count(),
             'izin'  => $riwayat->where('status', 'izin')->count(),
@@ -315,9 +340,13 @@ class MonitoringKehadiranController extends Controller
         $kalender = $riwayat->keyBy(fn($a) => $a->tanggal->format('Y-m-d'))
             ->map(fn($a) => $this->warnaBadgeStatus($a));
 
+        // Track Record Bulanan untuk Evaluasi Perpanjangan Kontrak
+        $trackRecordBulanan = $this->getTrackRecordBulanan($karyawan, 6);
+
         return view('pimpinan.monitoring.detail', compact(
             'karyawan', 'riwayat', 'rekap', 'kuotaCuti',
             'kalender', 'dari', 'sampai', 'statusFilter',
+            'trackRecordBulanan'
         ));
     }
 
@@ -345,12 +374,14 @@ class MonitoringKehadiranController extends Controller
             $absMitra = Absensi::where('mitra_id', $m->id)
                 ->whereBetween('tanggal', [$dari->toDateString(), $sampai->toDateString()])
                 ->get();
+            $absMitra = \App\Helpers\AttendanceHelper::hanyaHariKerja($absMitra);
 
             $totalKary = \App\Models\DetailRiwayatPenempatan::where('mitra_id', $m->id)
                 ->where('status', 'aktif')->count();
             $totalSlot = $totalKary * $totalHariKerja;
-            $hadir     = $absMitra->whereIn('status', ['hadir', 'telat'])->count();
-            $persen    = $totalSlot > 0 ? round(($hadir / $totalSlot) * 100) : 0;
+            $masuk     = $absMitra->whereIn('status', ['hadir', 'telat'])->count();
+            $hadir     = $absMitra->whereIn('status', ['hadir', 'telat'])->where('is_telat', false)->count();
+            $persen    = $totalSlot > 0 ? round(($masuk / $totalSlot) * 100) : 0;
 
             $dataMitra[] = [
                 'mitra'          => $m,
@@ -375,9 +406,11 @@ class MonitoringKehadiranController extends Controller
                 $absK = Absensi::where('user_id', $k->id)
                     ->whereBetween('tanggal', [$dari->toDateString(), $sampai->toDateString()])
                     ->get();
+                $absK = \App\Helpers\AttendanceHelper::hanyaHariKerja($absK);
 
-                $hadir  = $absK->whereIn('status', ['hadir', 'telat'])->count();
-                $persen = $totalHariKerja > 0 ? round(($hadir / $totalHariKerja) * 100, 1) : 0;
+                $masuk  = $absK->whereIn('status', ['hadir', 'telat'])->count();
+                $hadir  = $absK->whereIn('status', ['hadir', 'telat'])->where('is_telat', false)->count();
+                $persen = $totalHariKerja > 0 ? round(($masuk / $totalHariKerja) * 100, 1) : 0;
 
                 $karyawanMitra[] = [
                     'id'      => $k->id,
@@ -469,6 +502,56 @@ class MonitoringKehadiranController extends Controller
             }
         }
 
+        // Sheet 2: Rekapitulasi & Evaluasi Perpanjangan Kontrak
+        $sheet2 = $spreadsheet->createSheet()->setTitle('Rekap & Evaluasi Kontrak');
+        $sheet2->mergeCells('A1:O1');
+        $sheet2->setCellValue('A1', "REKAPITULASI KEHADIRAN & EVALUASI PERPANJANGAN KONTRAK  |  {$dari->format('d/m/Y')} s.d. {$sampai->format('d/m/Y')}");
+        $sheet2->getStyle('A1')->applyFromArray($this->styleJudul());
+
+        $h2 = ['No.', 'NIP', 'Nama Karyawan', 'Jabatan', 'Jenis Karyawan', 'Mitra / Cabang', 'Hari Kerja', 'Hadir', 'Telat', 'Alfa', 'Izin', 'Sakit', 'Cuti', 'Dinas', '% Kehadiran', 'Rekomendasi Evaluasi Kontrak'];
+        $this->tulisHeader($sheet2, 2, $h2);
+
+        $rekapGroup = $absensiList->groupBy('user_id');
+        $idx = 1;
+        foreach ($rekapGroup as $userId => $rows) {
+            $rowNum = $idx + 2;
+            $k      = $rows->first()->karyawan;
+            $rows   = \App\Helpers\AttendanceHelper::hanyaHariKerja($rows);
+            $masuk  = $rows->whereIn('status', ['hadir', 'telat'])->count();
+            $hadir  = $rows->whereIn('status', ['hadir', 'telat'])->where('is_telat', false)->count();
+            $persen = $totalHariKerja > 0 ? round(($masuk / $totalHariKerja) * 100, 1) : 0;
+            $alfa   = $rows->where('status', 'alfa')->count();
+
+            $evaluasiStatus = match(true) {
+                $persen >= 90 && $alfa <= 2 => 'Sangat Layak Perpanjang Kontrak',
+                $persen >= 80               => 'Layak Perpanjang Kontrak (Dengan Evaluasi)',
+                default                     => 'Perlu Evaluasi Khusus Sebelum Perpanjangan'
+            };
+
+            $data2 = [
+                $idx,
+                $k?->nip ?? '-',
+                $k?->nama ?? '-',
+                $k?->jabatan ?? '-',
+                $k?->isTetap() ? 'Tetap' : 'Kontrak',
+                $rows->first()->mitra?->nama_mitra ?? ($k?->isTetap() ? 'Kantor CBN' : '-'),
+                $totalHariKerja,
+                $hadir,
+                $rows->where('is_telat', true)->count(),
+                $alfa,
+                $rows->where('status', 'izin')->count(),
+                $rows->where('status', 'sakit')->count(),
+                $rows->where('status', 'cuti')->count(),
+                $rows->where('status', 'dinas_luar')->count(),
+                "{$persen}%",
+                $evaluasiStatus,
+            ];
+            foreach ($data2 as $col => $val) {
+                $sheet2->setCellValue(Coordinate::stringFromColumnIndex($col + 1) . $rowNum, $val);
+            }
+            $idx++;
+        }
+
         $spreadsheet->setActiveSheetIndex(0);
         $tmpFile = tempnam(sys_get_temp_dir(), 'monitoring_');
         (new Xlsx($spreadsheet))->save($tmpFile);
@@ -533,5 +616,98 @@ class MonitoringKehadiranController extends Controller
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ]);
         }
+    }
+
+    private function getTrackRecordBulanan(User $karyawan, int $jumlahBulan = 6): array
+    {
+        $records = [];
+        $totalHadir = 0;
+        $totalAlfa = 0;
+        $totalTelat = 0;
+        $totalHariKerjaAll = 0;
+
+        for ($i = 0; $i < $jumlahBulan; $i++) {
+            $date = Carbon::now()->subMonths($i);
+            $startOfMonth = $date->copy()->startOfMonth();
+            $endOfMonth   = ($i === 0) ? Carbon::now()->endOfDay() : $date->copy()->endOfMonth();
+
+            $hariKerja = \App\Helpers\AttendanceHelper::countWorkingDays($startOfMonth, $endOfMonth);
+
+            $absensiBulan = Absensi::where('user_id', $karyawan->id)
+                ->whereBetween('tanggal', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+                ->get();
+            $absensiBulan = \App\Helpers\AttendanceHelper::hanyaHariKerja($absensiBulan);
+
+            $masuk = $absensiBulan->whereIn('status', ['hadir', 'telat'])->count();
+            $hadir = $absensiBulan->whereIn('status', ['hadir', 'telat'])->where('is_telat', false)->count();
+            $telat = $absensiBulan->where('is_telat', true)->count();
+            $alfa  = $absensiBulan->where('status', 'alfa')->count();
+            $izin  = $absensiBulan->where('status', 'izin')->count();
+            $sakit = $absensiBulan->where('status', 'sakit')->count();
+            $cuti  = $absensiBulan->where('status', 'cuti')->count();
+            $dinas = $absensiBulan->where('status', 'dinas_luar')->count();
+
+            $persen = $hariKerja > 0 ? round(($masuk / $hariKerja) * 100, 1) : 0;
+
+            $statusEvaluasi = match(true) {
+                $persen >= 90 => 'Sangat Layak Perpanjang',
+                $persen >= 80 => 'Layak Perpanjang',
+                default       => 'Perlu Evaluasi'
+            };
+
+            $statusBadge = match(true) {
+                $persen >= 90 => 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+                $persen >= 80 => 'bg-blue-100 text-blue-800 border border-blue-200',
+                default       => 'bg-rose-100 text-rose-800 border border-rose-200'
+            };
+
+            $records[] = [
+                'bulan_label'     => $date->translatedFormat('F Y'),
+                'bulan_num'       => $date->month,
+                'tahun'           => $date->year,
+                'hari_kerja'      => $hariKerja,
+                'hadir'           => $hadir,
+                'telat'           => $telat,
+                'alfa'            => $alfa,
+                'izin'            => $izin,
+                'sakit'           => $sakit,
+                'cuti'            => $cuti,
+                'dinas'           => $dinas,
+                'persen'          => $persen,
+                'status_evaluasi' => $statusEvaluasi,
+                'status_badge'    => $statusBadge,
+            ];
+
+            $totalHadir += $hadir;
+            $totalMasuk  = ($totalMasuk ?? 0) + $masuk;
+            $totalAlfa  += $alfa;
+            $totalTelat += $telat;
+            $totalHariKerjaAll += $hariKerja;
+        }
+
+        $avgPersen = $totalHariKerjaAll > 0 ? round((($totalMasuk ?? 0) / $totalHariKerjaAll) * 100, 1) : 0;
+
+        $rekomendasiTotal = match(true) {
+            $avgPersen >= 90 && $totalAlfa <= 2 => 'Sangat Layak Perpanjang Kontrak',
+            $avgPersen >= 80                    => 'Layak Perpanjang Kontrak (Dengan Evaluasi)',
+            default                             => 'Perlu Evaluasi Khusus Sebelum Perpanjangan'
+        };
+
+        $badgeTotal = match(true) {
+            $avgPersen >= 90 && $totalAlfa <= 2 => 'bg-emerald-600 text-white shadow-lg shadow-emerald-200/50',
+            $avgPersen >= 80                    => 'bg-blue-600 text-white shadow-lg shadow-blue-200/50',
+            default                             => 'bg-rose-600 text-white shadow-lg shadow-rose-200/50'
+        };
+
+        return [
+            'list'              => $records,
+            'avg_persen'        => $avgPersen,
+            'total_alfa'        => $totalAlfa,
+            'total_telat'       => $totalTelat,
+            'total_hadir'       => $totalHadir,
+            'total_hari_kerja'  => $totalHariKerjaAll,
+            'rekomendasi_total' => $rekomendasiTotal,
+            'badge_total'       => $badgeTotal,
+        ];
     }
 }

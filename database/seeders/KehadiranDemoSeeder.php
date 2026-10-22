@@ -12,9 +12,9 @@ use Carbon\Carbon;
 class KehadiranDemoSeeder extends Seeder
 {
     /**
-     * Run the database seeds untuk demo Semhas.
-     * Membuat data absensi lengkap untuk semua karyawan aktif
-     * dengan mayoritas 'hadir', 1x 'sakit', dan 1x 'izin' per bulan.
+     * Generate data absensi demo untuk April - Juli 2026.
+     * Absensi dimulai dari tanggal_masuk masing-masing karyawan.
+     * Setiap bulan: mayoritas hadir, 1-2x sakit, 1-2x izin, 1-2x telat.
      */
     public function run(): void
     {
@@ -25,7 +25,7 @@ class KehadiranDemoSeeder extends Seeder
             ->get();
 
         if ($karyawanList->isEmpty()) {
-            $this->command->error('❌ Tidak ada karyawan aktif ditemukan dalam database!');
+            $this->command->error('❌ Tidak ada karyawan aktif ditemukan!');
             return;
         }
 
@@ -33,15 +33,23 @@ class KehadiranDemoSeeder extends Seeder
         $mitraPusat   = Mitra::where('is_pusat', true)->first() ?? Mitra::first();
         $mitraCabang  = Mitra::where('is_pusat', false)->first() ?? $mitraPusat;
 
-        // Rentang waktu: Bulan Lalu & Bulan Ini
+        // Rentang bulan yang akan di-seed: April - Juli 2026
         $monthsToSeed = [
-            Carbon::now()->subMonth(), // Bulan lalu
-            Carbon::now(),            // Bulan ini
+            Carbon::create(2026, 4, 1), // April
+            Carbon::create(2026, 5, 1), // Mei
+            Carbon::create(2026, 6, 1), // Juni
+            Carbon::create(2026, 7, 1), // Juli
         ];
 
         $totalInserted = 0;
+        $totalSkipped  = 0;
 
         foreach ($karyawanList as $karyawan) {
+            // Tanggal masuk karyawan — absensi tidak boleh sebelum ini
+            $tanggalMasuk = $karyawan->tanggal_masuk
+                ? Carbon::parse($karyawan->tanggal_masuk)
+                : Carbon::create(2026, 1, 1);
+
             // Tentukan mitra_id
             $mitraId = null;
             if ($karyawan->isTetap()) {
@@ -52,14 +60,23 @@ class KehadiranDemoSeeder extends Seeder
 
             foreach ($monthsToSeed as $monthCarbon) {
                 $startOfMonth = $monthCarbon->copy()->startOfMonth();
-                // Sampai akhir bulan atau sampai hari ini jika bulan ini
-                $endOfMonth   = $monthCarbon->isCurrentMonth() 
-                    ? Carbon::today() 
-                    : $monthCarbon->copy()->endOfMonth();
+                $endOfMonth   = $monthCarbon->copy()->endOfMonth();
 
-                // Ambil semua hari kerja (Senin - Jumat)
+                // Batas awal absensi = mana yang lebih baru antara
+                // awal bulan atau tanggal_masuk karyawan
+                $startDate = $startOfMonth->lt($tanggalMasuk)
+                    ? $tanggalMasuk->copy()
+                    : $startOfMonth->copy();
+
+                // Kalau karyawan belum masuk di bulan ini, skip
+                if ($startDate->gt($endOfMonth)) {
+                    $totalSkipped++;
+                    continue;
+                }
+
+                // Kumpulkan semua hari kerja (Senin - Jumat) di rentang ini
                 $weekdays = [];
-                $curr = $startOfMonth->copy();
+                $curr = $startDate->copy();
                 while ($curr->lte($endOfMonth)) {
                     if ($curr->isWeekday()) {
                         $weekdays[] = $curr->toDateString();
@@ -71,43 +88,42 @@ class KehadiranDemoSeeder extends Seeder
                     continue;
                 }
 
-                // Acak 1 hari untuk Sakit dan 1 hari untuk Izin jika jumlah hari kerja cukup
+                // Acak: 1-2 hari sakit, 1-2 hari izin, 1-2 hari telat per bulan
                 shuffle($weekdays);
-                $sakitDate = count($weekdays) > 2 ? array_pop($weekdays) : null;
-                $izinDate  = count($weekdays) > 2 ? array_pop($weekdays) : null;
-                $telatDate = count($weekdays) > 3 ? array_pop($weekdays) : null;
+                $jumlahSakit = count($weekdays) >= 10 ? rand(1, 2) : (count($weekdays) >= 5 ? 1 : 0);
+                $jumlahIzin  = count($weekdays) >= 10 ? rand(1, 2) : (count($weekdays) >= 5 ? 1 : 0);
+                $jumlahTelat = count($weekdays) >= 8  ? rand(1, 2) : (count($weekdays) >= 4 ? 1 : 0);
 
-                // Kembalikan sisa hari kerja sebagai 'hadir'
-                // Re-sort hari kerja agar teratur berdasarkan tanggal
-                $allDates = array_merge(
-                    $weekdays,
-                    array_filter([$sakitDate, $izinDate, $telatDate])
-                );
+                $sakitDates = array_splice($weekdays, 0, $jumlahSakit);
+                $izinDates  = array_splice($weekdays, 0, $jumlahIzin);
+                $telatDates = array_splice($weekdays, 0, $jumlahTelat);
+                // Sisa = hadir
+
+                $allDates = array_merge($weekdays, $sakitDates, $izinDates, $telatDates);
                 sort($allDates);
 
                 foreach ($allDates as $dateStr) {
-                    $tanggal = Carbon::parse($dateStr);
-                    $status  = 'hadir';
-                    $isTelat = false;
-                    $waktuMasuk  = null;
-                    $waktuPulang = null;
+                    $tanggal    = Carbon::parse($dateStr);
+                    $isTelat    = false;
+                    $waktuMasuk = null;
+                    $waktuPulang= null;
 
-                    if ($dateStr === $sakitDate) {
-                        $status = 'sakit';
-                    } elseif ($dateStr === $izinDate) {
-                        $status = 'izin';
-                    } elseif ($dateStr === $telatDate) {
-                        $status  = 'hadir';
-                        $isTelat = true;
-                        // Jam masuk telat: 08:15 - 08:35
-                        $randMinute  = rand(15, 35);
-                        $waktuMasuk  = $tanggal->copy()->setTime(8, $randMinute, rand(0, 59));
-                        $waktuPulang = $tanggal->copy()->setTime(16, rand(5, 30), rand(0, 59));
+                    if (in_array($dateStr, $sakitDates)) {
+                        $status = 'alfa'; // alfa mewakili tidak hadir (sakit)
+                    } elseif (in_array($dateStr, $izinDates)) {
+                        $status = 'alfa'; // alfa mewakili tidak hadir (izin)
+                    } elseif (in_array($dateStr, $telatDates)) {
+                        $status      = 'hadir'; // tetap hadir tapi telat
+                        $isTelat     = true;
+                        $randMenit   = rand(15, 45);
+                        $waktuMasuk  = $tanggal->copy()->setTime(8, $randMenit, rand(0, 59));
+                        $waktuPulang = $tanggal->copy()->setTime(16, rand(30, 59), rand(0, 59));
                     } else {
-                        // Hadir Tepat Waktu: 07:40 - 07:55
-                        $randMinute  = rand(40, 55);
-                        $waktuMasuk  = $tanggal->copy()->setTime(7, $randMinute, rand(0, 59));
-                        $waktuPulang = $tanggal->copy()->setTime(16, rand(0, 25), rand(0, 59));
+                        // Hadir tepat waktu: 07:40 - 07:59
+                        $status      = 'hadir';
+                        $randMenit   = rand(40, 59);
+                        $waktuMasuk  = $tanggal->copy()->setTime(7, $randMenit, rand(0, 59));
+                        $waktuPulang = $tanggal->copy()->setTime(16, rand(0, 30), rand(0, 59));
                     }
 
                     Absensi::updateOrCreate(
@@ -120,12 +136,12 @@ class KehadiranDemoSeeder extends Seeder
                             'shift_id'     => $defaultShift?->id,
                             'waktu_masuk'  => $waktuMasuk,
                             'waktu_pulang' => $waktuPulang,
-                            'lat_masuk'    => $status === 'sakit' || $status === 'izin' ? null : -0.947000,
-                            'long_masuk'   => $status === 'sakit' || $status === 'izin' ? null : 100.363000,
-                            'ip_masuk'     => $status === 'sakit' || $status === 'izin' ? null : '127.0.0.1',
-                            'lat_pulang'   => $status === 'sakit' || $status === 'izin' ? null : -0.947000,
-                            'long_pulang'  => $status === 'sakit' || $status === 'izin' ? null : 100.363000,
-                            'ip_pulang'    => $status === 'sakit' || $status === 'izin' ? null : '127.0.0.1',
+                            'lat_masuk'    => $waktuMasuk ? -0.947000 : null,
+                            'long_masuk'   => $waktuMasuk ? 100.363000 : null,
+                            'ip_masuk'     => $waktuMasuk ? '127.0.0.1' : null,
+                            'lat_pulang'   => $waktuPulang ? -0.947000 : null,
+                            'long_pulang'  => $waktuPulang ? 100.363000 : null,
+                            'ip_pulang'    => $waktuPulang ? '127.0.0.1' : null,
                             'status'       => $status,
                             'is_telat'     => $isTelat,
                         ]
@@ -136,7 +152,10 @@ class KehadiranDemoSeeder extends Seeder
             }
         }
 
-        $this->command->info("✅ Berhasil men-generate {$totalInserted} data kehadiran demo!");
-        $this->command->info("📊 Setiap karyawan sekarang memiliki kehadiran penuh (Mayoritas Hadir, 1x Sakit, 1x Izin).");
+        $this->command->info("✅ Berhasil generate {$totalInserted} data absensi demo (April - Juli 2026)!");
+        $this->command->info("⏭️  {$totalSkipped} bulan dilewati karena karyawan belum masuk.");
+        $this->command->info("📊 Status: Mayoritas Hadir, sebagian Telat, sebagian Alfa (Sakit/Izin).");
     }
 }
+
+
